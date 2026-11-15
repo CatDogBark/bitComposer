@@ -423,9 +423,11 @@ MASK_FLOOR = 5                        # second_figures' draw never backs off bel
 
 
 def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list | None = None, floor_k: int | None = None,
-          floor_songs: int = 0) -> str:
+          floor_songs: int = 0, own: str | None = None) -> str:
     """A draw from a pack's table under a context (a mixture's own table alone; `floor_k` the level the draw never backs off
-    below, PLAN_FLOOR, the part, without); the default where the pack has no such table."""
+    below, PLAN_FLOOR, the part, without); the default where the pack has no such table. `own` (round 172): the balance
+    token's song, for a once-a-song word (rhythm.OWN): the draw is made all the same, so the stream stands, and that
+    song's own answer under the context is taken over it where it has one (own.answer)."""
     t = models.get(name)
     if t is None:
         default = DEFAULTS[name]
@@ -435,7 +437,13 @@ def _draw(models: dict, name: str, context: tuple, rng: random.Random, log: list
             log.append(f"no {name} table: {default!r} assumed")
         return default
     t = t.table if hasattr(t, "table") else t
-    return t.draw(tuple(context), rng, floored=False, floor_k=PLAN_FLOOR if floor_k is None else floor_k, min_songs=PLAN_SONGS, floor_songs=floor_songs)
+    drawn = t.draw(tuple(context), rng, floored=False, floor_k=PLAN_FLOOR if floor_k is None else floor_k, min_songs=PLAN_SONGS, floor_songs=floor_songs)
+    mine = own_mod.answer(models, own, name, context) if own else None
+    if mine is None:
+        return drawn
+    if log is not None and mine != drawn:
+        log.append(f"{name} ({', '.join(str(c) for c in context)}): the balance's song's own, {mine} (the draw {drawn})")
+    return mine
 
 
 def tokens_say_feel(balance) -> bool:
@@ -530,7 +538,8 @@ def counter_mask(models: dict, context: tuple, tune_pat: str, mask: str, bounds:
     return asked(True) or got
 
 
-def _draw_values(models: dict, name: str, values: dict, rng: random.Random, log: list | None = None, floor_k: int | None = None) -> str:
+def _draw_values(models: dict, name: str, values: dict, rng: random.Random, log: list | None = None, floor_k: int | None = None,
+                 own: str | None = None) -> str:
     """_draw with the context built from the table's own conditionings (round 81): a table fitted before a conditioning
     was added keeps its shape, and a value it does not condition on is dropped rather than misread as another. `floor_k`
     as _draw's: the level the draw is terminal at when seen (the group habits' class level: a dense hat's habit is drawn
@@ -539,12 +548,12 @@ def _draw_values(models: dict, name: str, values: dict, rng: random.Random, log:
     if t is None:
         return _draw(models, name, (values["part"],), rng, log)
     t = t.table if hasattr(t, "table") else t
-    return _draw(models, name, tuple(values.get(c, "?") for c in t.conditionings), rng, log, floor_k=floor_k)
+    return _draw(models, name, tuple(values.get(c, "?") for c in t.conditionings), rng, log, floor_k=floor_k, own=own)
 
 
-def _maybe(models: dict, name: str, context: tuple, rng: random.Random):
-    """A one-shot draw as a number, None where the pack has no such table."""
-    return float(_draw(models, name, context, rng)) if name in models else None
+def _maybe(models: dict, name: str, context: tuple, rng: random.Random, own: str | None = None):
+    """A one-shot draw as a number, None where the pack has no such table. `own` as _draw's."""
+    return float(_draw(models, name, context, rng, own=own)) if name in models else None
 
 
 def form_of(text: str) -> list | None:
@@ -2952,7 +2961,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             habits[role] = drum_habit
             groups_rng = random.Random(f"whole:{seed}:drum-groups")   # own stream (round 81): the classes change what a draw visits
             extras[role] = {"".join(g): _draw_values(models, "drum_group_habits", {"part": "drums-" + "".join(g), "classes": rhythm.habit_class(token_kit_classes, g),
-                                                                                    "habit": habits[role]}, groups_rng, log, floor_k=GROUP_HABIT_FLOOR)
+                                                                                    "habit": habits[role]}, groups_rng, log, floor_k=GROUP_HABIT_FLOOR, own=token_song)
                             for g in rhythm.DRUM_GROUPS}    # terminal at the class (round 81): a dense hat never takes a sparse habit from the root
             if token_kit:                                   # the token song's own kit (round 63): its pieces are these, its samples theirs
                 extras[role]["pieces"] = "".join(x for x in rhythm.LETTERS.values() if x in token_kit)
@@ -3012,12 +3021,11 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
         else:
             habits[role] = _draw(models, "habits", (role, tempo, weight), rng, log)
         if role in rhythm.UPPER:
-            extras[role] = {"richness": _draw(models, "voicing_habits", (role,), rng, log), "motion": _draw(models, "motions", (role,), rng, log),
-                            "clashes": ({pl: float(_draw(models, "clashes", (role, pl), random.Random(f"whole:{seed}:clashes:{role}:{pl}"), log)) for pl in ("strong", "weak")}
+            extras[role] = {"richness": _draw(models, "voicing_habits", (role,), rng, log, own=token_song), "motion": _draw(models, "motions", (role,), rng, log),
+                            "clashes": ({pl: float(_draw(models, "clashes", (role, pl), random.Random(f"whole:{seed}:clashes:{role}:{pl}"), log, own=token_song)) for pl in ("strong", "weak")}
                                         if "clashes" in render_mod.models_or_empty(models) else None),   # its share of onsets a semitone from the bass and the chord parts under it (round 94), own streams
                             "tone_tier": (_draw(models, "tone_tiers", (role,), random.Random(f"whole:{seed}:tone_tier:{role}"), log)
                                           if "tone_tiers" in render_mod.models_or_empty(models) else None)}   # how much of its line leaves the chord (round 96), an own stream
-            own_mod.take(models, token_song, role, extras[role], mode, log)   # the token song's own clashes (round 172)
             if role in token_line_company:                  # where the line doubles the bass, by stretch (round 123): the token song's own
                 extras[role]["company"] = token_line_company[role]
                 log.append(f"{role}'s line doubles the bass where the balance's song's does (round 123): {token_line_company[role]}")
@@ -3034,23 +3042,22 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                 extras[role]["tone_tier"] = token_tone_tiers[role]
                 log.append(f"{role}'s off-chord tier from the balance: {token_tone_tiers[role]} (the draw {extras[role]['tone_tier_drawn']})")
         elif role in (R.MELODY, R.COUNTER):                  # the phrase tables count both lines as the tune's: drawn under the melody's part
-            extras[role] = {"articulation": _draw(models, "articulation", (role,), rng, log),
-                            "echo": _draw(models, "echo_habits", (R.MELODY, tempo, weight), rng, log),
-                            "steps": _draw(models, "step_habits", (R.MELODY,), rng, log),
-                            "repeats": _draw(models, "repeat_habits", (R.MELODY,), rng, log),
-                            "chord_tones": float(_draw(models, "chord_tones", (R.MELODY,), rng, log)),
-                            "off_scale": ({pl: float(_draw(models, "off_scale", (role, mode, pl), random.Random(f"whole:{seed}:off_scale:{role}:{pl}"), log)) for pl in ("strong", "weak")}
+            extras[role] = {"articulation": _draw(models, "articulation", (role,), rng, log, own=token_song),   # the line's manner: its token song's own (round 173)
+                            "echo": _draw(models, "echo_habits", (R.MELODY, tempo, weight), rng, log, own=token_song),
+                            "steps": _draw(models, "step_habits", (R.MELODY,), rng, log, own=token_song),
+                            "repeats": _draw(models, "repeat_habits", (R.MELODY,), rng, log, own=token_song),
+                            "chord_tones": float(_draw(models, "chord_tones", (R.MELODY,), rng, log, own=token_song)),
+                            "off_scale": ({pl: float(_draw(models, "off_scale", (role, mode, pl), random.Random(f"whole:{seed}:off_scale:{role}:{pl}"), log, own=token_song)) for pl in ("strong", "weak")}
                                           if "off_scale" in render_mod.models_or_empty(models) else None),   # the line's share off the scale by the beat (round 93), own streams,
-                            "clashes": ({pl: float(_draw(models, "clashes", (role, pl), random.Random(f"whole:{seed}:clashes:{role}:{pl}"), log)) for pl in ("strong", "weak")}
+                            "clashes": ({pl: float(_draw(models, "clashes", (role, pl), random.Random(f"whole:{seed}:clashes:{role}:{pl}"), log, own=token_song)) for pl in ("strong", "weak")}
                                         if "clashes" in render_mod.models_or_empty(models) else None),   # the melody's and the counter's each its own; its onsets a semitone from a sounding part
-                            "repeat_rate": _maybe(models, "repeat_rates", (R.MELODY,), rng),
-                            "grain": (_draw(models, "tune_grain", (role, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:grain:{role}"), log, floor_k=GRAIN_FLOOR)
+                            "repeat_rate": _maybe(models, "repeat_rates", (R.MELODY,), rng, own=token_song),
+                            "grain": (_draw(models, "tune_grain", (role, str(habits[role]).split()[0]), random.Random(f"whole:{seed}:grain:{role}"), log, floor_k=GRAIN_FLOOR, own=token_song)
                                       if "tune_grain" in render_mod.models_or_empty(models) else None)}   # an own stream, floored at the tier (round 66)
             if role == R.COUNTER and "chord_tones" in render_mod.models_or_empty(models):   # the counter-line's own chord-tone share (round 96), on an
-                extras[role]["chord_tones"] = float(_draw(models, "chord_tones", (R.COUNTER,), random.Random(f"whole:{seed}:chord_tones:{role}"), log))   # own stream
-            own_mod.take(models, token_song, role, extras[role], mode, log)   # the token song's own clashes, off-scale share and chord tones (round 172)
+                extras[role]["chord_tones"] = float(_draw(models, "chord_tones", (R.COUNTER,), random.Random(f"whole:{seed}:chord_tones:{role}"), log, own=token_song))   # own stream
             if "tune_sounds" in render_mod.models_or_empty(models):   # the share of its gap a held and a detached note sounds (round 98), own streams
-                extras[role]["tune_sounds"] = {kind: float(_draw(models, "tune_sounds", (role, kind), random.Random(f"whole:{seed}:tune_sounds:{role}:{kind}"), log))
+                extras[role]["tune_sounds"] = {kind: float(_draw(models, "tune_sounds", (role, kind), random.Random(f"whole:{seed}:tune_sounds:{role}:{kind}"), log, own=token_song))
                                                for kind in rhythm.TUNE_KINDS}
     if R.DRUMS in band and "part_entries" in render_mod.models_or_empty(models) and not own_textures and not kit_through:   # the drums' entrances under the kit's tier (round 59), on an own stream; the token song's own stand (round 124)
         textures, plays = drum_entrances(models, parts, textures, band, str(habits[R.DRUMS]).split()[0], random.Random(f"whole:{seed}:entries"), log)
@@ -3082,7 +3089,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                     shifts[k] = max(-1, min(2, shifts[k] + x))
     for role in band:                                       # a part with two voices or more: what each voice beside its line does (the layers table)
         if role != R.DRUMS and voices.get(role, 1) >= 2:
-            layers = [_draw(models, "layers", (role, str(min(rank, 4))), rng, log) if "layers" in models else "apart +0 like"
+            layers = [_draw(models, "layers", (role, str(min(rank, 4))), rng, log, own=token_song) if "layers" in models else "apart +0 like"
                       for rank in range(2, voices[role] + 1)]
             for i, word in sorted((token_layer_words.get(role) or {}).items()):   # the bass's voices as the token song's own (round 126): the draw
                 if 1 <= i <= len(layers) and layers[i - 1] != word:               # above is made all the same, so no other draw moves
@@ -3221,7 +3228,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                          for voice in ("only", "line", "second")}
                   for role in band if role in rhythm.UPPER + (R.BASS,)} if "gap_sounds" in render_mod.models_or_empty(models) else {}
     _own_gap_sounds(gap_sounds, token_gap_shares, log)      # the balance's song's own note lengths for the line (round 95), the draw where it lacks a class
-    locks = {R.BASS: float(_draw(models, "bass_locks", (R.BASS,), rng, log))} if R.BASS in band and R.DRUMS in band else {}
+    locks = {R.BASS: float(_draw(models, "bass_locks", (R.BASS,), rng, log, own=token_song))} if R.BASS in band and R.DRUMS in band else {}
     levels = {role: float(_draw(models, "levels", (role,), rng, log)) for role in band}
     layer_levels = {role: float(_draw(models, "layer_levels", (role,), rng, log)) for role in band if role != R.DRUMS}
     # the band's levels as one unit (round 32): a part's level is the balance token's where its song has the part, the
@@ -3266,7 +3273,7 @@ def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
         if role == R.DRUMS or role not in p.habits:
             continue
         tier = str(p.habits[role]).split()[0]
-        drawn = _draw(models, "part_speeds", (role, tier), rng, p.log, floor_k=2) if "part_speeds" in render_mod.models_or_empty(models) else DEFAULTS["part_speeds"]
+        drawn = _draw(models, "part_speeds", (role, tier), rng, p.log, floor_k=2, own=p.token_song) if "part_speeds" in render_mod.models_or_empty(models) else DEFAULTS["part_speeds"]
         p.speeds[role] = SPEED_FASTER if drawn == "faster" else float(drawn)   # floored at the part and tier: a dense accompaniment had drawn 2 a second
                                                                            # from the coarser level's mass, a value FFVI's dense accompaniments never have
 
@@ -3999,7 +4006,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         lock = {k: (ps, set()) for k, ps in rhythm.kit_accents(song.notes.get(R.DRUMS, []), song.bars, song.division).items()} if R.BASS in plan.locks else locks_of(song, {R.BASS}, plan)
         lock_share = plan.locks.get(R.BASS, 1.0)
         layered = plan.voices.get(R.BASS, 1) >= 2 and layer_of(plan.extras.get(R.BASS))[0] == "apart"
-        sounds_line = float(_draw(models, "layer_sounds", (R.BASS, "line"), random.Random(f"{seed}:bass:line sounds"))) if layered and "layer_sounds" in models else plan.sounds[R.BASS]
+        sounds_line = float(_draw(models, "layer_sounds", (R.BASS, "line"), random.Random(f"{seed}:bass:line sounds"), own=plan.token_song)) if layered and "layer_sounds" in models else plan.sounds[R.BASS]
         gs = plan.gap_sounds.get(R.BASS)                    # the share a note sounds by its gap (gap_sounds), the one share without it
         shared_bass = {}                                    # the line's notes, for a second voice following it
         bass_log = []                                       # what the bass writer's holds did (round 114)
@@ -4039,7 +4046,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                          for p in line_pat]                 # plus its own), drawn a bar as the chord parts' are (round 20): one draw a line
                                                             # pattern had given a whole song the doubling mask where FFVI's slap fills half its bars
                 given = [writer.mask_figure(f, m) for f, m in zip(figures, masks)]
-            sounds2 = float(_draw(models, "layer_sounds", (R.BASS, "second"), rng2)) if "layer_sounds" in models else plan.sounds[R.BASS]
+            sounds2 = float(_draw(models, "layer_sounds", (R.BASS, "second"), rng2, own=plan.token_song)) if "layer_sounds" in models else plan.sounds[R.BASS]
             floor2 = max(24, plan.registers[R.BASS][0] + offset)
             bound2 = plan.bounds.get(f"{R.BASS}:second", (floor2, floor2 + writer.BESIDE_SPAN))   # where the game plays its sample (round 34)
             notes2, figures2 = writer.bass(song, models["bass"], rng2, habit=habit2, key=key, lock=locks_of(song, {R.BASS}, plan),
@@ -4066,7 +4073,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         low, high = plan.bounds.get(role, plan.registers[role])   # where the game plays the line's sample (round 34)
         sounds = harness.UPPER_SOUNDS.get(role) or plan.sounds[role]
         if layers and "layer_sounds" in models:               # a layered part's line takes its own note lengths
-            sounds = float(_draw(models, "layer_sounds", (role, "line"), random.Random(f"{seed}:{role}:line sounds")))
+            sounds = float(_draw(models, "layer_sounds", (role, "line"), random.Random(f"{seed}:{role}:line sounds"), own=plan.token_song))
         gs = plan.gap_sounds.get(role)                        # by the gap (gap_sounds) where the pack has the word
         if gs and not harness.UPPER_SOUNDS.get(role):
             sounds = gs["line" if layers else "only"]

@@ -421,7 +421,7 @@ and the hit-or-miss part. Two steps, in order.
   and the default player's sound in 2.0.0rc3, the parts' attack class in
   2.0.0, released 2026-11-01: `docs/idiom/phase-6-generator.md`; since
   then on `dev`, the kit's pieces in rounds 74 to 83 and the writer's
-  rounds through 172, recorded in `docs/idiom/phase-4-writing.md`, with
+  rounds through 173, recorded in `docs/idiom/phase-4-writing.md`, with
   what stays open in `docs/LIMITS.md`).** The idiom's plan took
   this over from the translator's stages 3 and 4 on 2026-10-20: the
   readers scored on ground truth (phase 1), one score of voices through
@@ -452,6 +452,18 @@ and the hit-or-miss part. Two steps, in order.
   and saving each import's readings in the database waited for it
   (decided 2026-10-20); since 2.0 the writer is the default on the
   built-in sound sets too, and an import keeps its readings.
+- **Mt. Koltz's accompaniment reads off pitch (noticed 2026-11-14, not
+  looked into).** Some songs written on Mt. Koltz's token fail the
+  tuning measure on one voice of the accompaniment: of the notes it can
+  judge (about a third) none is on pitch, most two semitones off. Seed
+  1322 as the player asks does it since before round 165, and seed 1192
+  since round 172; other seeds on the token pass. It kept those songs
+  out of two listening sets. Not known: whether the notes sound two
+  semitones off or the measure misreads that sample; which sample; and
+  whether the game's own song reads the same on that measure.
+  What it needs first: the voice's sample and
+  its tuned rate in the pack against the notes written for it, in one
+  failing song and one passing.
 - **A channel's second instrument, as a word (asked for 2026-11-13).**
   Where a bass or chord channel plays a second instrument in a register
   of its own the reader makes a voice of it (round 89) and the readings

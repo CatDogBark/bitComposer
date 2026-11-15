@@ -139,7 +139,7 @@ KEPT = {
     "off_scale": ("rhythm", "off_scale_units", {}, ("part", "mode", "place"), False, False, "the share of a part's notes off the song's natural scale, by the part, the mode and the beat (strong, weak); the tune's drawn once a song and held in place of a ban"),
     "clashes": ("rhythm", "clash_units", {}, ("part", "place"), False, False, "a part's share of onsets under a sounding note of a part written before it (the bass, then the chord parts, then the tune, then the counter) that sit a semitone from it, by the beat; each writer holds its draw"),
     "voice_keeps": ("rhythm", "voice_keep_units", {}, ("sample",), False, False, "the share of a voice's strikes, where its chord part's line keeps its note, on which the voice keeps its own, by whether the voice plays the line's sample; drawn once a voice, on an own stream, for a voice its balance token gives no share (round 167)"),
-    "song_answers": ("rhythm", "own_units", {}, ("song", "word", "context"), False, False, "each song's own answer to the once-a-song words (rhythm.OWN: clashes, off_scale, chord_tones), by the song, the word and the word's context; not drawn: the plan looks the balance token's song up in it and draws the pooled word where that song has no answer (round 172)"),
+    "song_answers": ("rhythm", "own_units", {}, ("song", "word", "context"), False, False, "each song's own answer to the once-a-song words (the list rhythm.OWN), by the song, the word and the word's context; not drawn: the plan looks the balance token's song up in it and draws the pooled word where that song has no answer (round 172)"),
     "chord_follows": ("rhythm", "chord_follow_units", {}, ("part",), False, False, "of a tune's or a counter-line's notes on a tone a chord has off the key or on the key's tone a semitone over it, the share on the chord's tone, and the same against the key's tone a semitone under it; drawn once a line, on an own stream, for a line its balance token gives no shares (round 171)"),
     "parallel_intervals": ("rhythm", "parallel_interval_units", {}, ("interval", "tone", "part", "previous"), False, False, "where a parallel voice's note sits against the chord at each shared onset (the chord tone it lands on, or its semitones from the line's note off the chord), by the stretch's nominal interval in scale steps, the tone class of the line's note against the chord, the part and the landing before: the writer's parallel voice lands where the game's does, on the chord, instead of the line again in the scale (round 97)"),
     "tone_tiers": ("rhythm", "tone_tier_units", {}, ("part",), False, False, "how much of a chord part's line leaves the chord over the song (rare: under a tenth of its onsets, some: under 0.3, many), drawn once a song a part on an own stream: the tier its tone figures are drawn under (round 96)"),
@@ -154,6 +154,7 @@ KEPT = {
     "vibrato": ("rhythm", "vibrato_units", {}, ("part",), False, False, "a part's vibrato on its held notes: the share carrying it in each length class (0.35-0.5 s, 0.5-1, 1-2, 2 and over), its depth in cents, its rate in Hz and its onset in seconds, drawn once a song a part by the player's performance on its own stream (round 72)"),
 }
 MODULES = {"rhythm": rhythm, "phrases": phrases}
+OWN_TABLE = "song_answers"            # the table of every song's own answers to the once-a-song words (rhythm.own)
 DOUBLE_TIME = ("drums", "drums-KSt", "drums-h", "drums-c", "drums-o")   # the kit's bar tables, kept a second time (round 145) with a song the
                                       # reading has at half its speed counted in double time, as its balance token has been since round 131
                                       # (rhythm.token_song): Locke's snare strikes 28 times a bar at 70 beats a minute, bars the tables leave
@@ -203,7 +204,10 @@ def build(db, game: str | None, say=lambda *a: None) -> dict:
     say(f"  the lead pass: {heard['heard']} songs heard voice by voice, {heard['relabelled']} with the tune moved" if heard["heard"]
         else "  the lead pass has not run on these readings: every tune is the reader's label (python -m bitcomposer.translate.lead)")
     for name, (module, builder, kwargs, *_) in KEPT.items():
-        entry = fit(name, getattr(MODULES[module], builder)(songs_for(name, songs[module]), **kwargs))   # the kit's bars in double time (round 145)
+        units = getattr(MODULES[module], builder)(songs_for(name, songs[module]), **kwargs)   # the kit's bars in double time (round 145)
+        if name == OWN_TABLE:                               # every song's own answers (round 172): the words counted on the phrases' songs too (round 173)
+            units = list(units) + rhythm.own_units(songs["phrases"], "phrases", phrases)
+        entry = fit(name, units)
         if entry is None:
             say(f"  {name}: no units, left out")
             continue
