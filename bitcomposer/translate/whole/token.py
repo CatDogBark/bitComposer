@@ -83,82 +83,8 @@ def read_token(text: str, log: list) -> Token:
     token_beat = 1                                          # 2 where the token's song is counted in double time (round 131)
     token_feel = rhythm.FEELS[0]                            # the token's song's feel (round 147): duple where the token does not say
     token_loop = None                                       # the part of its form the token's song's loop returns to (round 132)
-    for token in text.split():
-        role, _, rest = token.partition("=")
-        if role == "loop":                                  # the part of its form the token's song's loop returns to (round 132), not a part
-            token_loop = int(rest) if rest.isdigit() else None
-            continue
-        if role == "follows":                               # how far the token's song's tune and counter go with a chord off the key (round 171)
-            by = {v: k for k, v in rhythm.FOLLOW_LETTERS.items()}
-            for w in rest.split(","):
-                pair = follow_pair(w[1:], 100)
-                if w[:1] in by and pair:
-                    token_follows[by[w[:1]]] = pair
-            continue
-        if role == "keeps":                                 # how often the token's song's voices keep their note with their line (round 167)
-            token_keeps = voice_rubs_of(rest)
-            continue
-        if role == "rubs":                                  # how often the token's song's voices sit a semitone from their own part (round 165)
-            token_rubs = voice_rubs_of(rest)
-            continue
-        if role == "pulse":                                 # the token's song's moving lines by their place in the beat (round 161), not a part
-            token_pulse = line_pulse_of(rest)
-            continue
-        if role == "turns":                                 # where the token's song's block lines turn (round 160), not a part
-            token_turns = line_turns_of(rest)
-            token_turn_moves = line_turn_moves_of(rest)
-            continue
-        if role == "struck":                                # where the token's song's struck voices strike (round 159), not a part
-            token_struck_places = struck_places_of(rest)
-            token_voice_places = voice_places_of(rest)      # the same word: every voice beside a line (round 166)
-            continue
-        if role == "beat":                                  # the token's song is counted in double time (round 131), not a part
-            token_beat = int(rest) if rest.isdigit() and int(rest) > 0 else 1
-            continue
-        if role == "feel":                                  # the token's song's feel (round 147), not a part
-            token_feel = rest if rest in rhythm.FEELS else rhythm.FEELS[0]
-            continue
-        if role == "tempo":                                 # the token's song's tempo class (round 54) and its own tempo (round 137:
-            token_class, _, own = rest.partition(":")       # `fast:140`), not a part
-            token_tempo = float(own) if own.replace(".", "", 1).isdigit() and float(own) > 0 else None
-            continue
-        if role == "top":                                   # the token's song's loudest part, of full (round 59), not a part
-            token_top = float(rest)
-            continue
-        if role == "holds":                                 # the token's song's chord-hold share (round 106), not a part
-            token_holds = float(rest)
-            continue
-        if role == "form":                                  # the token's song's form (round 113), not a part
-            token_form = form_of(rest)
-            if token_form:
-                log.append("the balance's song's form: " + " ".join(f"{l}{n}" for l, n in token_form))
-            continue
-        if role == "cycle":                                 # the token's song's harmony's loops (round 121), not a part
-            got = loops_of(rest)
-            if got:
-                token_loops[LOOP_CHORDS] = got
-            continue
-        if role == "quals":                                 # the qualities each degree has in the token's song (round 127), not a part
-            token_quals = quals_of(rest)
-            continue
-        if role == "shapes":                                # the token's song's chord shapes (round 112), not a part
-            token_shapes = shape_profile_of(rest)
-            if token_shapes:
-                log.append("the balance's song's chord shapes: " + " ".join(f"{sh or 'maj'} {v:.2f}" for sh, v in token_shapes.items()))
-            continue
-        if role == "loud":                                  # the token's song's rendered loudness in dBFS (round 59), not a part
-            token_loud = float(rest)
-            continue
-        if role == "song":                                  # which song the token is (round 172), not a part
-            token_song = rest
-            continue
-        if role == "key":                                   # the token's song's key (round 79): the kit's degrees and tuned rates read against it
-            t, _, m = rest.partition(":")
-            token_key = (int(t), m or "major")
-            continue
-        if role == "echo":                                  # the token's song's echo word (round 82): the written song sits in its room
-            token_echo = rest
-            continue
+    parts, spoken = rhythm.token_words(text)                # the parts' fields in the token's order, and the song's words by name
+    for role, rest in parts:
         band.append(role)
         if rest:
             f = rhythm.PartFields(rest)                     # the part's fields by name (rhythm.PART_FIELDS)
@@ -338,6 +264,60 @@ def read_token(text: str, log: list) -> Token:
                     token_kit_onsets = kit_onsets_of(f.onsets[1:])
                 elif onsets_of(f.onsets[1:]):
                     token_onsets[role] = onsets_of(f.onsets[1:])
+    if spoken.echo is not None:                             # the token's song's echo word (round 82): the written song sits in its room
+        token_echo = spoken.echo
+    if spoken.key is not None:                              # the token's song's key (round 79): the kit's degrees and tuned rates read against it
+        t, _, m = spoken.key.partition(":")
+        token_key = (int(t), m or "major")
+    if spoken.holds is not None:                            # the token's song's chord-hold share (round 106), not a part
+        token_holds = float(spoken.holds)
+    if spoken.shapes is not None:                           # the token's song's chord shapes (round 112), not a part
+        token_shapes = shape_profile_of(spoken.shapes)
+        if token_shapes:
+            log.append("the balance's song's chord shapes: " + " ".join(f"{sh or 'maj'} {v:.2f}" for sh, v in token_shapes.items()))
+    if spoken.quals is not None:                            # the qualities each degree has in the token's song (round 127), not a part
+        token_quals = quals_of(spoken.quals)
+    if spoken.form is not None:                             # the token's song's form (round 113), not a part
+        token_form = form_of(spoken.form)
+        if token_form:
+            log.append("the balance's song's form: " + " ".join(f"{l}{n}" for l, n in token_form))
+    if spoken.loop is not None:                             # the part of its form the token's song's loop returns to (round 132), not a part
+        token_loop = int(spoken.loop) if spoken.loop.isdigit() else None
+    if spoken.cycle is not None:                            # the token's song's harmony's loops (round 121), not a part
+        got = loops_of(spoken.cycle)
+        if got:
+            token_loops[LOOP_CHORDS] = got
+    if spoken.beat is not None:                             # the token's song is counted in double time (round 131), not a part
+        token_beat = int(spoken.beat) if spoken.beat.isdigit() and int(spoken.beat) > 0 else 1
+    if spoken.feel is not None:                             # the token's song's feel (round 147), not a part
+        token_feel = spoken.feel if spoken.feel in rhythm.FEELS else rhythm.FEELS[0]
+    if spoken.top is not None:                              # the token's song's loudest part, of full (round 59), not a part
+        token_top = float(spoken.top)
+    if spoken.loud is not None:                             # the token's song's rendered loudness in dBFS (round 59), not a part
+        token_loud = float(spoken.loud)
+    if spoken.tempo is not None:                            # the token's song's tempo class (round 54) and its own tempo (round 137:
+        token_class, _, own = spoken.tempo.partition(":")       # `fast:140`), not a part
+        token_tempo = float(own) if own.replace(".", "", 1).isdigit() and float(own) > 0 else None
+    if spoken.struck is not None:                           # where the token's song's struck voices strike (round 159), not a part
+        token_struck_places = struck_places_of(spoken.struck)
+        token_voice_places = voice_places_of(spoken.struck)      # the same word: every voice beside a line (round 166)
+    if spoken.turns is not None:                            # where the token's song's block lines turn (round 160), not a part
+        token_turns = line_turns_of(spoken.turns)
+        token_turn_moves = line_turn_moves_of(spoken.turns)
+    if spoken.pulse is not None:                            # the token's song's moving lines by their place in the beat (round 161), not a part
+        token_pulse = line_pulse_of(spoken.pulse)
+    if spoken.rubs is not None:                             # how often the token's song's voices sit a semitone from their own part (round 165)
+        token_rubs = voice_rubs_of(spoken.rubs)
+    if spoken.keeps is not None:                            # how often the token's song's voices keep their note with their line (round 167)
+        token_keeps = voice_rubs_of(spoken.keeps)
+    if spoken.follows is not None:                          # how far the token's song's tune and counter go with a chord off the key (round 171)
+        by = {v: k for k, v in rhythm.FOLLOW_LETTERS.items()}
+        for w in spoken.follows.split(","):
+            pair = follow_pair(w[1:], 100)
+            if w[:1] in by and pair:
+                token_follows[by[w[:1]]] = pair
+    if spoken.song is not None:                             # which song the token is (round 172), not a part
+        token_song = spoken.song
     return Token(
         band=band, counts=counts, layout=layout, shares=shares, token_beat=token_beat, token_class=token_class, token_continuity=token_continuity,
         token_downbeat=token_downbeat, token_echo=token_echo, token_feel=token_feel, token_first=token_first, token_follows=token_follows,

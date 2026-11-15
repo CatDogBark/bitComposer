@@ -4019,6 +4019,27 @@ class SongsOwnAnswersTests(unittest.TestCase):
                     seen += 1
         self.assertGreater(seen, 200)                                                              # a few parts a token, 68 songs
 
+    def test_the_songs_words_go_by_name_on_both_sides(self):
+        """The refactor's third stage: the words of the song as a whole have one list, in the token's order
+        (rhythm.SONG_WORDS). The builder says each under its name and the list orders them (song_words_text); the reader
+        splits a token into its parts and its words (token_words) and takes each word by name. Whatever is not one of
+        the words is a part, as the token has always been read."""
+        self.assertEqual(len(rhythm.SONG_WORDS), 20)
+        self.assertEqual((rhythm.SONG_WORDS[0], rhythm.SONG_WORDS[-1]), ("echo", "song"))          # which song it is comes last
+        self.assertEqual(rhythm.song_words_text(song="s1", key="9:minor", tempo="medium:88"), ["key=9:minor", "tempo=medium:88", "song=s1"])   # the list's order
+        self.assertEqual(rhythm.song_words_text(key=None), [])                                     # a word the song does not say
+        with self.assertRaises(TypeError):
+            rhythm.song_words_text(sogn="s1")
+        parts, said = rhythm.token_words("bass=half:36-44 melody=main top=0.30 odd=1 loop= song=s1 top=0.45")
+        self.assertEqual(parts, [("bass", "half:36-44"), ("melody", "main"), ("odd", "1")])        # what is no word of the song is a part
+        self.assertEqual((said.top, said.loop, said.song, said.key), ("0.45", "", "s1", None))     # said twice: the later; said bare: empty; not said: None
+        from bitcomposer import vocabularies
+        balance = getattr(vocabularies.load("default")["balance"], "table", vocabularies.load("default")["balance"])
+        for text in sorted({o for votes in balance.votes.values() for o in votes}):                # every shipped token, split and written again, is itself
+            parts, said = rhythm.token_words(text)
+            again = [f"{role}={rest}" if rest else role for role, rest in parts] + rhythm.song_words_text(**{w: getattr(said, w) for w in rhythm.SONG_WORDS})
+            self.assertEqual(" ".join(again), text)
+
     def test_the_plan_takes_its_token_songs_mode_and_answers(self):
         token = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium key=9:minor song=song1"
         keys = tables.Table(("part",), "keys").fit([tables.Unit(f"k{i}", "g", "0 major", {"part": "song"}) for i in range(3)])
