@@ -121,9 +121,9 @@ def emulator_installed() -> bool:
 def update_spec(version: str, emulator: bool | None = None) -> str:
     """What pipx is asked for: the exact version, with the import extra when
     the emulator is installed here (emulator=True asks for it regardless:
-    the PACKS panel's GET THE EMULATOR). pipx install --force keeps the venv and
-    what is in it, so the emulator would survive an update without the
-    extra; but pip would never move it to what the new release asks for,
+    the LIBRARY screen's GET THE EMULATOR). pipx install --force keeps the
+    venv and what is in it, so the emulator would survive an update without
+    the extra; but pip would never move it to what the new release asks for,
     and pipx remembers only the last spec it was given, so a later
     `pipx reinstall` (a new system Python) would rebuild without it. With
     the extra in the spec, both follow the release."""

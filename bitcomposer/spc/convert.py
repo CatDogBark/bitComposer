@@ -384,7 +384,7 @@ def render(score: Score, path: str | None = None) -> dict:
         (f"rows on the driver's clock, {score.tick_hz:.2f} Hz" if score.on_ticks else
          f"rows at {score.row_hz:.0f} a second" + ("" if score.snap is None else " (the driver's key-ons do not sit on a tick IT can run)"))
         + f"; {placed} notes ({baked} pitch-modulated), {repeats} echo repeats",
-    ])
+    ] + _channel_lines(song, channels))
     samples, instruments = song.samples, song.instruments
     out = {"name": score.title[:25], "samples": samples, "patterns": grid.patterns,
            "global_volume": song.master.start(), "orders": list(range(len(grid.patterns))), "tempo": score.tempo, "speed": 1,
@@ -507,6 +507,15 @@ def _bake_pitch_modulation(song: _Song, seconds: float) -> None:
         song.instruments[baked_ins - 1].keyboard[key] = (60, len(song.samples))
         for n in group:
             song.baked_of[id(n)] = (baked_ins, key)
+
+
+def _channel_lines(song: _Song, channels: int) -> list[str]:
+    """The message's lines for a player that mutes a voice: which channels are each sending voice's echo repeats
+    ("echo channels: 1=8-16, 4=17-25", the voice then its repeats' first and last, counted from 1 as a tracker shows
+    them; left out where no voice sends), so the echo can go quiet with its voice, and which is the master volume's,
+    which must stay heard for its volume moves and the fade to be played."""
+    echoes = ", ".join(f"{v + 1}={chs[0] + 1}-{chs[-1] + 1}" for v, chs in sorted(song.echo_channels.items()) if chs)
+    return ([f"echo channels: {echoes}"] if echoes else []) + [f"master channel: {channels}"]
 
 
 def _plan_echo(song: _Song) -> int:

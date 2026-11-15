@@ -165,6 +165,29 @@ def fundamental(sample, rate: int = RATE) -> float | None:
 NAMES = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
 
 
+ROUGH = 0.5                          # the least similarity a looped instrument's loop must repeat at for a rough fundamental (round 102)
+
+
+def rough_fundamental(sample, rate: int = RATE) -> float | None:
+    """A looped sample's fundamental where fundamental() finds none (round 102: a distorted guitar's loop repeats too roughly
+    for CLEAN or PITCHED, and its notes had no pitch at all): the shortest lag between 40 and 1000 Hz at which the loop
+    repeats at ROUGH or better and within NEARLY of its best lag (a power chord's sub-octave repeats as well as its root;
+    the shorter lag is the note), as Hz at `rate`; None for a one-shot or a loop that never repeats that well. Rough: a
+    register, not a tuning; its notes' fraction of a semitone is taken out as every sample's is."""
+    if not sample.loops or sample.loop_end is None or sample.loop_end - sample.loop_start < SHORTEST:
+        return None
+    loop = list(sample.pcm[sample.loop_start:sample.loop_end])
+    n = len(loop)
+    x = (loop * (2 + 2 * LONGEST // n))[:max(2 * n, 2 * LONGEST + 256)]
+    lo, hi = max(SHORTEST, rate // 1000), min(LONGEST, rate // 40, len(x) // 2)
+    sims = [(_similarity(x, lag), lag) for lag in range(lo, hi + 1)]
+    best = max(sims, default=(0.0, 0))[0]
+    if best < ROUGH:
+        return None
+    lag = next(l for s, l in sims if s >= NEARLY * best)   # the first region repeating nearly as well as the best
+    return rate / _cycle(x, _peak(x, lag, lo, hi), lo)        # climbed to its peak and placed between whole lags, as fundamental() does
+
+
 def midi(f0: float, pitch: int) -> float:
     """The MIDI note (cents as the fraction) a sample with fundamental f0
     plays at pitch register `pitch`."""

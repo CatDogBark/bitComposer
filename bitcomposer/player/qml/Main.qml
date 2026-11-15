@@ -10,7 +10,7 @@
     sentence or a number, the pink bit as the one accent (and the family's
     mark in the tile), green only for ready and playing. Nothing sits on a
     fixed grid: the layout is fluid, the text is real text, the controls are
-    real controls. Styling only, as the owner asked.
+    real controls. Styling only, by decision.
 
     The plumbing is the 1.x window's: `backend` (bitcomposer/player/app.py)
     wraps the engine in-process, state is pushed, the compose settings
@@ -132,6 +132,15 @@ ApplicationWindow {
     property int currentIndex: backend.state.currentIndex !== undefined ? backend.state.currentIndex : -1
     property var playlistInfo: backend.playlist
     property string trackMessage: backend.state.message || ""
+    readonly property var trackDetails: backend.state.details || []      // what MORE opens: the message's lines about this song
+    readonly property string trackFactsText: {                          // beside the title: key, tempo and form, or what the module is
+        var f = backend.state.facts || []
+        if (f.length) return f.join("  ·  ")
+        return trackFormat !== "" ? trackFormat.toUpperCase() + " · " + trackChannels + " channels" : ""
+    }
+    property bool showDetails: false                                     // the deck's MORE
+    property bool soundOpen: true                                        // PLAY's sections, open or folded to their heading
+    property bool bandOpen: true
     property var songVoices: backend.state.voices || ({})
     property var songDrew: backend.state.drew || ({})
     readonly property string songReadout: {
@@ -152,6 +161,15 @@ ApplicationWindow {
         return String(name).replace(/^(bit|ffvi|mana|evm|mmx|snes|gen|chip)_/, "").replace(/_/g, " ")
     }
     property real volumeGain: backend.state.volume !== undefined ? backend.state.volume : 1.0
+    property real stereoWidth: backend.state.width !== undefined ? backend.state.width : 1.0   // WIDTH: 1.0 the pans as written
+    property bool levelOn: backend.state.level !== undefined ? backend.state.level : true      // LEVEL: every song at one common level
+    // The loaded song's trim to that level, in words; empty where the level is off or the song has none.
+    readonly property string levelTrimText: {
+        var t = backend.state.levelTrim
+        if (t === undefined || t === null) return ""
+        if (Math.abs(t) < 0.05) return "  This song: left as it is."
+        return "  This song: turned " + (t < 0 ? "down " : "up ") + Math.abs(t).toFixed(1) + " dB."
+    }
     readonly property var levels: backend.levels                   // each channel's level while playing (about 0 to 1), else []
     readonly property bool liveLevels: playbackStatus === "Playing" && levels.length > 0
     function meterCells(ch, cells) {                               // live while playing, the channel's set volume otherwise
@@ -173,6 +191,14 @@ ApplicationWindow {
     property string packConfirm: ""
     property string packRenaming: ""
     readonly property bool importBusy: !!backend.importState.busy
+    // An import's stage with nothing to count (unpacking, the vocabularies):
+    // its bar steps a cell a second, as an update's does.
+    property int _impElapsed: 0
+    Timer {
+        interval: 1000; repeat: true; running: root.importBusy && !(backend.importState.bar >= 0)
+        onRunningChanged: root._impElapsed = 0
+        onTriggered: root._impElapsed += 1
+    }
     readonly property bool gettingEmulator: backend.updatePurpose === "emulator"
     readonly property var builtinSounds: ["random", "chip", "genesis", "snes", "bit", "ffvi", "mana", "evermore", "megamanx"]   // Classic's
     readonly property var snesSets: ["bit", "ffvi", "mana", "evermore", "megamanx"]
@@ -290,6 +316,26 @@ ApplicationWindow {
         }
     }
     function _resetEchoRatios() { echoBase = channelVolumes.slice(); echoBus = 1.0; echoGroupRatio = ({}); echoGroupRatioChanged(); _resetKitRatios() }
+    // THE BAND's M and S. A row is its channels (a part's one, the kit's pieces); the backend keeps what is muted and
+    // soloed, for the loaded song only, and silences each part's echo with it.
+    readonly property var mutedChannels: backend.mutedChannels
+    readonly property var soloChannels: backend.soloChannels
+    function rowIn(list, chs) { return chs.length > 0 && list.indexOf(chs[0]) >= 0 }
+    function rowHeard(chs) { return soloChannels.length > 0 ? rowIn(soloChannels, chs) : !rowIn(mutedChannels, chs) }
+    function _rowToggled(list, chs) {
+        var on = rowIn(list, chs), out = []
+        for (var i = 0; i < list.length; i++) if (chs.indexOf(list[i]) < 0) out.push(list[i])
+        return on ? out : out.concat(chs)
+    }
+    readonly property string bandSummary: {                              // the folded band's line: its parts, and what is silenced out of sight
+        var rows = partChannels.length + (kitChannels.length ? 1 : 0), muted = 0, soloed = 0
+        for (var i = 0; i < partChannels.length; i++) { if (rowIn(mutedChannels, [partChannels[i]])) muted++; if (rowIn(soloChannels, [partChannels[i]])) soloed++ }
+        if (rowIn(mutedChannels, kitChannels)) muted++
+        if (rowIn(soloChannels, kitChannels)) soloed++
+        return rows + (rows === 1 ? " part" : " parts") + (soloed ? " · " + soloed + " soloed" : muted ? " · " + muted + " muted" : "")
+    }
+    function toggleMute(chs) { backend.setBand(_rowToggled(mutedChannels, chs), soloChannels) }
+    function toggleSolo(chs) { backend.setBand(mutedChannels, _rowToggled(soloChannels, chs)) }
     function applyChannelVolume(channel, value) {
         if (channelVolumes[channel] === value) return
         channelVolumes[channel] = value
@@ -366,7 +412,7 @@ ApplicationWindow {
 
     readonly property var _savedKeys: ["settGenerator", "settVocabulary", "settCarryTheme", "settBandReturns", "settSeed", "settTempo", "settEnergy", "settScale", "settSound", "settDrumDensity", "settDrumFills",
         "settDrumSwing", "settMelody", "settHarmonyVoicing", "settHarmonyMode", "settBassWeight", "settForm",
-        "settEcho", "settEchoWet", "activePreset", "settingsTab", "tab", "ui", "savedW", "savedH"]
+        "settEcho", "settEchoWet", "activePreset", "settingsTab", "tab", "ui", "savedW", "savedH", "showDetails", "soundOpen", "bandOpen"]
     function _save() {
         if (root._loading) return
         var o = {}
@@ -627,6 +673,8 @@ ApplicationWindow {
         play:    ["#.....", "##....", "###...", "####..", "###...", "##....", "#....."],
         pause:   ["##.##", "##.##", "##.##", "##.##", "##.##", "##.##", "##.##"],
         stop:    ["#####", "#####", "#####", "#####", "#####"],
+        open:    ["#######", ".#####.", "..###..", "...#..."],
+        shut:    ["#...", "##..", "###.", "####", "###.", "##..", "#..."],
         prev:    ["#...#.#", "#..##.#", "#.#####", "######.", "#.#####", "#..##.#", "#...#.#"],
         next:    ["#.#...#", "#.##..#", "#####.#", ".######", "#####.#", "#.##..#", "#.#...#"],
         shuffle: ["##...##", "..#.#..", "...#...", "..#.#..", "##...##"],
@@ -719,6 +767,51 @@ ApplicationWindow {
                     onClicked: optRow.picked(modelData)
                 }
             }
+        }
+    }
+
+    // A small lit square: THE BAND's M and S, the deck's MORE.
+    component Tog: Rectangle {
+        id: tg
+        property string text: ""
+        property bool on: false
+        property color tint: root.accentPink
+        signal clicked()
+        implicitWidth: Math.max(Math.round(18 * root.ui), tgLabel.implicitWidth + Math.round(10 * root.ui))
+        implicitHeight: Math.round(14 * root.ui)
+        color: tg.on ? tg.tint : root.raised
+        border.width: 1
+        border.color: tg.on ? tg.tint : (tgMouse.containsMouse ? root.bevelLight : root.edge)
+        Text { id: tgLabel; anchors.centerIn: parent; text: tg.text; color: tg.on ? root.bg : (tgMouse.containsMouse ? root.textColor : root.dimText); font.family: root.mono; font.bold: true; font.pixelSize: Math.round(9 * root.ui) }
+        MouseArea { id: tgMouse; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: tg.clicked() }
+    }
+
+    // The position as a strip of blocks over the song; a click seeks.
+    component PosStrip: Item {
+        implicitHeight: Math.round(16 * root.ui)
+        Rectangle { anchors.fill: parent; color: root.bg; border.width: 2; border.color: root.line }
+        Row {
+            id: psCells
+            anchors.fill: parent
+            anchors.margins: 4
+            spacing: 2
+            readonly property int cells: Math.max(8, Math.floor((width + 2) / (Math.round(8 * root.ui) + 2)))
+            readonly property int lit: root.trackDuration > 0 ? Math.round(cells * Math.min(1, root.trackPosition / root.trackDuration)) : 0
+            Repeater {
+                model: psCells.cells
+                Rectangle {
+                    required property int index
+                    width: (psCells.width - (psCells.cells - 1) * 2) / psCells.cells
+                    height: psCells.height
+                    color: index < psCells.lit ? root.accentPink : root.raised
+                    Rectangle { x: 1; y: 1; width: parent.width - 2; height: 1; color: Qt.rgba(1, 1, 1, index < psCells.lit ? 0.35 : 0.08) }
+                }
+            }
+        }
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: root.trackDuration > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onClicked: function(mouse) { if (root.trackDuration > 0) backend.seek(Math.max(0, Math.min(1, mouse.x / width)) * root.trackDuration) }
         }
     }
 
@@ -818,13 +911,20 @@ ApplicationWindow {
 
     // A screen's heading: a pixel label with a rule after it.
     component Heading: RowLayout {
+        id: hd
         property string text: ""
         property string aside: ""
+        property bool foldable: false       // a section that opens and closes on a click anywhere along its heading
+        property bool open: true
+        signal toggled()
         Layout.fillWidth: true
         spacing: Math.round(10 * root.ui)
-        PxLabel { text: parent.text; color: root.dimText; font.pixelSize: Math.round(10 * root.ui) }
+        Sprite { visible: hd.foldable; rows: root.glyphs[hd.open ? "open" : "shut"]; tint: hdHover.hovered ? root.textColor : root.dimText; px: Math.max(1, Math.round(1.5 * root.ui)) }
+        PxLabel { text: hd.text; color: hd.foldable && hdHover.hovered ? root.textColor : root.dimText; font.pixelSize: Math.round(10 * root.ui) }
         Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 2; color: root.line }
-        Text { visible: parent.aside !== ""; text: parent.aside; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui) }
+        Text { visible: hd.aside !== ""; text: hd.aside; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui) }
+        HoverHandler { id: hdHover; enabled: hd.foldable; cursorShape: Qt.PointingHandCursor }
+        TapHandler { enabled: hd.foldable; onTapped: hd.toggled() }
     }
 
     // ── The window ──
@@ -912,6 +1012,19 @@ ApplicationWindow {
                         width: parent.width
                         spacing: Math.round(10 * root.ui)
                         Heading { text: "SET: THE PLAYER"; aside: "Ctrl +/- zooms the window, Ctrl 0 resets, Ctrl 1-4 pick a screen" }
+                        // Level: the songs in a folder do not sit at one level (a written song's parts take theirs from its
+                        // token's game song, and the game's own songs span fifteen decibels), so the player measures each
+                        // song once and trims it at playback, beside GAIN; no file is changed (player/level.py).
+                        OptionRow {
+                            objectName: "levelRow"
+                            label: "LEVEL"; options: ["on", "off"]; value: root.levelOn ? "on" : "off"
+                            onPicked: function(c) { if ((c === "on") !== root.levelOn) backend.setLevel(c === "on") }
+                        }
+                        Body {
+                            objectName: "levelBody"
+                            text: (root.levelOn ? "Every song plays at one level, so a quiet song and a loud one sit side by side; GAIN sets how loud that is. The files are not changed."
+                                                : "Each song plays at the level it was written at.") + root.levelTrimText
+                        }
                         OptionRow {
                             visible: backend.autostartSupported
                             label: "LOGIN"; options: ["on", "off"]; value: backend.autostart ? "on" : "off"
@@ -1024,102 +1137,116 @@ ApplicationWindow {
 
                 // ══ PLAY ══
                 ColumnLayout {
+                    id: playColumn
                     visible: root.tab === 0
                     Layout.fillWidth: true
                     spacing: Math.round(16 * root.ui)
 
+                    // The deck: the song playing, where it is in it and the transport, in one panel. The title's line carries
+                    // the song's key, tempo and form; what else its message says opens with MORE.
                     Panel {
+                        objectName: "deck"
                         Layout.fillWidth: true
-                        pad: Math.round(20 * root.ui)
+                        pad: Math.round(12 * root.ui)
                         ColumnLayout {
                             width: parent.width
                             spacing: Math.round(10 * root.ui)
                             RowLayout {
+                                id: deckTitleRow
                                 Layout.fillWidth: true
-                                spacing: Math.round(12 * root.ui)
-                                Sprite { rows: root.glyphs[root.playbackStatus === "Playing" ? "play" : "pause"]; tint: root.playbackStatus === "Playing" ? root.accentGreen : root.dimText; visible: root.trackTitle !== "" }
-                                PxLabel { text: root.trackTitle ? root.playbackStatus.toUpperCase() : "NOTHING LOADED"; color: root.playbackStatus === "Playing" ? root.accentGreen : root.dimText }
-                                Text { visible: root.trackDuration > 0; text: root.formatTime(root.trackPosition) + " of " + root.formatTime(root.trackDuration); color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui) }
-                                Item { Layout.fillWidth: true }
-                                Text { visible: root.trackFormat !== ""; text: root.trackFormat.toUpperCase() + " · " + root.trackChannels + " channels · " + root.trackPatterns + " patterns"; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(9 * root.ui) }
-                            }
-                            Text {
-                                id: titleText
-                                Layout.fillWidth: true
-                                text: root.trackTitle || "Press GENERATE for a song"
-                                color: root.trackTitle ? root.textColor : root.dimText
-                                font.family: root.pixel
-                                font.bold: true
-                                font.pixelSize: Math.round((root.trackTitle ? 26 : 16) * root.ui)
-                                font.letterSpacing: 1
-                                wrapMode: Text.WordWrap
-                                style: Text.Raised; styleColor: "#000000"
-                            }
-                            Body { visible: root.trackMessage !== ""; text: root.trackMessage; font.pixelSize: Math.round(12 * root.ui) }
-                            Body { visible: root.songReadout !== ""; text: root.songReadout; color: root.dimText }
-                            Body { visible: root.trackArtist !== "" && root.trackArtist !== "bitComposer"; text: "by " + root.trackArtist }
-                            // The position as a strip of blocks over the song.
-                            Item {
-                                Layout.fillWidth: true
-                                implicitHeight: Math.round(22 * root.ui)
-                                Rectangle { anchors.fill: parent; color: root.bg; border.width: 2; border.color: root.line }
-                                Row {
-                                    id: posStrip
-                                    anchors.fill: parent
-                                    anchors.margins: 4
-                                    spacing: 2
-                                    readonly property int cells: Math.max(8, Math.floor((width + 2) / (Math.round(8 * root.ui) + 2)))
-                                    readonly property int lit: root.trackDuration > 0 ? Math.round(cells * Math.min(1, root.trackPosition / root.trackDuration)) : 0
-                                    Repeater {
-                                        model: posStrip.cells
-                                        Rectangle {
-                                            required property int index
-                                            width: (posStrip.width - (posStrip.cells - 1) * 2) / posStrip.cells
-                                            height: posStrip.height
-                                            color: index < posStrip.lit ? root.accentPink : root.raised
-                                            Rectangle { x: 1; y: 1; width: parent.width - 2; height: 1; color: Qt.rgba(1, 1, 1, index < posStrip.lit ? 0.35 : 0.08) }
-                                        }
-                                    }
+                                spacing: Math.round(10 * root.ui)
+                                Sprite {
+                                    id: deckGlyph
+                                    visible: root.trackTitle !== ""
+                                    rows: root.glyphs[root.playbackStatus === "Playing" ? "play" : root.playbackStatus === "Paused" ? "pause" : "stop"]
+                                    tint: root.playbackStatus === "Playing" ? root.accentGreen : root.dimText
                                 }
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: root.trackDuration > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                    onClicked: function(mouse) { if (root.trackDuration > 0) backend.seek(Math.max(0, Math.min(1, mouse.x / width)) * root.trackDuration) }
+                                Text {
+                                    objectName: "deckTitle"
+                                    // the title takes the room it needs before the facts take any
+                                    Layout.preferredWidth: Math.min(implicitWidth, Math.max(Math.round(80 * root.ui), deckTitleRow.width - deckGlyph.width - deckTime.width - deckMore.width - 4 * deckTitleRow.spacing))
+                                    text: root.trackTitle || "Press GENERATE for a song"
+                                    color: root.trackTitle ? root.textColor : root.dimText
+                                    font.family: root.pixel; font.bold: true; font.pixelSize: Math.round(14 * root.ui); font.letterSpacing: 1
+                                    elide: Text.ElideRight
+                                }
+                                Text {
+                                    objectName: "deckFacts"
+                                    Layout.fillWidth: true
+                                    Layout.minimumWidth: 0
+                                    text: root.trackFactsText
+                                    color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui)
+                                    elide: Text.ElideRight
+                                }
+                                Text { id: deckTime; visible: root.trackDuration > 0; text: root.formatTime(root.trackPosition) + " / " + root.formatTime(root.trackDuration); color: root.text2; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui) }
+                                Tog { id: deckMore; objectName: "deckMore"; visible: root.trackTitle !== ""; text: root.showDetails ? "LESS" : "MORE"; on: root.showDetails; onClicked: { root.showDetails = !root.showDetails; root._save() } }
+                            }
+                            // The position sits between the transport and GENERATE while the row has room for it, and
+                            // over the buttons, the panel wide, when it has not.
+                            PosStrip { visible: !deckFlow.wide; Layout.fillWidth: true }
+                            Flow {
+                                id: deckFlow
+                                Layout.fillWidth: true
+                                spacing: Math.round(8 * root.ui)
+                                readonly property real stripW: Math.floor(width - prevB.width - playB.width - stopB.width - nextB.width - shuffleB.width - (keepB.visible ? keepB.width + spacing : 0) - autoB.width - generateButton.width - 7 * spacing) - 1
+                                readonly property bool wide: stripW >= Math.round(160 * root.ui)
+                                PButton { id: prevB; text: ""; implicitWidth: Math.round(44 * root.ui); onClicked: root.dbusPrevious(); Sprite { anchors.centerIn: parent; anchors.horizontalCenterOffset: -2; anchors.verticalCenterOffset: -2; rows: root.glyphs.prev } }
+                                PButton { id: playB; text: ""; implicitWidth: Math.round(60 * root.ui); onClicked: root.dbusPlayPause(); Sprite { anchors.centerIn: parent; anchors.horizontalCenterOffset: -2; anchors.verticalCenterOffset: -2; rows: root.glyphs[root.playbackStatus === "Playing" ? "pause" : "play"]; tint: root.playbackStatus === "Playing" ? root.accentGreen : root.textColor } }
+                                PButton { id: stopB; text: ""; implicitWidth: Math.round(44 * root.ui); onClicked: root.dbusStop(); Sprite { anchors.centerIn: parent; anchors.horizontalCenterOffset: -2; anchors.verticalCenterOffset: -2; rows: root.glyphs.stop } }
+                                PButton { id: nextB; text: ""; implicitWidth: Math.round(44 * root.ui); onClicked: root.dbusNext(); Sprite { anchors.centerIn: parent; anchors.horizontalCenterOffset: -2; anchors.verticalCenterOffset: -2; rows: root.glyphs.next } }
+                                PButton { id: shuffleB; text: ""; implicitWidth: Math.round(44 * root.ui); on: root.shuffleOn; onClicked: root.dbusToggleShuffle(); Sprite { anchors.centerIn: parent; anchors.horizontalCenterOffset: -2; anchors.verticalCenterOffset: -2; rows: root.glyphs.shuffle; tint: root.shuffleOn ? root.accentPink : root.textColor } }
+                                Item {
+                                    visible: deckFlow.wide
+                                    width: Math.max(0, deckFlow.stripW)
+                                    height: prevB.height
+                                    PosStrip { objectName: "deckPosition"; anchors.left: parent.left; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; anchors.verticalCenterOffset: -2 }
+                                }
+                                PButton {
+                                    id: keepB
+                                    visible: root.currentIndex >= 0 && root.currentIndex < root.playlistInfo.length && !!root.playlistInfo[root.currentIndex].auto
+                                    text: "KEEP"
+                                    onClicked: root.keepTrack(root.currentIndex)
+                                }
+                                PButton { id: autoB; text: root.autoGenerate ? "AUTO: ON" : "AUTO"; on: root.autoGenerate; onClicked: root.toggleAutoGenerate() }
+                                PButton {
+                                    id: generateButton
+                                    text: root.generating ? "WRITING…" : "GENERATE"
+                                    hot: !root.generating
+                                    enabledLook: !root.generating
+                                    font.pixelSize: Math.round(12 * root.ui)
+                                    font.bold: true
+                                    onClicked: root.generateTrack()
                                 }
                             }
-                        }
-                    }
-
-                    // Transport, KEEP, GENERATE.
-                    Flow {
-                        Layout.fillWidth: true
-                        spacing: Math.round(10 * root.ui)
-                        PButton { text: ""; implicitWidth: Math.round(52 * root.ui); onClicked: root.dbusPrevious(); Sprite { anchors.centerIn: parent; anchors.horizontalCenterOffset: -2; anchors.verticalCenterOffset: -2; rows: root.glyphs.prev } }
-                        PButton { text: ""; implicitWidth: Math.round(72 * root.ui); onClicked: root.dbusPlayPause(); Sprite { anchors.centerIn: parent; anchors.horizontalCenterOffset: -2; anchors.verticalCenterOffset: -2; rows: root.glyphs[root.playbackStatus === "Playing" ? "pause" : "play"]; tint: root.playbackStatus === "Playing" ? root.accentGreen : root.textColor } }
-                        PButton { text: ""; implicitWidth: Math.round(52 * root.ui); onClicked: root.dbusStop(); Sprite { anchors.centerIn: parent; anchors.horizontalCenterOffset: -2; anchors.verticalCenterOffset: -2; rows: root.glyphs.stop } }
-                        PButton { text: ""; implicitWidth: Math.round(52 * root.ui); onClicked: root.dbusNext(); Sprite { anchors.centerIn: parent; anchors.horizontalCenterOffset: -2; anchors.verticalCenterOffset: -2; rows: root.glyphs.next } }
-                        PButton { text: ""; implicitWidth: Math.round(52 * root.ui); on: root.shuffleOn; onClicked: root.dbusToggleShuffle(); Sprite { anchors.centerIn: parent; anchors.horizontalCenterOffset: -2; anchors.verticalCenterOffset: -2; rows: root.glyphs.shuffle; tint: root.shuffleOn ? root.accentPink : root.textColor } }
-                        PButton {
-                            visible: root.currentIndex >= 0 && root.currentIndex < root.playlistInfo.length && !!root.playlistInfo[root.currentIndex].auto
-                            text: "KEEP"
-                            onClicked: root.keepTrack(root.currentIndex)
-                        }
-                        PButton { text: root.autoGenerate ? "AUTO: ON" : "AUTO"; on: root.autoGenerate; onClicked: root.toggleAutoGenerate() }
-                        PButton {
-                            id: generateButton
-                            text: root.generating ? "WRITING…" : "GENERATE"
-                            hot: !root.generating
-                            enabledLook: !root.generating
-                            font.pixelSize: Math.round(13 * root.ui)
-                            font.bold: true
-                            implicitHeight: Math.round(44 * root.ui)
-                            onClicked: root.generateTrack()
+                            ColumnLayout {
+                                objectName: "deckDetails"
+                                visible: root.showDetails && root.trackTitle !== ""
+                                Layout.fillWidth: true
+                                spacing: Math.round(4 * root.ui)
+                                Rectangle { Layout.fillWidth: true; Layout.preferredHeight: 1; color: root.line }
+                                Repeater {
+                                    model: root.trackDetails
+                                    Body { required property var modelData; text: modelData; color: root.dimText }
+                                }
+                                Body { visible: root.songReadout !== ""; text: root.songReadout; color: root.dimText }
+                                Body { visible: root.trackArtist !== "" && root.trackArtist !== "bitComposer"; text: "by " + root.trackArtist; color: root.dimText }
+                                Body { visible: root.trackFormat !== ""; text: root.trackFormat.toUpperCase() + " · " + root.trackChannels + " channels · " + root.trackPatterns + " patterns"; color: root.dimText; font.pixelSize: Math.round(10 * root.ui) }
+                            }
                         }
                     }
                     Body { text: root.settingsSummary(); color: root.dimText; font.pixelSize: Math.round(10 * root.ui) }
 
+                    Heading {
+                        objectName: "soundHeading"
+                        text: "GAIN & WIDTH"
+                        foldable: true
+                        open: root.soundOpen
+                        aside: root.soundOpen ? "" : "gain " + Math.round(root.volumeGain * 100) + "% · width " + Math.round(root.stereoWidth * 100) + "%"
+                        onToggled: { root.soundOpen = !root.soundOpen; root._save() }
+                    }
                     // Gain.
                     RowLayout {
+                        visible: root.soundOpen
                         Layout.fillWidth: true
                         spacing: Math.round(10 * root.ui)
                         PxLabel { text: "GAIN"; Layout.preferredWidth: Math.round(72 * root.ui) }
@@ -1138,6 +1265,38 @@ ApplicationWindow {
                         }
                     }
 
+                    // Width: libopenmpt's stereo separation at playback. 100 % plays each voice where its song puts it (a
+                    // written song's voices sit where its token's FFVI song put them, round 84), less pulls every pan toward
+                    // centre; the SNES pans by amplitude for a television, and a lead held at 0.25 all song sits far out on headphones.
+                    RowLayout {
+                        visible: root.soundOpen
+                        Layout.fillWidth: true
+                        spacing: Math.round(10 * root.ui)
+                        PxLabel { text: "WIDTH"; Layout.preferredWidth: Math.round(72 * root.ui) }
+                        Fader {
+                            ratio: root.stereoWidth
+                            accent: root.accentPink
+                            centreMark: false
+                            onMoved: function(r) { backend.setWidth(Math.round(r * 20) / 20) }
+                        }
+                        Text {
+                            Layout.preferredWidth: Math.round(44 * root.ui)
+                            text: Math.round(root.stereoWidth * 100) + "%"
+                            color: root.textColor
+                            font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); horizontalAlignment: Text.AlignRight
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: backend.setWidth(1.0) }
+                        }
+                    }
+                    RowLayout {
+                        visible: root.soundOpen
+                        Layout.fillWidth: true
+                        spacing: Math.round(8 * root.ui)
+                        Item { Layout.preferredWidth: Math.round(72 * root.ui) }
+                        PButton { small: true; text: "SPEAKERS"; on: root.stereoWidth > 0.99; onClicked: backend.setWidth(1.0) }
+                        PButton { small: true; text: "HEADPHONES"; on: Math.abs(root.stereoWidth - 0.6) < 0.01; onClicked: backend.setWidth(0.6) }
+                        Body { text: root.stereoWidth > 0.99 ? "each voice where its song puts it" : "every pan pulled toward centre by " + Math.round((1 - root.stereoWidth) * 100) + "%"; color: root.dimText; font.pixelSize: Math.round(10 * root.ui) }
+                    }
+
                     // The band, as the file names its channels.
                     Panel {
                         Layout.fillWidth: true
@@ -1146,26 +1305,42 @@ ApplicationWindow {
                         ColumnLayout {
                             width: parent.width
                             spacing: Math.round(8 * root.ui)
-                            Heading { text: "THE BAND"; aside: root.liveLevels ? "what each channel plays, as it plays" : "each channel's volume; MIX changes them" }
+                            Heading {
+                                objectName: "bandHeading"
+                                text: "THE BAND"
+                                foldable: true
+                                open: root.bandOpen
+                                aside: !root.bandOpen ? root.bandSummary
+                                     : backend.bandEchoOff ? "an older file: its echo is off while a part is silenced"
+                                     : root.liveLevels ? "what each channel plays, as it plays; M mutes, S solos" : "each channel's volume; MIX changes them"
+                                onToggled: { root.bandOpen = !root.bandOpen; root._save() }
+                            }
                             Repeater {
-                                model: root.partChannels
+                                model: root.bandOpen ? root.partChannels : []
                                 RowLayout {
                                     required property int modelData
                                     readonly property int ch: modelData
                                     Layout.fillWidth: true
                                     spacing: Math.round(12 * root.ui)
-                                    Text { Layout.preferredWidth: Math.round(120 * root.ui); text: root.channelLabel(ch); color: root.textColor; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui); elide: Text.ElideRight }
-                                    Meter { cells: 16; on: root.meterCells(ch, 16); tint: root.channelColor(ch) === 2 ? root.text2 : root.accentPink }
+                                    readonly property bool heard: root.rowHeard([ch])
+                                    Text { Layout.preferredWidth: Math.round(120 * root.ui); text: root.channelLabel(ch); color: heard ? root.textColor : root.edge; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui); elide: Text.ElideRight }
+                                    Tog { objectName: "bandMute" + ch; text: "M"; on: root.rowIn(root.mutedChannels, [ch]); onClicked: root.toggleMute([ch]) }
+                                    Tog { objectName: "bandSolo" + ch; text: "S"; tint: root.accentGreen; on: root.rowIn(root.soloChannels, [ch]); onClicked: root.toggleSolo([ch]) }
+                                    Meter { cells: 16; on: heard ? root.meterCells(ch, 16) : 0; tint: root.channelColor(ch) === 2 ? root.text2 : root.accentPink }
                                     Item { Layout.fillWidth: true }
                                     Text { text: root.voiceLabel(ch); color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui); elide: Text.ElideRight }
                                 }
                             }
                             RowLayout {
-                                visible: root.kitChannels.length > 0
+                                id: bandKit
+                                visible: root.bandOpen && root.kitChannels.length > 0
                                 Layout.fillWidth: true
                                 spacing: Math.round(12 * root.ui)
-                                Text { Layout.preferredWidth: Math.round(120 * root.ui); text: "the kit"; color: root.textColor; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui) }
-                                Meter { cells: 16; on: root.kitCells(16); tint: root.text2 }
+                                readonly property bool heard: root.rowHeard(root.kitChannels)
+                                Text { Layout.preferredWidth: Math.round(120 * root.ui); text: "the kit"; color: bandKit.heard ? root.textColor : root.edge; font.family: root.mono; font.pixelSize: Math.round(11 * root.ui) }
+                                Tog { objectName: "bandMuteKit"; text: "M"; on: root.rowIn(root.mutedChannels, root.kitChannels); onClicked: root.toggleMute(root.kitChannels) }
+                                Tog { objectName: "bandSoloKit"; text: "S"; tint: root.accentGreen; on: root.rowIn(root.soloChannels, root.kitChannels); onClicked: root.toggleSolo(root.kitChannels) }
+                                Meter { cells: 16; on: bandKit.heard ? root.kitCells(16) : 0; tint: root.text2 }
                                 Item { Layout.fillWidth: true }
                                 Text { text: root.kitChannels.length + " pieces"; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui) }
                             }
@@ -1174,6 +1349,7 @@ ApplicationWindow {
 
                     // The songs.
                     Panel {
+                        id: songsPanel
                         Layout.fillWidth: true
                         shadow: false
                         pad: Math.round(10 * root.ui)
@@ -1199,7 +1375,13 @@ ApplicationWindow {
                             ListView {
                                 id: playlistView
                                 Layout.fillWidth: true
-                                Layout.preferredHeight: Math.min(contentHeight, Math.round(30 * root.ui) * 12)
+                                objectName: "songList"
+                                // Until the window has its size the list is as tall as its songs, twelve at most, and the
+                                // window fits that. From then on it takes what the window has left under it, never fewer than
+                                // four rows: the songs scroll here, and the screen over them stays where it is.
+                                readonly property real rowH: Math.round(30 * root.ui)
+                                readonly property real room: flick.height - (popupColumn.y + playColumn.y + songsPanel.y + songsPanel.pad + 2 + y) - (songsPanel.pad + 2 + Math.round(16 * root.ui))
+                                Layout.preferredHeight: root._sized ? Math.max(Math.min(contentHeight, 4 * rowH), Math.min(contentHeight, room)) : Math.min(contentHeight, 12 * rowH)
                                 clip: true
                                 interactive: contentHeight > height
                                 boundsBehavior: Flickable.StopAtBounds
@@ -1495,7 +1677,7 @@ ApplicationWindow {
                                 PButton { text: "IMPORT"; hot: backend.canImport && !root.importBusy; enabledLook: backend.canImport && !root.importBusy; onClicked: if (backend.canImport && !root.importBusy) backend.importGame() }
                                 PButton { text: "ADD A PACK"; onClicked: backend.addPack() }
                             }
-                            Body { text: "IMPORT takes a game's SPC set: a folder of .spc files, a zip, or an .rsn, .rar or .7z. Each song runs through the SNES sound hardware's emulator and is read as music; then the game's vocabulary is counted beside its sounds, and the library's over everything you have read. About six minutes for a whole soundtrack; nothing leaves this machine. ADD brings in a pack someone exported." }
+                            Body { text: "IMPORT takes a game's SPC set: a folder of .spc files, a zip, or an .rsn, .rar or .7z. Each song runs through the SNES sound hardware's emulator and is read as music; then the game's vocabulary is counted beside its sounds, and the library's over everything you have read. A few minutes for a whole soundtrack; nothing leaves this machine. ADD brings in a pack someone exported." }
                             RowLayout {
                                 visible: !backend.canImport
                                 Layout.fillWidth: true
@@ -1510,7 +1692,7 @@ ApplicationWindow {
                                 }
                                 PButton { objectName: "getEmulator"; visible: backend.updateKind === "pipx"; text: "GET THE EMULATOR"; hot: !backend.updating; enabledLook: !backend.updating; onClicked: backend.getEmulator() }
                             }
-                            // An import running: the songs read so far.
+                            // An import running: which stage it is at, and that stage's songs so far.
                             ColumnLayout {
                                 visible: root.importBusy
                                 Layout.fillWidth: true
@@ -1520,11 +1702,11 @@ ApplicationWindow {
                                     spacing: Math.round(10 * root.ui)
                                     PxLabel { text: "READING " + String(backend.importState.name || "").toUpperCase(); color: root.accentPink }
                                     Item { Layout.fillWidth: true }
-                                    Text { text: backend.importState.total ? backend.importState.done + " of " + backend.importState.total + " songs" : "unpacking the set…"; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui) }
+                                    Text { objectName: "importCount"; text: backend.importState.total ? backend.importState.done + " of " + backend.importState.total + " songs" : ""; color: root.dimText; font.family: root.mono; font.pixelSize: Math.round(10 * root.ui) }
                                     PButton { small: true; text: "STOP"; onClicked: backend.cancelImport() }
                                 }
-                                Meter { Layout.fillWidth: true; cells: 40; cellW: Math.max(4, Math.floor((width - 78) / 40)); on: backend.importState.total ? Math.round(40 * backend.importState.done / backend.importState.total) : 0 }
-                                Body { color: root.dimText; font.pixelSize: Math.round(10 * root.ui); text: (backend.importState.stage ? backend.importState.stage + "…  " : "") + (backend.importState.stage && backend.importState.stage.indexOf("reading") < 0 ? "a few minutes on a whole soundtrack" : "the songs read so far stay read if you stop") }
+                                Meter { objectName: "importBar"; Layout.fillWidth: true; cells: 40; cellW: Math.max(4, Math.floor((width - 78) / 40)); on: backend.importState.bar >= 0 ? Math.round(40 * Math.min(1, backend.importState.bar)) : (root._impElapsed % 40) }
+                                Body { objectName: "importStage"; color: root.dimText; font.pixelSize: Math.round(10 * root.ui); text: (backend.importState.step ? "step " + backend.importState.step + " of " + backend.importState.steps + ": " : "") + (backend.importState.stage ? backend.importState.stage + "…  " : "") + "a few minutes on a whole soundtrack; if you stop, the next import starts from the first song again" }
                             }
                             RowLayout {
                                 visible: !!backend.importState.pendingAdd
@@ -1647,7 +1829,7 @@ ApplicationWindow {
                         value: root.packOpen
                         onPicked: function(c) { root.packOpen = c; root.packVoice = ""; root.packConfirm = ""; root.packRenaming = "" }
                     }
-                    Body { visible: root.packNames.length === 0; text: "No games read yet. The built-in sets (FFVI, Mana, Evermore, Mega Man X) are code and cannot be edited; a game you read under LIBRARY shows its samples here, by part, to hear and to move." }
+                    Body { visible: root.packNames.length === 0; text: "No games read yet. The built-in sets (bitComposer's own, FFVI, Mana, Evermore, Mega Man X) are code and cannot be edited; a game you read under LIBRARY shows its samples here, by part, to hear and to move." }
                     Body { visible: root.packNames.length > 0 && !parent.pack; text: "Pick a game above. Each sample sits where the game played it most; move one when the reading got it wrong. A written song takes its samples from here by part." }
 
                     Panel {

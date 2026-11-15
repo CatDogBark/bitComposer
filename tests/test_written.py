@@ -14,13 +14,14 @@ from bitcomposer.translate import whole
 class ShippedVocabularyTests(unittest.TestCase):
     def test_the_player_ships_a_default_vocabulary(self):
         """The shipped vocabulary is a format 2 pack's tables, fitted on a game's readings (its source says which): statistics,
-        no samples, and no game's name in front of the listener."""
+        no samples, and no game's name in front of the user."""
         self.assertIn("default", vocabularies.names())
         self.assertEqual(vocabularies.DEFAULT, "default")
         self.assertEqual(vocabularies.label("default"), "bitComposer")
         src = vocabularies.source("default")
-        self.assertEqual((src["game"], src["songs"]), ("Final Fantasy VI", 67))
+        self.assertEqual((src["game"], src["songs"]), ("Final Fantasy VI", 68))   # 68 since round 77: Quiet Beach's pad read as a part, not a drum
         self.assertIn("Final Fantasy VI", src["fitted_on"])
+        self.assertEqual(src["lead"], {"heard": 68, "relabelled": 9})   # counted on readings the lead pass has heard (round 152): nine tunes on the voice heard as the tune
         models = vocabularies.load("default")
         for name in ("rhythm", "balance", "habits", "moves", "voice_intervals", "tune_grain"):
             self.assertIn(name, models)
@@ -65,7 +66,7 @@ class WrittenSongTests(unittest.TestCase):
                 m = re.search(r"voice (\S+) by the pool rule for (\d+)-(\d+) .*: it plays (\d+)-(\d+)", line)
                 self.assertIsNotNone(m, line)
                 lo, hi, plo, phi = (int(x) for x in m.groups()[1:])
-                self.assertLess(max(lo, plo), min(hi, phi), line)            # the voice's range overlaps the register
+                self.assertLessEqual(max(lo, plo), min(hi, phi), line)       # the voice's range overlaps the register (a one-note register, 32-32, included)
             self.assertIn("on its own sounds", out["score"].message[2])
 
     def test_a_seed_names_one_song_on_one_sound_set(self):
@@ -85,8 +86,21 @@ class WrittenSongTests(unittest.TestCase):
         self.assertEqual(out["info"]["vocabulary"], "bitComposer")
         self.assertIn("melody", out["info"]["band"])
         self.assertTrue(any(l.startswith("Written by bitComposer on the mana sounds") for l in out["score"].message))
-        self.assertFalse(any("Fantasy" in l for l in out["score"].message))   # no game's name in front of the listener
+        self.assertFalse(any("Fantasy" in l for l in out["score"].message))   # no game's name in front of the user
         self.assertTrue(any(l.startswith("layout: ") and "melody" in l for l in out["score"].message))
+
+    def test_a_written_song_names_its_echo_and_master_channels(self):
+        """The module's message says which channels are each sending voice's echo repeats and which is the master
+        volume's (counted from 1), so a player can silence a voice with its echo and leave the master playing."""
+        out = written.compose_written(seed=5)
+        with tempfile.TemporaryDirectory() as d:
+            song = convert.render(out["score"], os.path.join(d, "s.it"))
+        echoes, channels = song["info"]["echo_channels"], song["info"]["channels"]
+        self.assertTrue(echoes)                                # this seed's band sends to the echo
+        lines = song["message"].split("\r")
+        said = ", ".join(f"{v + 1}={chs[0] + 1}-{chs[-1] + 1}" for v, chs in sorted(echoes.items()))
+        self.assertEqual(lines[-2:], [f"echo channels: {said}", f"master channel: {channels}"])
+        self.assertEqual(max(max(chs) for chs in echoes.values()), channels - 2)   # the repeats end where the master begins
 
     def test_random_sounds_are_one_of_the_snes_sets_and_the_seed_picks_them(self):
         import random
@@ -221,7 +235,7 @@ class SustainedVoicesTests(unittest.TestCase):
         for name in bit.PACK["voices"]["drums"].values():
             self.assertNotIn(name, samples.SAMPLE_ENVELOPES)
         self.assertEqual(bit.PACK["voices"]["lead"].count("bit_square"), 1)
-        out = written.compose_written(seed=68554, pack="bit")
+        out = written.compose_written(seed=68555, pack="bit")   # a band with a kit (seed 68554 lost its drums when round 98 moved its loop point and the plan's draws after it)
         first = whole.voice_map(out["plan"], out["written"])
         drums = set(range(first["drums"], first["drums"] + out["plan"].voices.get("drums", 1))) if "drums" in first else set()
         for n in out["score"].notes:
@@ -234,7 +248,7 @@ class SustainedVoicesTests(unittest.TestCase):
         """The render carries each voice's loop into the module: a sustaining voice's sample loops (the preset's sustain
         loop, the chip's one loop), a one-shot's does not, and the file on disk says the same. Every written render had
         gone out with no looped sample, the imports' too (2026-10-30)."""
-        out = written.compose_written(seed=68554, pack="bit")
+        out = written.compose_written(seed=68555, pack="bit")   # a band with a kit (seed 68554 lost its drums when round 98 moved its loop point and the plan's draws after it)
         with tempfile.TemporaryDirectory() as d:
             path = os.path.join(d, "song.it")
             song = convert.render(out["score"], path)

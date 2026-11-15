@@ -368,14 +368,14 @@ ENVELOPES = {name: dict(_HOLD) for name in RELEASE}
 
 # Where each pitched voice sounds right, MIDI low to high: the writer fits a
 # voice to a part's register and speed by this (packs.profile). The tops were
-# placed by the owner's ear on 2026-10-31 (the Bit Voice Range Check: every
+# placed by ear on 2026-10-31 (the Bit Voice Range Check: every
 # lead-capable voice at C4, F#4, C5, F#5, C6 and F#6, each note at the same
 # measured loudness the writer gives it): the pitch above which the voice stops
 # sounding right as a line. The bright single-period leads (square, pulse, saw,
 # brass, reed) had ranged to 86-96 and carried the tune at C6 in Song Check 58,
 # where they read as "exploding"; the pulse, saw, brass and reed now stop at
 # C5, the square at F#5, and the high registers go to the flute, ocarina, horn
-# and the keys. A voice he found fine up to F#6 keeps a top already above it.
+# and the keys. A voice heard as fine up to F#6 keeps a top already above it.
 RANGES = {
     "bit_square": (55, 78), "bit_pulse": (55, 72), "bit_saw_lead": (52, 72), "bit_sine_flute": (60, 84),
     "bit_ocarina": (65, 98), "bit_brass": (50, 72), "bit_horn": (41, 84), "bit_reed": (58, 72),
@@ -424,7 +424,7 @@ PACK = {
         "drum_density": {"sparse": 1, "normal": 2, "busy": 1},
         "drum_swing": {"off": 4, "light": 1, "heavy": 0},
         # The echo on every song: the SNES era's room. A dry song on this set sounded empty beside Classic
-        # (the owner's ear, 2.0rc2); the slap and the eighth, as the games most often have it.
+        # (by ear, 2.0rc2); the slap and the eighth, as the games most often have it.
         "echo": 1.0,
         "echo_wet": {"light": 0, "normal": 2, "wet": 2},
         "echo_delay": {"slap": 3, "eighth": 2, "dotted": 1, "quarter": 0},

@@ -118,7 +118,8 @@ def compose(models: dict, pack: dict, own: set, pack_name: str, seed: int, game:
     song = plan_mod.song_of(p, kit)
     rng = random.Random(f"whole:{seed}:render")
     samples = render_mod.samples_for(p, pack, own, pack_name, rng, models)   # before the writing: every voice writes where the game plays its sample
-    written = plan_mod.write(p, song, models, seed, reference)
+    song.pieces.update({slot: plan_mod.KIT_PIECES[slot] for slot in samples.get(R.DRUMS) or {} if slot in plan_mod.KIT_PIECES and slot not in song.pieces})
+    written = plan_mod.write(p, song, models, seed, reference)   # ^ the kit's second samples (round 99) are slots the pack's kit does not list: the writer
     if isinstance(echo, str) and echo == "habit":          # the game's own echo where the vocabulary counts it (round 70), on its own stream;
         echo = render_mod.echo_word(models, p, random.Random(f"whole:{seed}:echo")) if (models or {}).get("echo") else render_mod.echo_of(pack.get("habits") or {}, p.bpm, rng)
     elif callable(echo):

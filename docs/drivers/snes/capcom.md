@@ -38,7 +38,7 @@ almost none of its code ([super-ghouls-ghosts.md](super-ghouls-ghosts.md)).
 - **Echo**: the same in every song, the sides of opposite signs (a widening
   trick), and a band-pass filter (taps 52, 51, 0, -39, -27, 1, -4, -21:
   0.10 at DC, about 1 from 2 to 8 kHz).
-- **Density**: the busiest of the four, and the most samples and
+- **Density**: the busiest of the first four, and the most samples and
   instruments a converted song (42 and 64).
 
 ## Scores

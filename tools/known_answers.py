@@ -34,8 +34,8 @@ PARENT = {"dorian": 2, "phrygian": 4, "mixolydian": 7, "natural_minor": 9, "mino
 
 
 class _Sample:
-    def __init__(self, key):
-        self.key = key
+    def __init__(self, key, piece="none"):
+        self.key, self.piece = key, piece   # piece: the drum namer's name (drums.PIECES, "none" an instrument), as roles.assign reads it
 
 
 class _Note:
@@ -80,7 +80,8 @@ def read(song: dict):
         role = CHANNEL_ROLES[n.voice]
         key = inst.get(against.SLOTS.get(role, role), role) if role in against.DRUMS else f"ch{n.voice}"
         midi = None if n.midi is None or (isinstance(n.midi, float) and math.isnan(n.midi)) else n.midi
-        notes.append(_Note(n.beat, s.end if n.beats is None else n.beat + n.beats, midi, n.level, n.voice, _Sample(key)))
+        piece = against.DRUMS.get(role, "none") if role in against.DRUMS else "none"   # a drum channel's kit slot as the namer would call it
+        notes.append(_Note(n.beat, s.end if n.beats is None else n.beat + n.beats, midi, n.level, n.voice, _Sample(key, piece)))
     notes.sort(key=lambda p: (p.start, p.voice))
     like = _Song(notes, s.end * 60 / s.bpm)
     grid = _Grid(max(1, math.ceil(s.end)), list(s.bars))

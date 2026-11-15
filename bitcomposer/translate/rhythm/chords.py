@@ -271,6 +271,24 @@ def cadence_units(songs, sure_only: bool = True) -> list:
     return out
 
 
+def loop_part_units(songs, sure_only: bool = True) -> list:
+    """Each sure song's loop as a unit (round 98): its outcome the index of the form's part the loop returns to ("0" the
+    first part, "1" the second), its values the part (form) and whether the song opens with an intro, a first part the
+    form never comes back to ("intro", "none"). The writer had sent every loop to the second part after an intro and to
+    the first without one (plan.loop_bar_of, right for 40 of FFVI's 61 loops); FFVI returns to the intro itself in 15 of
+    its 53 intro songs, to the second part in 33, further on in 5, and to the first part in 7 of 8 songs without one."""
+    out = []
+    for s in songs:
+        if s.loop_bar is None or not s.parts or (sure_only and not tonic_sure(s)):
+            continue
+        idx = next((i for i, p in enumerate(s.parts) if p[0] <= s.loop_bar < p[0] + p[1]), None)
+        if idx is None:
+            continue
+        intro = len(s.parts) > 1 and s.parts[0][3] not in {p[3] for p in s.parts[1:]}
+        out.append(tables.Unit(s.sid, s.game, str(idx), {"part": "form", "intro": "intro" if intro else "none"}))
+    return out
+
+
 def loop_units(songs, sure_only: bool = True) -> list:
     """Each sure song's loop as a unit: its outcome the chord the loop returns
     to (the numeral at its first bar); its values the part (harmony), the

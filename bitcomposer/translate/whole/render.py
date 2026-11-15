@@ -405,9 +405,26 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
     is then written in (plan.bounds, bound_of), so every voice plays where the game plays its sample. The sample had
     come after the writing, fitted to the written notes' speed, and three rules with a fold had covered the seam."""
     from ...instruments import _make_sample
+    from ... import samples as samples_mod
+    viewed, untuned = [], []                                # kit voices played as pitched instruments, with and without a tonal reading
 
-    def make(name):
-        return name, _make_sample(f"{pack_name}_{name}" if name in own else name)
+    def make(name, tonal=False):
+        """A sample by its name; `tonal`: for a pitched voice. A kit voice of the pack given to a pitched voice (the token
+        song's own sample for the part) plays by its tonal reading where the pack carries one (round 119): tuned by the kit's
+        convention, every piece at KIT_NOTE as recorded, Battle Theme's guitar had sounded a minor third under every note
+        written for it, and unlooped."""
+        voice = f"{pack_name}_{name}" if name in own else name
+        if tonal and samples_mod.is_percussion(voice):
+            view = samples_mod.tonal_view(voice)
+            if view is not None:
+                sample = _make_sample(view)
+                sample.tonal_view = True                    # the kit voice's other face: an instrument of its own in the song (score_of)
+                if name not in viewed:
+                    viewed.append(name)
+                return name, sample
+            if name not in untuned:
+                untuned.append(name)
+        return name, _make_sample(voice)
     voices = pack["voices"]
     ranges = (models or {}).get("ranges")
     out, drawn = {}, {}                                     # drawn: each sample's range as the fit drew it, by the pack's id
@@ -416,16 +433,43 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
         if role == R.DRUMS:
             out[role] = {piece: make(name) for piece, name in (voices.get("drums") or {}).items()}
             given_kit = plan.extras.get(R.DRUMS, {}).get("kit") or {}   # the token song's own kit (round 63), slot by piece letter, where
-            taken = []                                                  # the pack holds the sample; the pack's slot else
-            for letter, sid in given_kit.items():
+            taken, tonal, off_rate = [], [], []                         # the pack holds the sample; a tonal one is struck where the game struck
+            for letter, sid in given_kit.items():                       # it (round 75, kit_note_of), not at the kit's one note
                 slot = plan_mod.KIT_SLOT.get(letter)
-                if slot and sid in own:
-                    out[role][slot] = make(sid)
-                    taken.append(f"{slot} {sid}")
-                    if slot == "hihat" and "open_hihat" in out[role]:
-                        out[role]["open_hihat"] = make(sid)
+                if not slot or sid not in own:
+                    continue
+                out[role][slot] = make(sid)
+                taken.append(f"{slot} {sid}")
+                if slot == "hihat" and "open_hihat" in out[role]:
+                    out[role]["open_hihat"] = make(sid)
+                second = plan_mod.kit_second(plan, slot)    # the letter's second sample (round 99), its own slot name
+                if second and second.get("sample") in own:
+                    slot2 = slot + plan_mod.SECOND_SLOT
+                    out[role][slot2] = make(second["sample"])
+                    taken.append(f"{slot2} {second['sample']} ({second['share']:.2f} of the {letter} hits)")
+                    if not samples_mod.is_percussion(f"{pack_name}_{second['sample']}"):
+                        plan.extras.setdefault(R.DRUMS, {}).setdefault("tonal_slots", set()).add(slot2)
+                if plan_mod.kit_piece_tuned(plan, slot):           # a tuned slot's moved rate stays inside the game's rates for the
+                    wall = kit_rate_wall(models, sid, letter)       # sample as this piece (round 88), read before any note is placed
+                    if wall is not None:
+                        plan.extras.setdefault(R.DRUMS, {}).setdefault("kit_rate_walls", {})[letter] = wall
+                if not samples_mod.is_percussion(f"{pack_name}_{sid}"):
+                    pitch, rate = plan_mod.kit_piece_pitch(plan, slot), plan_mod.kit_piece_rate(plan, slot)
+                    degree, hold = plan_mod.kit_piece_degree(plan, slot), plan_mod.kit_piece_hold(plan, slot)
+                    plan.extras.setdefault(R.DRUMS, {}).setdefault("tonal_slots", set()).add(slot)   # the writer holds such a piece as the game does (round 77)
+                    tonal.append(f"{letter} {sid}" + (f" struck at {degree[0]}{degree[1]:+d} of the key, {kit_note_of(plan, slot, sid, out[role][slot][1], pack_name):.0f} here" if degree is not None
+                                                      else f" struck at {pitch}" if pitch is not None else f" struck {rate - 60:+d} semitones from the recording" if rate is not None
+                                                      else " at the recording's own pitch") + (f", held {hold:.2f} beats" if hold else ""))
+                else:
+                    rate = plan_mod.kit_piece_rate(plan, slot)   # a percussion piece's struck rate (round 78), as a note: 60 as recorded
+                    if rate is not None and (rate != 60 or plan_mod.kit_piece_tuned(plan, slot)):
+                        off_rate.append(f"{letter} {sid} {rate - 60:+d} semitones" + (f", tuned: {kit_note_of(plan, slot, sid, out[role][slot][1], pack_name) - 48:+.0f} in this key" if plan_mod.kit_piece_tuned(plan, slot) else ""))
             if taken:
                 plan.log.append("kit samples from the balance's song: " + ", ".join(taken))
+            if tonal:
+                plan.log.append("kit pieces on the balance's song's tonal samples, played where the game struck them: " + ", ".join(tonal))
+            if off_rate:
+                plan.log.append("kit pieces struck off the recording's rate, played at the game's: " + ", ".join(off_rate))
             continue
         pool = plan_mod.POOLS.get(role)
         if role == R.BASS:
@@ -439,10 +483,14 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
         register = plan.registers.get(role)
         given = plan.token_samples.get(role)                # the token song's own instrument for the part (round 60), where the pack holds it
         if given and given in own:
-            out[role] = make(given)
-            if ranges is not None and ranges.songs.get((given,), 0):
+            out[role] = make(given, tonal=True)
+            if ranges is not None and ranges.songs.get((given,), 0):   # the pooled draw stays on the stream; the token's own range stands
                 drawn[given] = tuple(int(x) for x in ranges.draw(range_context(given, role), rng, floored=False, floor_k=plan_mod.PLAN_FLOOR).split("-"))
-            plan.log.append(f"{role}'s sample {given}: the balance's song's own (its levels were counted on it)")
+            own_range = plan.sample_ranges.get(role)         # in its place where the token carries it (round 86)
+            if own_range:
+                drawn[given] = tuple(own_range)
+            plan.log.append(f"{role}'s sample {given}: the balance's song's own (its levels were counted on it)"
+                            + (f", played {own_range[0]}-{own_range[1]} there" if own_range else ""))
         if role == R.COUNTER and kind and R.MELODY in out and role not in out:   # the counter beside the tune (round 29): on the tune's sample as the plan drew it
             if kind == "same":                              # (counter_samples: 18 of FFVI's 52 songs with both; the pool's own choice had given
                 out[role] = out[R.MELODY]                   # 3 of 14, and 10 of 14 once the counter sat in the tune's register), else on another,
@@ -454,7 +502,7 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 sid, level, passed = counter_pair_for(models, tune, own, ranges, register, rng, drawn)   # pool rule: FFVI's counter sample is
                 over = f" (passed over: {'; '.join(passed)})" if passed else ""                    # darker than the tune's in 17 pairs of 23
                 if sid is not None:
-                    out[role] = make(sid)
+                    out[role] = make(sid, tonal=True)
                     plan.log.append(f"counter's sample {sid}: " + (f"the game's pair under the tune's {tune}" if level == "tune"
                                                                     else "the counter's sample over all tunes") + f" (counter_pairs){over}")
                 elif passed is not None:
@@ -463,25 +511,48 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
             sid = part_sample_for(models, role, plan.speeds.get(role), own, random.Random(f"whole:{plan.seed}:sample:{role}"), plan.log)   # the instrument
             # the game gives the part (round 42), on its own stream (round 56: on the render stream it moved with every draw before it)
             if sid is not None:
-                out[role] = make(sid)
+                out[role] = make(sid, tonal=True)
                 if ranges is not None and ranges.songs.get((sid,), 0):
                     drawn[sid] = tuple(int(x) for x in ranges.draw(range_context(sid, role), rng, floored=False, floor_k=plan_mod.PLAN_FLOOR).split("-"))
         if role not in out:
             attack = attack_for(models, role, random.Random(f"whole:{plan.seed}:attack:{role}"), plan.log)   # the part's attack class (round 73), on its own stream
             out[role] = make(best_sample(ranges, names, register, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn, role=role,
                                          pack=pack_name, attack=attack)
-                             if register else rng.choice(names))
+                             if register else rng.choice(names), tonal=True)
             if register:
                 fit = drawn.get(raw(out[role][0]))
                 plan.log.append(f"{role}'s voice {out[role][0]} by the pool rule for {register[0]}-{register[1]} at {plan.speeds.get(role, 0.0):.1f} a second"
                                 + (f": it plays {fit[0]}-{fit[1]}" if fit else ": nothing known of its range, drawn from the pool"))
         if register:
             played = drawn.get(raw(out[role][0]))
-            if role in (R.MELODY, R.COUNTER):               # a tune's bound is the whole range the game took the sample over (round 43)
+            own_range = plan.sample_ranges.get(role) if given and raw(out[role][0]) == given and role not in (R.MELODY, R.COUNTER) else None
+            if own_range and own_range[1] - own_range[0] >= plan_mod.MIN_SPAN:   # the token song's own range for its own sample (round 86);
+                played = tuple(own_range)                   # the voice is written where its token song played this very sample. A tune keeps
+            elif role in (R.MELODY, R.COUNTER):             # round 43's wall: FFVI's tunes change sample mid-song, and the main sample's own
+                # range had cut 9 of 30 written tunes under their token's ambitus; a tune's bound is the whole range the game took the sample over
                 played = ambitus_of(models, raw(out[role][0]), pack=pack_name) or played
             else:
                 played = wide_enough(models, raw(out[role][0]), played, role, plan.log, pack=pack_name)
             plan.bounds[role] = bound_of(played, register)
+        stretches = plan.stretches.get(role)                # the line's instrument by stretch (round 91): each stretch's sample where the pack
+        if stretches and register:                          # holds it, bound to the range the token song played it over; the line written over
+            spans = plan_mod.stretch_bars(stretches, plan.bars)   # the union of those ranges and folded into each in its bars (plan.fold_line)
+            x = plan.extras.setdefault(role, {})
+            x["stretch_spans"], x["stretch_bounds"], x["stretch_samples"] = spans, {}, {}
+            for i, a, b in spans:
+                sid, played_i, _ = stretches[i]
+                if sid in own:
+                    out[f"{role}:stretch:{i}"] = make(sid, tonal=True)
+                    x["stretch_samples"][i] = sid
+                if played_i:
+                    x["stretch_bounds"][i] = bound_of(played_i, register)
+            known = [stretches[i][1] for i, _, _ in spans if stretches[i][1]]
+            if known:
+                plan.bounds[role] = bound_of((min(r[0] for r in known), max(r[1] for r in known)), register)
+            plan.log.append(f"{role}'s instrument by stretch (the balance's song's own): " + ", ".join(
+                f"bars {a + 1}-{b} {stretches[i][0]}" + (f" {stretches[i][1][0]}-{stretches[i][1][1]}" if stretches[i][1] else "")
+                + ("" if stretches[i][0] in own else " (not in the pack: the line's sample)") for i, a, b in spans)
+                + f"; written over {plan.bounds[role][0]}-{plan.bounds[role][1]}")
         # a layered part apart: its line and its second voice on the game's own pair of samples (layer_samples) where the
         # pack holds both and each reaches its voice's register; else the second voice's sample by its own register and
         # speed, as the line's is chosen
@@ -491,16 +562,20 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
             second = None
             given2 = (plan.layer_samples.get(role) or [""])[0]   # the token song's own sample for its voice beside the line (round 65)
             if given2 and given2 in own:
-                second = make(given2)
-                plan.log.append(f"{role}'s second voice's sample {given2}: the balance's song's own")
+                second = make(given2, tonal=True)
+                own2 = (plan.layer_ranges.get(role) or [None])[0]   # where the token song plays the second voice's sample (round 86)
+                if own2:
+                    drawn[given2] = tuple(own2)
+                plan.log.append(f"{role}'s second voice's sample {given2}: the balance's song's own" + (f", played {own2[0]}-{own2[1]} there" if own2 else ""))
             elif pair == ("same", "same"):                  # FFVI gives one sample to both voices in half its layered chord parts
                 second = out[role]
             elif pair is not None and reaches(ranges, pair[0], plan.registers[role], rng, drawn, role) and reaches(ranges, pair[1], reg2, rng, drawn, role):
-                out[role] = make(pair[0])
-                second = make(pair[1])
+                out[role] = make(pair[0], tonal=True)
+                second = make(pair[1], tonal=True)
                 plan.bounds[role] = bound_of(wide_enough(models, pair[0], drawn.get(pair[0]), role, plan.log, pack=pack_name), plan.registers[role])
             if second is None:
-                second = make(best_sample(ranges, names, reg2, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn, role=role, pack=pack_name))
+                second = make(best_sample(ranges, names, reg2, rng, raw, tonal, speed=plan.speeds.get(role, 0.0), models=models, drawn=drawn, role=role, pack=pack_name),
+                              tonal=True)
             out[f"{role}:second"] = second
             plan.bounds[f"{role}:second"] = bound_of(wide_enough(models, raw(second[0]), drawn.get(raw(second[0])), f"{role}:second", plan.log, pack=pack_name), reg2)
         # each voice beyond the line on the token song's own sample for THAT voice (round 70), doubling or not, where the
@@ -510,10 +585,23 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
         taken_v = []
         for v, sid in enumerate(plan.layer_samples.get(role) or [], start=1):
             if sid and sid in own and v < plan.voices.get(role, 1):
-                out[f"{role}:{v}"] = make(sid)
+                out[f"{role}:{v}"] = make(sid, tonal=True)
                 taken_v.append(f"{v + 1} {sid}")
         if taken_v:
             plan.log.append(f"{role}'s voices beside the line on the balance's song's own samples: " + ", ".join(taken_v))
+        for v, sts in enumerate(plan.layer_stretches.get(role) or [], start=1):   # a voice beside the line's instrument by stretch (round 92)
+            if not sts or v >= plan.voices.get(role, 1):
+                continue
+            spans = plan_mod.stretch_bars(sts, plan.bars)
+            x = plan.extras.setdefault(role, {})
+            x.setdefault("voice_stretch_spans", {})[v] = spans
+            x.setdefault("voice_stretch_samples", {})[v] = {}
+            for i, a, b in spans:
+                if sts[i][0] in own:
+                    out[f"{role}:{v}:stretch:{i}"] = make(sts[i][0], tonal=True)
+                    x["voice_stretch_samples"][v][i] = sts[i][0]
+            plan.log.append(f"{role}'s voice {v + 1} by stretch (the balance's song's own): " + ", ".join(
+                f"bars {a + 1}-{b} {sts[i][0]}" + ("" if sts[i][0] in own else " (not in the pack: the voice's sample)") for i, a, b in spans))
         # an apart or alternating voice of an upper part written in its own span (round 70): the line's span at the layer
         # word's offset, within the whole range the game plays the voice's sample over
         if role in rhythm.UPPER and role in plan.bounds:
@@ -522,7 +610,8 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
                 if word.startswith("doubling"):
                     continue
                 chosen = out.get(f"{role}:{v}") or out.get(f"{role}:second") or out[role]
-                played = ambitus_of(models, raw(chosen[0]), pack=pack_name) or drawn.get(raw(chosen[0]))
+                own_v = (plan.layer_ranges.get(role) or [])[v - 1] if out.get(f"{role}:{v}") and v - 1 < len(plan.layer_ranges.get(role) or []) else None
+                played = tuple(own_v) if own_v else (ambitus_of(models, raw(chosen[0]), pack=pack_name) or drawn.get(raw(chosen[0])))   # the token's own (round 86)
                 plan.bounds[f"{role}:{v}"] = voice_bounds(plan, role, word, played)
                 spans.append(f"voice {v + 1} {plan.bounds[f'{role}:{v}'][0]}-{plan.bounds[f'{role}:{v}'][1]} ({word}, {raw(chosen[0])} {played[0]}-{played[1]})" if played
                              else f"voice {v + 1} {plan.bounds[f'{role}:{v}'][0]}-{plan.bounds[f'{role}:{v}'][1]} ({word})")
@@ -535,8 +624,16 @@ def samples_for(plan: plan_mod.Plan, pack: dict, own: set, pack_name: str, rng: 
     for name_, speed in fastest.items():
         floors[name_] = sample_floor(models, raw(name_), rng, speed if plan.speeds else None, pack=pack_name)
     out["floors"] = floors
+    from ... import score as score_mod
+    plan.ceilings = {key: score_mod.pitch_ceiling(chosen[1].c5_speed) for key, chosen in out.items()   # what the SNES chip can play of each chosen
+                     if isinstance(chosen, tuple) and getattr(chosen[1], "c5_speed", 0)}                # sample (round 120): the writing holds under it
     if plan.bounds:
         plan.log.append("written where the game plays each sample: " + ", ".join(f"{k} {lo}-{hi}" for k, (lo, hi) in plan.bounds.items()))
+    if viewed:
+        plan.log.append("the pack's kit voices played as pitched instruments by their tonal readings (round 119): " + ", ".join(viewed))
+    if untuned:
+        plan.log.append("the pack's kit voices given to pitched voices with no tonal reading, played by the kit's convention (their pitch unknown): "
+                        + ", ".join(untuned))
     return out
 
 
@@ -572,9 +669,11 @@ def echo_word(models: dict | None, plan: plan_mod.Plan, rng: random.Random) -> d
     the chip's EDL step nearest the counted ms (ECHO_STEP, 1 to 15). None where the pack has no such word (echo_of, the
     sound set's habits, then stands)."""
     from ...score import ECHO_STEP
-    if not (models or {}).get("echo"):
+    word = (plan.extras.get("echo") or {}).get("word")       # the token song's own echo word (round 82): no draw, the same room as its kit
+    if word is None and not (models or {}).get("echo"):
         return None
-    outcome = plan_mod._draw(models, "echo", (rhythm.ECHO_PART,), rng, plan.log)
+    outcome = word if word is not None else plan_mod._draw(models, "echo", (rhythm.ECHO_PART,), rng, plan.log)
+    source = "balance" if word is not None else "echo"
     fields = outcome.split(":")
     if len(fields) < 5:
         return None
@@ -582,11 +681,12 @@ def echo_word(models: dict | None, plan: plan_mod.Plan, rng: random.Random) -> d
     sends = sorted(set(fields[3].split("+")) - {"-", ""})   # lists: the echo is written into the song's JSON record
     dry = sorted(set(fields[4].split("+")) - {"-", ""})
     steps = max(1, min(15, round(ms / 1000 / ECHO_STEP)))
-    if volume <= 0 or not sends:
-        plan.log.append(f"echo (echo): dry; the game's song sent nothing" + (f" (sends {'+'.join(sorted(sends))} at {volume:.2f})" if sends else ""))
+    marks = plan.extras.get(R.DRUMS, {}).get("kit_echo")
+    if volume <= 0 or not (sends or marks):
+        plan.log.append(f"echo ({source}): dry; the game's song sent nothing" + (f" (sends {'+'.join(sorted(sends))} at {volume:.2f})" if sends else ""))
         return None
-    plan.log.append(f"echo (echo): volume {volume:.2f} of full, {steps * ECHO_STEP * 1000:.0f} ms, feedback {feedback:.2f}; sends "
-                    + "+".join(sends) + (f"; dry {'+'.join(dry)}" if dry else ""))
+    plan.log.append(f"echo ({source}): volume {volume:.2f} of full, {steps * ECHO_STEP * 1000:.0f} ms, feedback {feedback:.2f}; sends "
+                    + ("+".join(sends) or "-") + (f"; dry {'+'.join(dry)}" if dry else "") + (f"; kit pieces to echo {''.join(marks)}" if marks else "; kit pieces dry" if marks is not None else ""))
     return {"delay": f"{steps * ECHO_STEP * 1000:.0f} ms", "seconds": steps * ECHO_STEP, "wet": volume, "feedback": feedback,
             "sends": sends, "dry": dry, "word": outcome}
 
@@ -599,6 +699,48 @@ def sends_to_echo(echo: dict | None, role: str) -> bool:
     if role in echo.get("sends", ()) or role in echo.get("dry", ()):
         return role in echo["sends"]
     return role in plan_mod.SENDS
+
+
+def pan_at(word, bar: int | None) -> float:
+    """A voice's pan word at a bar (round 85): a number is the pan; "0.60x5|0.45x13" sits at 0.60 for 5 bars, at 0.45 for 13
+    and again from the song's first bar; "0.35x4>0.65" sits at 0.35 for 4 bars, then at 0.65; without a bar, the first place."""
+    if isinstance(word, (int, float)):
+        return float(word)
+    once = ">" in word
+    first, second = word.split(">" if once else "|")
+    a, na = first.split("x")
+    a, na = float(a), max(1, int(na))
+    if once:
+        return a if bar is None or bar < na else float(second)
+    b, nb = second.split("x")
+    b, nb = float(b), max(1, int(nb))
+    return a if bar is None or (bar % (na + nb)) < na else b
+
+
+def pan_of(plan: plan_mod.Plan, role: str, voice: int, letter: str | None = None, bar: int | None = None) -> float:
+    """Where a note sits in the stereo field, as the right side's share (round 84): a kit piece at its slot's pan where the
+    token carries one (extras.drums.kit_pans), a pitched part's voice at the token's pan for that voice (plan.pans, the
+    line first, the voices beyond it by rank), and the writer's fixed pans (plan.PANS) for a token without the field or
+    a voice past its list. FFVI pans half its voices 0.1 or more off centre and a part's voices 0.15 to 0.18 apart at the
+    median; the fixed pans had given every written song one stereo picture, the tune at centre, the counter at 0.6."""
+    if role == R.DRUMS and letter is not None:
+        kit = plan.extras.get(R.DRUMS, {}).get("kit_pans") or {}
+        if letter in kit:
+            return kit[letter]
+    pans = (getattr(plan, "pans", None) or {}).get(role)
+    if pans and 0 <= voice < len(pans):
+        return pan_at(pans[voice], bar)                     # a voice in two places sits where its word has it at this bar (round 85)
+    return plan_mod.PANS[role][voice % len(plan_mod.PANS[role])]
+
+
+def piece_sends(plan: plan_mod.Plan, echo: dict | None, role: str, letter: str | None = None) -> bool:
+    """Whether a note sends to the song's echo: a kit piece whose token carries echo marks (round 82) by its letter's mark,
+    the game's channel send for that sample, so Wild West's blip is wet while its kick beside it is dry; any other note
+    by its part (sends_to_echo)."""
+    marks = plan.extras.get(R.DRUMS, {}).get("kit_echo")
+    if echo is not None and role == R.DRUMS and marks is not None and letter is not None:
+        return letter in marks
+    return sends_to_echo(echo, role)
 
 
 def voice_map(plan: plan_mod.Plan, written: dict) -> dict:
@@ -694,6 +836,73 @@ def sample_envelope(name: str, pack_name: str = "") -> dict | None:
     return env
 
 
+def kit_rate_wall(models: dict | None, sid: str, letter: str) -> tuple | None:
+    """The rates the game struck a percussion kit sample at as a given piece (the kit_rates word, round 88): (lowest,
+    highest) as notes, 60 the recording; None without the word or a song for the pair. A tuned slot's rate, moved with
+    the written key (round 79), stays inside: FFVI tunes its pitched snare within -4 to +3, and a tritone's move had taken
+    it to -10."""
+    t = (models or {}).get("kit_rates")
+    t = t.table if hasattr(t, "table") else t
+    if t is None or not t.songs.get((sid, letter), 0):
+        return None
+    rates = [int(o) for o in t.votes.get((sid, letter), {})]
+    return (min(rates), max(rates)) if rates else None
+
+
+def walled(plan: plan_mod.Plan, slot: str, offset: float) -> float:
+    """A kit slot's rate offset from the recording held inside the game's rates for its sample as that piece
+    (extras.drums.kit_rate_walls, set by samples_for from the kit_rates word; round 88), as it is without a wall."""
+    letter, _ = plan_mod.slot_letter(slot)
+    wall = (plan.extras.get(R.DRUMS, {}).get("kit_rate_walls") or {}).get(letter)
+    return max(wall[0] - 60, min(wall[1] - 60, offset)) if wall else offset
+
+
+def kit_note_of(plan: plan_mod.Plan, slot: str, name: str, sample, pack_name: str = "", at: float | None = None) -> float:
+    """The note a kit slot's hit is written at. KIT_NOTE for the pack's own kit (a kit voice is registered to sound as
+    recorded at KIT_NOTE). A percussion sample the balance token's song filled the slot with plays at the rate the game
+    struck it (round 78: the token's note slot carries the chip's rate as a note, 60 as recorded, 48 an octave under, so
+    KIT_NOTE plus the offset; FFVI plays its crash an octave down in all 22 songs that use it, and the written crash had
+    been twice as bright and half as long), as recorded where the token carries none. A slot the song filled with one
+    of its tonal samples (round 75; FFVI's "other" pieces are tonal in ten tokens of eleven: a lead struck as an accent,
+    a bell, a pad) plays the note the game struck the piece at (kit_piece_pitch) and, where the readings heard none, the
+    note at which the sample plays at its recording's own rate. Until round 74 such a piece hammered at KIT_NOTE, two
+    octaves under The Phantom Forest's accent; round 74 had the pack's own drum stand in, a snare for a lead. `at`: the
+    hit's beat in the song; a piece the token's song strikes at several rates is struck at its rate for that place in the
+    bar (round 176: plan.kit_place_offset, semitones from the slot's rate, added outside the wall, so the piece's drums keep
+    their distances)."""
+    from ... import samples as samples_mod
+    from ...drums import KIT_NOTE
+    from ..harmony import MODES
+    from ..writer.tune import scale_index, scale_pitch
+    letter, second = plan_mod.slot_letter(slot)
+    given = (((plan_mod.kit_second(plan, slot) or {}).get("sample") if second else (plan.extras.get(R.DRUMS, {}).get("kit") or {}).get(letter))
+             if letter else None)                           # a second slot plays its own sample's note (round 99)
+    if given != name:
+        return float(KIT_NOTE)
+    key = plan_mod.kit_token_key(plan)                      # the token song's key (round 79): a degree or a tuned rate is read against it
+    fold = ((plan.tonic - key[0] + 6) % 12) - 6 if key is not None else 0   # the written tonic's distance from the song's, within a tritone
+    place = plan_mod.kit_place_offset(plan, slot, at) if at is not None else 0   # the piece's rate at this place in the bar (round 176)
+    if samples_mod.is_percussion(name) or (pack_name and samples_mod.is_percussion(f"{pack_name}_{name}")):
+        rate = plan_mod.kit_piece_rate(plan, slot)        # the chip's rate as a note (round 78): 60 as recorded, 48 an octave under;
+        shift = fold if plan_mod.kit_piece_tuned(plan, slot) else 0   # a tuned sample's rate moves with the key (round 79), inside the
+        return float(KIT_NOTE + walled(plan, slot, (rate - 60) + shift) + place) if rate is not None else float(KIT_NOTE)   # game's rates (round 88)
+    degree = plan_mod.kit_piece_degree(plan, slot)
+    if degree is not None and key is not None:              # the degree realized in the written key (round 79), from the written tonic
+        ref = 60 + key[0] + fold                            # nearest the song's own (the register the game struck it in, give or take a fourth)
+        wscale = {(plan.tonic + i) % 12 for i in MODES["major" if plan.mode == "major" else "natural_minor"]}
+        form, k = degree
+        return float(scale_pitch(scale_index(ref, wscale) + k, wscale)) if form == "d" else float(ref + k)
+    pitch = plan_mod.kit_piece_pitch(plan, slot)
+    if pitch is not None:
+        return float(pitch)
+    c5 = getattr(sample, "c5_speed", 0) or 0
+    source = getattr(sample, "source_rate", None) or c5
+    own = 60.0 + 12.0 * math.log2(source / c5) if c5 and source else float(KIT_NOTE)   # the note at the recording's own rate
+    rate = plan_mod.kit_piece_rate(plan, slot)             # a tonal sample the namer took for a drum (Another World of Beasts' pad as a
+    shift = fold if plan_mod.kit_piece_tuned(plan, slot) else 0   # kick): the token carries the chip's rate, and the pitch is the rate's offset
+    return own + walled(plan, slot, (rate - 60) + shift) + place if rate is not None else own   # inside the game's rates for it (round 88)
+
+
 def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, fade: float = 2.0, echo: dict | None = None, tail_bars: int = 0, pack_name: str = "",
              master: tuple | None = None):
     """The written parts as a score (spc.convert.Score) on the pack's
@@ -704,10 +913,13 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
     its hook; the echo as given (echo_of). Returns the score and {role:
     first voice}."""
     floors = samples.get("floors") or {}
+    own_lines = {role for role in (R.MELODY, R.COUNTER) if plan_mod.own_lengths(plan, role)}   # the lines written by their token song's own note lengths
+    # (round 141): the sample's floor, the shortest note the game plays the sample at under the written part's speed class, is not
+    # asked of them. It had sounded a tune's cut notes whole in the songs whose tune is cut most: the floor drawn for the written
+    # Gogo's tune was 240 ms where the game's tune stabs 50, for Umaro's 400 where its token's shortest usual note is 140
     second_voice = {role: {v for v, w in enumerate(plan_mod.layers_of(plan, role), start=1) if not w.startswith("doubling")}   # a layered part's own
                     for role in plan.band if role != R.DRUMS}                                                            # lines, on their sample
     from ... import score as score_mod
-    from ...drums import KIT_NOTE
     from ...spc import convert, it_song, notes as notes_mod
     beat_s = 60.0 / plan.bpm
     form_beats = plan.bars * plan_mod.METER
@@ -722,18 +934,21 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
     pcm_of, key_of, instruments = {}, {}, {}
 
     def instrument(name, sample):
-        if name not in instruments:
+        from ... import samples as samples_tuned
+        key = name + samples_tuned.TONAL_SUFFIX if getattr(sample, "tonal_view", False) else name   # a kit voice's tonal reading is an
+        if key not in instruments:                          # instrument of its own (round 119): one song may strike the recording and play it
             idx = len(instruments) + 1
             addr = (0x100 * idx, 0)
-            pcm_of[addr], key_of[addr] = score_mod._Pcm(sample, sustain=True), name   # a sustaining voice loops (its sustain loop is the chip's)
-            instruments[name] = (idx, addr, sample.c5_speed)
-        return instruments[name]
+            pcm_of[addr], key_of[addr] = score_mod._Pcm(sample, sustain=True), key   # a sustaining voice loops (its sustain loop is the chip's)
+            instruments[key] = (idx, addr, sample.c5_speed)
+        return instruments[key]
     steps_s, wet, feedback = (echo["seconds"], echo["wet"], echo["feedback"]) if echo else (0.0, 0.0, 0.0)
     notes = []
 
     from ... import samples as samples_mod
 
     loud_of, strike_of, drum_loud_of, capped = {}, {}, {}, Counter()   # a sample's own loudness (round 56): a note plays at its level over it
+    over = {}                                             # (part, voice, sample) -> [its notes written over the sample's ceiling on the SNES chip, the ceiling] (round 119)
     heard = []                                            # (start in beats, length in beats, perceived level): the mix level (round 59)
 
     def level_of(role, j, bar=None, name=None, sample=None, seconds=0.0, piece=None):
@@ -765,14 +980,16 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
         played = min(1.0, wanted)
         return played, played / factor
 
-    def put(voice, role, t0, t1, midi, name, sample, j, bar=None, piece=None):
+    def put(voice, role, t0, t1, midi, name, sample, j, bar=None, piece=None, letter=None):
         idx, addr, c5 = instrument(name, sample)
-        pan = plan_mod.PANS[role][j % len(plan_mod.PANS[role])]
-        send = sends_to_echo(echo, role)                    # the echo word's parts (round 70), the upper parts without it
+        pan = pan_of(plan, role, j, letter, bar)            # the token song's own pan for the voice or the kit piece (round 84), at this bar (85)
+        send = piece_sends(plan, echo, role, letter)        # the echo word's parts (round 70), a kit piece's own mark (round 82), the upper parts without
         env = sample_envelope(name, pack_name)              # the envelope the game plays the sample with; flat and full without one
         adsr, gain = ((env["adsr"][0], env["adsr"][1]), 0) if env and "adsr" in env else ((0, 0), env["gain"] if env else score_mod.GAIN_FULL)
         played, perceived = level_of(role, j, bar, name, sample, min(t1, seconds) - t0, piece)
         heard.append((t0 / beat_s, (min(t1, seconds) - t0) / beat_s, perceived))
+        if role != R.DRUMS and midi - score_mod.pitch_ceiling(c5) > plan_mod.CEILING_SLACK:   # over what the SNES chip can play of the sample (round 119):
+            over.setdefault((role, j, name), [0, score_mod.pitch_ceiling(c5)])[0] += 1   # the register's top sounds, whatever the note's pitch class
         notes.append(notes_mod.Note(voice, t0, idx, score_mod._pitch(c5, midi), score_mod._sides(played, pan), adsr, gain,
                                     send, False, brr=addr, echo_delay=steps_s, echo_volume=(wet, wet) if send else (0.0, 0.0),
                                     echo_feedback=feedback, echo_filter=score_mod.ECHO_FILTER, echo_writes=True, end=min(t1, seconds)))
@@ -793,15 +1010,20 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
                 if t0 >= seconds:
                     continue
                 if role == R.DRUMS:
-                    _, _, _, v, kit_name = n
+                    _, _, letter, v, kit_name = n
                     name, sample = samples[R.DRUMS][kit_name]
-                    put(first[role] + v, role, t0, t1, float(KIT_NOTE), name, sample, v, piece=kit_name)   # the piece's own level (round 68)
+                    put(first[role] + v, role, t0, t1, kit_note_of(plan, kit_name, name, sample, pack_name, at=a), name, sample, v, piece=kit_name, letter=letter)   # the piece's
                 else:
-                    name, sample = sample_of(samples, role, n[3], second_voice)
-                    t1 = max(t1, t0 + floors.get(name, 0.0))   # never shorter than the game plays the sample (the next key-on cuts an overlap)
+                    name, sample = sample_of(samples, role, n[3], second_voice, plan_mod.stretch_at(plan, role, int(a // plan_mod.METER), n[3]))
+                    if not (n[3] == 0 and role in own_lines):   # never shorter than the game plays the sample (the next key-on cuts an overlap);
+                        t1 = max(t1, t0 + floors.get(name, 0.0))   # a tune's line written by its token song's note lengths sounds them (round 141)
                     put(first[role] + n[3], role, t0, t1, float(n[2]), name, sample, n[3], int(a // plan_mod.METER))   # the bar's section level (round 48)
     if capped:
         plan.log.append("loudness: notes capped at full, their sample too quiet for their level: " + ", ".join(f"{k} {v}" for k, v in capped.most_common()))
+    if over:
+        plan.log.append("pitch: notes written over what the SNES chip can play of their sample (four times its recorded rate at most) sound at that ceiling: "
+                        + ", ".join(f"{role}{f' voice {j + 1}' if j else ''} {n} on {name} (no higher than {math.floor(top + plan_mod.CEILING_SLACK)})"
+                                    for (role, j, name), (n, top) in sorted(over.items())))
     notes.sort(key=lambda x: (x.start, x.voice))
     last = {}                                                # a floored note never runs into the voice's next: the key-on cuts it
     for n in notes:
@@ -834,15 +1056,11 @@ def score_of(plan: plan_mod.Plan, written: dict, samples: dict, loops: int = 2, 
     return score, first
 
 
-def sample_of(samples: dict, role: str, voice: int, second_voice: dict) -> tuple:
+def sample_of(samples: dict, role: str, voice: int, second_voice: dict, stretch: int | None = None) -> tuple:
     """The (name, ITSample) a part's voice plays: the token song's own for that voice (`role:v`, round 70) where the pack
-    holds it, else the part's second sample for a voice beside the line (apart, alternating), else the line's."""
-    own = samples.get(f"{role}:{voice}") if voice else None
-    if own is not None:
-        return own
-    if f"{role}:second" in samples and voice in second_voice.get(role, ()):
-        return samples[f"{role}:second"]
-    return samples[role]
+    holds it, else the part's second sample for a voice beside the line (apart, alternating), else the line's; the line's
+    (voice 0) its stretch's sample where the token song changes instrument there (`role:stretch:i`, round 91)."""
+    return samples[plan_mod.sample_slot(samples, role, voice, voice in second_voice.get(role, ()), stretch)]   # one order for the sample and its ceiling (round 120)
 
 
 def layer_class(plan: plan_mod.Plan, role: str) -> str:

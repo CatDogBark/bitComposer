@@ -35,7 +35,8 @@ record of what was built and found.
   dependency) on the user's machine, never in the repository: a game's
   notes are its music and its samples are its files. The repository holds
   the schema and the code; `drivers/` stays the record of aggregates.
-- The command line first; the player's PACKS panel after.
+- The command line first; the player's PACKS panel (the 1.x window's;
+  LIBRARY and SOUNDS since 2.0) after.
 - What the translator measures does not depend on the generator's
   vocabulary: readings are the music as played (notes on beats, chords,
   roles, form), so any vocabulary can be made from them.
@@ -100,9 +101,9 @@ Where it stands (2026-10-19): read, kept and printed by
 a minute from their played notes. Checked by ear, on 21 games, not FFVI
 alone:
 
-- The beat and bar, tapped on 43 songs: of the 41 the listener was sure
-  of, 40 read as heard (a clean double or half agreeing where the listener
-  did not tell them apart); the other is read from its notes, which the
+- The beat and bar, tapped on 43 songs: of the 41 marked sure by ear, 40
+  read as heard (a clean double or half agreeing where the ear did not
+  tell them apart); the other is read from its notes, which the
   taps drifted from. A grid holds most songs; a loose beat (an onset envelope and
   dynamic-programming beats) those no grid holds, a swing off the
   triplet or notes placed by hand.
@@ -134,7 +135,7 @@ for categories the plan is to outgrow.
   measures reads the soundtrack's readings and the generator's songs alike,
   into the same table.
 - **The command.** A folder of a game's SPC files in, `pack.json` and its
-  WAVs out (`python -m bitcomposer.spc --pack DIR OUT`); `bitcomposer
+  WAVs out (`python -m bitcomposer.spc --pack OUT DIR`); `bitcomposer
   --pack-file` plays it as any pack file.
 
 Check: songs from the imported FFVI pack and from the hand-made one, both
@@ -297,7 +298,7 @@ accompaniment and counter-line are read as high as it. Rhythm, melody
 and drum patterns are the next slice.
 
 Where it stands (2026-10-20), the rhythm half: `python -m
-bitcomposer.translate.rhythm --db PATH` (`translate/rhythm/`) prints
+bitcomposer.translate.rhythm.arrangement --db PATH` (`translate/rhythm/`) prints
 three tables over the same songs, once through. Each part's rhythms bar by
 bar: its voices' onsets together (a chord struck in three voices is one
 onset) on the song's grid, drawn four characters a beat, counted per meter

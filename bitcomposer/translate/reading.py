@@ -132,24 +132,29 @@ def vibrato_of_notes(notes) -> dict:
     return out
 
 
-def echo_of_notes(notes) -> dict:
+def echo_of_notes(notes, sample_keys: dict | None = None) -> dict:
     """The song's echo from its decoded notes (spc.notes.Note: the echo registers as they stood at key-on), round 70:
     {"volume": the echo volume of full (EVOL, the louder side's magnitude, the median over the notes that send),
     "delay_ms": the delay (EDL x 16 ms, the most common), "feedback": the feedback's magnitude (EFB, the median), and
-    "voice_N": each voice's share of its notes that send (EON with echo writes on and a delay)}; the three zero where
-    no note sends. FFVI's echo volume is 0.20 of full in 70 of its 82 songs (round 69: quartiles 0.20..0.20), its
+    "voice_N": each voice's share of its notes that send (EON with echo writes on and a delay), and since round 82
+    "sample_K": each sample's, K its key (`sample_keys`: the chip's source number -> the sample's key, the BRR hash the
+    readings key notes by; the source number itself without), as the game toggles a channel's echo note by note (Wild
+    West's channel 4 holds its hat dry and its pitched blip wet)}; the three zero where no note sends. FFVI's echo volume is 0.20 of full in 70 of its 82 songs (round 69: quartiles 0.20..0.20), its
     delay 80 ms in every one, its feedback 0.78 at the median (0.55..0.78); the written songs sent at score.ECHO_WET
-    0.4 with a "slap" delay of 48-144 ms, 6 dB wetter than the game ever plays on every sending voice, which the owner
+    0.4 with a "slap" delay of 48-144 ms, 6 dB wetter than the game ever plays on every sending voice, which was
     heard as vibrato and blur."""
     import statistics
     from collections import Counter
-    by_voice, sending = {}, []
+    by_voice, by_sample, sending = {}, {}, []
     for n in notes:
         send = bool(n.echo and n.echo_writes and n.echo_delay > 0)
         by_voice.setdefault(n.voice, []).append(send)
+        if getattr(n, "sample", None) is not None:
+            by_sample.setdefault((sample_keys or {}).get(n.sample, n.sample), []).append(send)
         if send:
             sending.append(n)
     out = {f"voice_{v}": sum(sends) / len(sends) for v, sends in sorted(by_voice.items())}
+    out.update({f"sample_{i}": sum(sends) / len(sends) for i, sends in sorted(by_sample.items(), key=lambda kv: str(kv[0]))})   # keys or source numbers
     if sending:
         out["volume"] = statistics.median(max(abs(x) for x in n.echo_volume) for n in sending)
         out["delay_ms"] = float(Counter(round(n.echo_delay * 1000) for n in sending).most_common(1)[0][0])
@@ -184,6 +189,10 @@ def beat_and_parts(song) -> tuple:
         bass = {x.voice for x in roles if x.role == roles_mod.BASS}
         beat.rebar(grid, [grid.beats(p.start) for p in song.notes if p.voice in bass])
         phase_mod.find(grid, song)
+        drums = {x.voice for x in roles if x.role == roles_mod.DRUMS}   # the kit's voices alone: a snare-named sample on a
+        beat.rebar_kit(grid, {piece: [grid.beats(p.start) for p in song.notes   # pitched part's voice (New Continent's one-pitch
+                                      if p.voice in drums and p.sample is not None and p.sample.piece == piece]   # pedal) is no backbeat
+                              for piece in beat.KIT_SIGNS})   # each section's bar from its kit (round 105)
     return grid, roles
 
 
@@ -209,10 +218,13 @@ def of_score(score, song: events.Song | None = None, id: str | None = None, game
 
 
 def _read(song: events.Song, snap, grid: beat.Grid | None = None) -> Reading:
+    roles_mod.split_melodic_pieces(song, grid)           # a tune on the drum channel is a voice of its own (round 83)
     if grid is None:
         grid, roles = beat_and_parts(song)
     else:
         roles = roles_mod.assign(song, grid, roles_mod.echoes(song))
+    if roles_mod.split_second_instruments(song, roles, grid):   # a second instrument in its own register on a channel under
+        roles = roles_mod.assign(song, grid, roles_mod.echoes(song))   # the tune is a voice of its own (round 89)
     source = snap.source if snap is not None else ""
     folder = os.path.basename(os.path.dirname(os.path.abspath(source))) if source else ""
     m = manifest(os.path.dirname(os.path.abspath(source))) if source else {}
@@ -220,7 +232,8 @@ def _read(song: events.Song, snap, grid: beat.Grid | None = None) -> Reading:
     r = Reading(hashlib.sha1(snap.raw).hexdigest()[:20] if snap is not None else "", os.path.basename(source), folder,
                 m.get("game") or (t.game if t else "") or folder, (t.title if t else "") or "",
                 m.get("composer") or (t.artist if t else "") or "", m.get("driver"), song, grid, roles)
-    r.echo = echo_of_notes([p.note for p in song.notes if p.note is not None])
+    r.echo = echo_of_notes([p.note for p in song.notes if p.note is not None],
+                           {p.note.sample: p.sample.key for p in song.notes if p.note is not None and p.sample is not None})
     r.vibrato = vibrato_of_notes([p.note for p in song.notes if p.note is not None])
     if grid:
         r.chords = harmony.chords(song, grid, roles)

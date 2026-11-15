@@ -18,8 +18,8 @@ below).
 - **Pipeline (done, branch `release-pipeline`).** A `v*` tag builds the
   sdist and wheel, checks the tag against `bitcomposer.__version__`, and
   publishes to PyPI through trusted publishing (`publish.yml`, environment
-  `pypi`); the Windows build runs on every push to main and, on the
-  tag, makes the GitHub release with the installer and the zip. The version lives in `bitcomposer/__init__.py` alone.
+  `pypi`); the Windows build runs on pull requests into main (or by hand)
+  and, on the tag, makes the GitHub release with the installer and the zip. The version lives in `bitcomposer/__init__.py` alone.
   First proven on `v1.0.0rc1`, a pre-release pip and pipx only install by
   exact version. The checklist is in `CONTRIBUTING.md`.
 - **Linux install (done).** `pipx install bitcomposer` is the user's path;
@@ -91,7 +91,7 @@ below).
     shows the first). `bitcomposer-player --screenshot out.png --screen
     1920x1080 --scale 1.5 [--panels settings,mix]` renders it offscreen;
     the Windows build renders six setups from the frozen executable on
-    every push. Windows build is a PyInstaller folder (onedir) so Qt
+    every build. Windows build is a PyInstaller folder (onedir) so Qt
     starts at once; the installer is per-user by default and UPDATE runs
     it silently and relaunches.
   - **Media keys and start at login (done 2026-10-18).** MPRIS on Linux
@@ -112,7 +112,7 @@ below).
 These change how every note sounds, not what notes are played.
 
 - **Brightness and register across the SNES palette (pass done).** The
-  survey tool (`~/diags/bitcomposer/bright/survey.py`) renders every
+  survey tool (`survey.py`, not in the repository) renders every
   sustaining voice at the three pitches the melody sounds at and measures
   centroid against the fundamental, power per harmonic band, and the swing
   of the fundamental's share across the chorus cycle. Findings: brightness
@@ -143,7 +143,7 @@ These change how every note sounds, not what notes are played.
   a pan per tap. Left for later: echo on the drums as a rare choice
   (gated snare). The player's readout of the drawn settings is done.
 - **Style packs.** An instrument set paired with arrangement habits
-  (`bitcomposer/packs.py`): voices per role, weighted draws for tempo,
+  (`bitcomposer/packs/`): voices per role, weighted draws for tempo,
   energy, scale, harmony mode, bass, drums and echo, a counter-line voice,
   orchestral fills, channel trims, arp figure weights. `ffvi` (orchestral)
   `mana` (Secret of Mana: mallets and air, hand percussion, bouncy habits)
@@ -175,8 +175,9 @@ These change how every note sounds, not what notes are played.
   (riff bass styles, `power_chords`, riff-vamp intros), so the pack is
   mostly data plus the VGM reader and the patch renderer.
 - **Your own packs (after 1.0, asked for 2026-10-18; the format and
-  loader shipped in 1.1.0, `docs/PACKS.md`, `--pack-file`; done in 1.2.0:
-  the player's PACKS panel, step 6 of the SPC import plan, with a pack
+  loader shipped in 1.1.0, `docs/PACKS.md`, `--pack-file`; done in the
+  1.2.0 release candidates: the player's PACKS panel (the 1.x window's;
+  LIBRARY and SOUNDS since 2.0), step 6 of the SPC import plan, with a pack
   shared as one zip, EXPORT and ADD).** A pack added
   without touching the code: a pack file the player lists in its PACKS
   panel, apart from the built-in sounds. A pack is mostly data already
@@ -305,10 +306,10 @@ These change how every note sounds, not what notes are played.
   https://www.williamkage.com/snes_soundfonts/ , the rest by character), then a readout of the drawn song and a mixer
   regrouped by part with a KIT fold (done 2026-10-16: `voices:` and
   `drew:` lines in the song message, voice labels on the faders, the KIT
-  bus; the player reads them since the widget retired). Method and tools: `~/diags/bitcomposer/ffvi-spc/
-  tools` (`survey.py` decodes and profiles every unique sample across a set
-  of snapshots, `voices.py` traces each through the voice registers,
-  `fine.py` and `match.py` compare a sample's steady profile with ours,
+  bus; the player reads them since the widget retired). Method and tools
+  (scratch tools, not in the repository: `survey.py` decodes and profiles
+  every unique sample across a set of snapshots, `voices.py` traces each
+  through the voice registers, `fine.py` and `match.py` compare a sample's steady profile with ours,
   `table.py` matches samples to a documented instrument table by exact BRR
   size). Identify by size against a table, never by which songs carry a
   sample: for FFVI the song-based guesses were wrong for eight voices.
@@ -332,17 +333,18 @@ These change how every note sounds, not what notes are played.
   games of 20 music drivers, its songs as SPC players play them; the
   emulator's wheels on PyPI, `bitcomposer-emu`, from `emu.yml`, and the
   Windows build carrying it, its executable running IMPORT's worker
-  itself; 1.2.0 makes packs: the translator's readings, a thin first pack
-  from a soundtrack, step 5, and the PACKS panel, step 6, importing a
-  folder, a zip, or an .rsn, .rar or .7z through the machine's 7-Zip or
-  unar (`docs/TRANSLATOR.md`, stages 1, 2 and 5); open: the generator
-  writing the way the readings show, Generation below).** The import reads a soundtrack's `.spc`
+  itself; the 1.2.0 release candidates make packs: the translator's
+  readings, a thin first pack from a soundtrack, step 5, and the PACKS
+  panel, step 6, importing a folder, a zip, or an .rsn, .rar or .7z
+  through the machine's 7-Zip or unar (`docs/TRANSLATOR.md`, stages 1, 2
+  and 5); since 2.0 the generator writes the way the readings show,
+  Generation below).** The import reads a soundtrack's `.spc`
   snapshots (samples, envelopes, echo); an SPC700 emulator runs the game's
   own music driver and logs what it tells the DSP; a translator turns the
   log into notes, roles and measured habits. Two outputs: an SPC-to-IT
   conversion, one to one (the translator's proof), and a pack the generator
   composes with, chosen in a PACKS panel of its own (beside MIX; imported
-  packs stay out of SOUND's random draw). Getting and unpacking the files is the user's business; the repo
+  packs stay out of SOUND's random draw). Getting the files is the user's business; the repo
   ships the code, never the samples, and imported packs stay on the
   user's machine. Built on the pack file format (Your own packs, above).
   Supersedes the per-game role map once planned here: the emulated notes
@@ -350,7 +352,23 @@ These change how every note sounds, not what notes are played.
 - **Mix by palette, fully.** Only the arp is palette-specific today. Per-
   palette tables for every channel, set by ear, the way the arp levels were.
 
+- **Surround and a leaning echo, as counted words (parked 2026-11-06).**
+  The chip can invert one side of a voice or of the echo (the IT's
+  surround), and set the echo's two volumes apart; the converter plays
+  both for a game's own songs. Final Fantasy VI never does either: no note
+  of its 82 songs has inverted sides, and its echo sits at the same level
+  both sides in every song (25 of 128 in 68). So the FFVI vocabulary has
+  no such word, by the vocabulary rule, and the writer plays every voice
+  and the echo in phase. When a pack is imported from a game that uses
+  them (Seiken Densetsu 3's master is inverted), count them: a voice's
+  surround as a mark on its pan in the balance token, the echo's two
+  sides in the echo word, and the writer plays them as read.
+
 ## Arrangement
+
+This section and Melody below, Mix by palette above and the items from
+`ANALYSIS.md` under Generation are about Classic, the 1.x generator kept
+behind `--classic`; the writer's own open items are in `docs/LIMITS.md`.
 
 - **Chip chord stabs (J effect).** The `Jxy` arpeggio command cycles one
   channel through three notes fast enough to read as a chord — the
@@ -401,8 +419,11 @@ and the hit-or-miss part. Two steps, in order.
   the writer as the generator, its engine in 2.0.0rc1, its window, its
   fitted voices and its own sound set in 2.0.0rc2, the writer's sustain
   and the default player's sound in 2.0.0rc3, the parts' attack class in
-  2.0.0, released 2026-11-01; the kit's pieces next, on branch
-  `kit-pieces`: `docs/idiom/phase-6-generator.md`).** The idiom's plan took
+  2.0.0, released 2026-11-01: `docs/idiom/phase-6-generator.md`; the
+  kit's pieces in rounds 74 to 83 and the writer's rounds through 178 in
+  2.1.0, released 2026-11-14, recorded in
+  `docs/idiom/phase-4-writing.md`, with what stays open in
+  `docs/LIMITS.md`).** The idiom's plan took
   this over from the translator's stages 3 and 4 on 2026-10-20: the
   readers scored on ground truth (phase 1), one score of voices through
   the SNES back end (phase 2), the vocabulary as tables read from the
@@ -414,10 +435,10 @@ and the hit-or-miss part. Two steps, in order.
   writes with them (the generation scopes decided 2026-10-23 in
   `docs/idiom/phase-5-packs.md`). After phase 5, Mega Man X as the
   writing's generalization test, its own pack and twenty songs judged by
-  ear and against its songs (the owner's call, 2026-10-24): riffs without
+  ear and against its songs (decided 2026-10-24): riffs without
   pause, where the ride cymbal and the drums changing every other bar
-  wait. 1.2.0's imported packs carry a game's sound and only the
-  habits the readings give straight, so a song from one is still
+  wait. The 1.2.0 release candidates' imported packs carry a game's
+  sound and only the habits the readings give straight, so a song from one is still
   arranged the generator's way, and measured against the game's own it
   shows (FFVI, 2026-10-19): an arp in every song where FFVI has one in 5
   of 69, no triplets where a fifth of FFVI's off-beat notes are, two or
@@ -428,11 +449,47 @@ and the hit-or-miss part. Two steps, in order.
   instruments item below comes with it); stage 4 makes the vocabulary
   anew from the readings: voicings, how chords move, rhythms per part,
   the melody's shapes, bass and drum patterns as played. Imported packs
-  use it first; the built-in packs move over only when chosen. Saving
-  each import's readings in the database waits for it (decided
-  2026-10-20).
+  were to use it first, the built-in packs moving over only when chosen,
+  and saving each import's readings in the database waited for it
+  (decided 2026-10-20); since 2.0 the writer is the default on the
+  built-in sound sets too, and an import keeps its readings.
+- **A part's line struck with another part's line (asked for
+  2026-11-14, the second half of round 178).** Since round 178 a chord
+  part's voice beside its line can be written struck with another
+  part's line. The lines themselves cannot. In 22 of FFVI's 67 songs
+  voices of different parts are one figure in some part of the form,
+  and where both are their parts' lines the written song has each on
+  its own bars: Dancing Mad (part 5)'s tune and accompaniment line (the
+  game's strike together on 0.95 and 1.00 of their notes, the written
+  ones on 0.66 and 0.38), Blackjack's and Locke's, and the
+  accompaniment with the counter-line in Ending Theme (part 1),
+  Overture (part 3), Troops March on and Umaro. What it needs: a word
+  in the shape of round 177's two (the share of a line's notes struck
+  with the other line, by part of the form, the token song's own), and
+  a hold where the later-written line's bars are drawn, as the tune is
+  held to the kit since round 149 (`writer/tune.py`). It changes how
+  the tune is written, so it is a round of its own with its own
+  listening.
+- **A channel's second instrument, as a word (asked for 2026-11-13).**
+  Where a bass or chord channel plays a second instrument in a register
+  of its own the reader makes a voice of it (round 89) and the readings
+  keep that voice beside the counts, not in them, so nothing of it is
+  written: 27 of Final Fantasy VI's 68 songs have one or more today
+  (Wild West 0.30 of its pitched notes, Kefka 0.17, Mog 0.12). The Day
+  After's second channel plays a broken chord in eighth notes through
+  the first eight bars on one instrument and a plucked figure from bar 9
+  on another; a song written on its token has the figure and no word of
+  the broken chord, which in the game's opening is 4.4 dB over the
+  tremolo beside it. What it needs: the instrument by stretch for a
+  voice beside a line (a line's own has been written since round 91),
+  or a part of its own for the second instrument where the eight voices
+  allow one, and a count of what the second instrument plays in its
+  bars. `docs/LIMITS.md`, "A channel's second instrument is not
+  written".
 - **The generator writes IT instruments (a later version, with a listening
-  review; decided 2026-10-18).** Today's songs are sample mode: release
+  review; decided 2026-10-18).** Classic's songs are sample mode (a
+  written song renders through `spc/convert.py`, with instruments and
+  envelopes): release
   tails baked into the sample data (a sustain loop and a decaying copy
   after it), stab lengths as note cuts, swells as volume slides. It sounds
   right, but a tracker shows nameless samples with their fades printed
@@ -522,3 +579,15 @@ After 1.0.0: how the player reaches people and fits their desktop.
   transport buttons, so KEEP and GENERATE cannot go there.
 - Social preview image for the repository (set in the repository's
   settings; the logo SVGs make one).
+- **A stereo width setting (decided 2026-11-06; done, merged 2026-11-06:
+  the player's WIDTH).** Since round
+  84 a written song's voices sit where its token's FFVI song put them,
+  and FFVI pans by amplitude alone for a television's speakers: a lead at
+  0.23 or a bass at 0.80 held all song sounds lopsided on headphones, in
+  the game's own songs as much as the written ones. The player gets a
+  width control beside GAIN: 100 % plays the pans as read, a lower setting
+  narrows every pan toward centre at playback (libopenmpt's stereo
+  separation, live, for imported game songs and written songs alike),
+  with a headphones preset; saved with the other settings. The vocabulary
+  keeps saying where the game put each voice; the player decides how to
+  present it.

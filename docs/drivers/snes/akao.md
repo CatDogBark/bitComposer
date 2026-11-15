@@ -72,6 +72,17 @@ registers, give 0.64 everywhere: [the packs table](README.md#the-style-packs-aga
 
 ## Open
 
+- FFVI's distorted rhythm guitar (sample a7c3eeca0d: noisy, looped, no
+  fundamental the tuner finds cleanly) reads as a snare by sound; it is
+  struck across the chords in Fanfare, Mt. Koltz, Battle Theme, The
+  Decisive Battle and Dancing Mad (part 5), and the drum namer's noise
+  branch never checked for a loop. Read as an instrument by how it is
+  struck since round 102 (`drums.instrument_by_play`), its register from
+  the loop's rough fundamental (about 95 Hz, near G2); the five songs'
+  kits and parts changed with it (Fanfare's kit is a kick and a hat, Mt.
+  Koltz has none). Other drivers' looped drum-named samples struck across
+  pitches (Super Turrican 2, Mega Man X, Ogre Battle: 357 sample-songs)
+  flip the same way, unheard.
 - Sound-effect tracks (999 Blazing Fire voice 2, 999 Train voice 5): the
   wrong tone.
 - Chrono Trigger's ambience (Rain and Flowing Water, Truce Canyon): a tiny

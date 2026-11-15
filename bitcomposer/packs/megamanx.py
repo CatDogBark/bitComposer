@@ -238,7 +238,7 @@ def mmx_synth_bass() -> tuple[bytes, int, dict]:
 # ── Kit ──
 # Kage's kick is a 125 ms hit with its energy on the third partial; the snare
 # 188 ms, bright; the tom 94 ms with a 45 ms bloom; the open hat an 80 ms
-# loop; the crash a loop with an 80 ms swell (he calls it reverse cymbal);
+# loop; the crash a loop with an 80 ms swell (Kage calls it reverse cymbal);
 # the closed hat an 18 ms bright noise loop.
 
 def mmx_kick() -> tuple[bytes, int, dict]:

@@ -416,7 +416,8 @@ class Cache:
                 previous = u.outcome
         return total / len(units)
 
-    def draw(self, unit: Unit, previous, cache: Counter, rng: random.Random, keep=None) -> str:
+    def draw(self, unit: Unit, previous, cache: Counter, rng: random.Random, keep=None, floor_outcomes: int | None = None,
+             floor_songs: int | None = None, rest_new: bool = False) -> str:
         """The next outcome for the song: the same, an earlier one by the urn,
         or a new one from the table, new to the song (an outcome the song
         has not played: the three are drawn as they were counted,
@@ -434,24 +435,33 @@ class Cache:
         if x < same + earlier:
             pool = {k: v for k, v in cache.items() if k != previous}
             return rng.choices(list(pool), list(pool.values()))[0]
-        return self.draw_new(unit, cache, rng, keep)
+        return self.draw_new(unit, cache, rng, keep, floor_outcomes, floor_songs, rest_new)
 
-    def draw_new(self, unit: Unit, cache: Counter, rng: random.Random, keep=None) -> str:
+    def draw_new(self, unit: Unit, cache: Counter, rng: random.Random, keep=None, floor_outcomes: int | None = None,
+                 floor_songs: int | None = None, rest_new: bool = False) -> str:
         """The "new" draw alone: an outcome from the table new to the song
         (not in `cache`), on the data (never the floor's: a run of cells no
         song played whole, which a writer's manner refuses); one the song
         played when none new passes `keep`. For a writer whose own urn has
         already chosen new (the tune's cells: a new cell takes a new
-        rhythm, not a second urn's draw)."""
+        rhythm, not a second urn's draw). `floor_outcomes`: the figures besides the rest a floor level needs (FLOOR_OUTCOMES
+        without; a drum limb under its slot's class asks one, round 81: a rare crash's vocabulary is the downbeat crash and
+        its rests); `floor_songs` likewise the songs it needs (FLOOR_SONGS without; a limb under its class asks two: a one-song
+        habit level under the class had rested in 0.87 of its bars and silenced a hat). `rest_new`: the rest counts as new
+        however often the song has rested (a drum limb under its slot's class, round 81: the rest is the class's own rate,
+        where "new to the song" had let a limb rest only from the urn's same and earlier shares after its first rest, and
+        a blip struck two bars in three in the game played in four of five)."""
         ctx = self.table.context(unit)
+        floor_outcomes = FLOOR_OUTCOMES if floor_outcomes is None else floor_outcomes
+        floor_songs = FLOOR_SONGS if floor_songs is None else floor_songs
         floor_k = self.table.chain_floor                    # the bar before may be let go when thin; the part, meter and habit never
         out = None
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=FLOOR_OUTCOMES, floor_songs=FLOOR_SONGS)
-            if out not in cache and (keep is None or keep(out)):
+            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=floor_outcomes, floor_songs=floor_songs)
+            if ((rest_new and out == REST) or out not in cache) and (keep is None or keep(out)):
                 return out
         for _ in range(NEW_TRIES):
-            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=FLOOR_OUTCOMES, floor_songs=FLOOR_SONGS)
+            out = self.table.draw(ctx, rng, unit.values, floored=False, floor_k=floor_k, floor_outcomes=floor_outcomes, floor_songs=floor_songs)
             if keep is None or keep(out):
                 return out
         return out

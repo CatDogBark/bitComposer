@@ -51,7 +51,7 @@ class _Pcm:
         # into the tail after it). The SNES chip has one loop and a key-off ends the note, so with `sustain` that loop
         # is the chip's: the written path asks for it. Read through the plain loop flag alone, every sustaining voice
         # had gone out as a one-shot, a 48 ms square under the tune, pads that plucked, in every written render since
-        # this bridge, the imports' too (2026-10-30). Classic's songs keep their one-shots as they are (the owner's call).
+        # this bridge, the imports' too (2026-10-30). Classic's songs keep their one-shots as they are (a product choice).
         loop = (s.loop_start, s.loop_end) if s.loop else (s.sus_loop_start, s.sus_loop_end) if sustain and getattr(s, "sus_loop", False) else None
         if loop and (loop[1] or 0) > (loop[0] or 0):
             self.loop_start, self.loop_end = int(loop[0] or 0), int(loop[1])
@@ -68,11 +68,23 @@ class _Pcm:
         return len(self.pcm)
 
 
+PITCH_MAX = 0x3FFF                    # the SNES chip's pitch register is 14 bits: just under four times the recording's rate
+
+
 def _pitch(c5_speed: int, midi: float) -> int:
     """The SNES chip's pitch register that plays a sample recorded for C-5 at
     c5_speed at this midi note, under the converter's model (0x1000 is the
-    sample at 32 kHz)."""
-    return max(1, min(0x3FFF, round(0x1000 * c5_speed / 32000 * 2 ** ((midi - 60) / 12))))
+    sample at 32 kHz). A note over the sample's ceiling (pitch_ceiling)
+    gets the register's top: it sounds at the ceiling, not at its pitch."""
+    return max(1, min(PITCH_MAX, round(0x1000 * c5_speed / 32000 * 2 ** ((midi - 60) / 12))))
+
+
+def pitch_ceiling(c5_speed: int) -> float:
+    """The highest midi note the SNES chip can play a sample recorded for C-5
+    at c5_speed: its pitch register stops at 0x3FFF, just under four times
+    the recording's rate, so two octaves over the note the sample sounds at
+    32 kHz."""
+    return 60 + 12 * math.log2(PITCH_MAX * 32000 / (0x1000 * c5_speed))
 
 
 def _sides(level: float, pan: float) -> tuple[int, int]:

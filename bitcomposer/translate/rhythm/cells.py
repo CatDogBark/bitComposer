@@ -96,7 +96,7 @@ def melody_cells(song: readings_mod.Song, role: str = None) -> list:
     the highest): its onsets in twelfths from the bar line and its
     intervals, as one key; None where the bar has no note."""
     role = role or R.MELODY
-    line = sorted(arrangement_mod._line(song.notes.get(role, [])))
+    line = sorted(arrangement_mod._line(tune_line(song, role)))
     out = []
     for a, b in song.bars:
         mine = [n for n in line if a - readings_mod.NEAR <= n[0] < b - readings_mod.NEAR]
@@ -146,7 +146,7 @@ def cell_handoff_units(songs) -> list:
     for s in songs:
         if R.MELODY not in s.notes:
             continue
-        tune = sorted(arrangement_mod._line(s.notes[R.MELODY]))
+        tune = sorted(arrangement_mod._line(tune_line(s, R.MELODY)))
         cells = half_cells(tune, s.bars)
         if sum(1 for c in cells if c) < 4:
             continue
@@ -184,7 +184,7 @@ def half_recall_units(songs) -> list:
     for s in songs:
         if R.MELODY not in s.notes:
             continue
-        cells = [c for c in half_cells(sorted(arrangement_mod._line(s.notes[R.MELODY])), s.bars) if c]
+        cells = [c for c in half_cells(sorted(arrangement_mod._line(tune_line(s, R.MELODY))), s.bars) if c]
         if len(cells) < 4:
             continue
         keys = [c[2] for c in cells]
@@ -325,6 +325,69 @@ def recall_source_units(songs) -> list:
     return out
 
 
+RECALL_MOVES = ("0", "root", "+1", "-1", "+2", "-2", "+3", "-3", "+4", "-4", "+5", "-5", "6")   # a recalled cell's move from its last
+                                                                                                # occurrence (recall_moves, round 100)
+
+
+def recall_move(offset: int, root_move: int | None) -> str:
+    """A recalled cell's move from its last occurrence as the recall_moves word's outcome (round 100): "0" at pitch, "root"
+    with the chord root where the chord changed and the cell moved by the root's own motion, else the semitones folded into
+    the octave either side ("+2", "-5"; "6" a tritone)."""
+    fo = ((offset + 6) % 12) - 6
+    if fo == 0:
+        return "0"
+    if root_move is not None and root_move % 12 and fo % 12 == root_move % 12:
+        return "root"
+    return "6" if fo == -6 else f"{fo:+d}"
+
+
+def _chord_under(song: readings_mod.Song, t: float):
+    """The chord span's (root, shape) at a time, None where the reader found no chord."""
+    for sp in song.chords:
+        if sp.start - readings_mod.NEAR <= t < sp.end - readings_mod.NEAR:
+            return (sp.root, sp.shape) if sp.root is not None else None
+    return None
+
+
+def recall_move_units(songs) -> list:
+    """Each bar of a song's tune whose cell was heard before (in the form's own parts) as a unit (round 100): its outcome
+    recall_move, how far the cell sits from its last occurrence (first note to first note); its values the part, the recall
+    (same: the bar before's cell again; earlier: a cell heard before that) and the chord (same: the chord under the bar is
+    the one under the cell's last occurrence; other). FFVI: 428 recalled bars in 62 tunes; a cell comes back at pitch in
+    0.70 of the earlier recalls and 0.53 of the immediate ones, within a third in 0.88 and 0.95; over another chord it
+    stays at pitch in 0.38 and 0.27, moves with the root in 0.27 and 0.45, by a step in 0.12 and 0.22. The written tune
+    had re-rooted every recall on the new chord (at pitch 0.27 of recalls, a fourth or fifth off 0.22), and its recalled
+    bars sat a semitone from the band on 0.15 to 0.25 of their strong beats against FFVI's 0.04 to 0.10."""
+    out = []
+    for s in songs:
+        if R.MELODY not in s.notes:
+            continue
+        line = sorted(n for n in arrangement_mod._line(tune_line(s, R.MELODY)) if not math.isnan(n[2]))
+        cells = melody_cells(s)
+        windows, own = _tune_groups(s)
+        first = {}
+        for k, (a, b) in enumerate(s.bars):
+            mine = [n for n in line if a - readings_mod.NEAR <= n[0] < b - readings_mod.NEAR]
+            if mine:
+                first[k] = round(mine[0][2])
+        last_seen, previous = {}, None
+        for i, w in windows:
+            for k in w:
+                c = cells[k]
+                if not c:
+                    previous = None
+                    continue
+                if i in own and c in last_seen and k in first and last_seen[c] in first:
+                    src = last_seen[c]
+                    here, there = _chord_under(s, s.bars[k][0]), _chord_under(s, s.bars[src][0])
+                    root_move = (here[0] - there[0]) if here and there else None
+                    out.append(tables.Unit(s.sid, s.game, recall_move(first[k] - first[src], root_move),
+                                           {"part": R.MELODY, "recall": "same" if c == previous else "earlier", "chord": "same" if here == there else "other"}))
+                last_seen[c] = k
+                previous = c
+    return out
+
+
 CELL_RHYTHMS = ("new", "previous", "earlier")   # a new cell's rhythm: new to the tune, the bar before's, or an earlier one's
 
 
@@ -369,7 +432,7 @@ def register_notes(song: readings_mod.Song, role: str) -> list | None:
     voices = part_voices(song, role)
     if len(voices) < 2:
         return None
-    return voices[line_voice(voices, role)]
+    return voices[line_voice(voices, role, song)]
 
 
 def register_units(songs) -> list:
@@ -427,11 +490,27 @@ def sounded_share(notes) -> float | None:
     return statistics.median(shares) if shares else None
 
 
-GAP_CLASSES = ((1.0, "<1"), (2.0, "1-2"), (4.0, "2-4"), (1e9, "4+"))   # beats to a voice's next onset: a note's sounded share depends on it
+GAP_CLASSES = ((0.5, "<0.5"), (1.0, "0.5-1"), (2.0, "1-2"), (4.0, "2-4"), (1e9, "4+"))   # beats to a voice's next onset: a note's sounded share
+                                      # depends on it; under a beat split at the half since round 95 (FFVI's accompaniment sounds 0.76 of a gap
+                                      # under half a beat, a run, and 0.63 of one at half to one, a peck; the arp 0.67 and 0.40, the bass 0.83 and 0.72)
 
 
 def gap_class(gap: float) -> str:
     return next(name for top, name in GAP_CLASSES if gap < top - readings_mod.NEAR)
+
+
+def gap_shares(notes) -> dict:
+    """A voice's sounded share by gap class (round 95): for each class, the median over its notes of the share of the gap to
+    the voice's next note the note sounds (to SOUND_BIN), None where the class has fewer than two notes. The balance token
+    carries the line voice's for the chord parts and the bass, so a song written on the token keeps its line's own note
+    lengths (Umaro's accompaniment pecks 0.4 of its gap under a beat where the pooled word for a layered line says 1.0)."""
+    line = sorted(n for n in notes if not math.isnan(n[1]) and not math.isnan(n[2]))
+    by = {name: [] for _, name in GAP_CLASSES}
+    for n, m in zip(line, line[1:]):
+        gap = m[0] - n[0]
+        if gap > readings_mod.NEAR:
+            by[gap_class(gap)].append(min(1.0, n[1] / gap))
+    return {name: (round(statistics.median(xs) / SOUND_BIN) * SOUND_BIN if len(xs) >= 2 else None) for name, xs in by.items()}
 
 
 def gap_sound_units(songs) -> list:
@@ -449,7 +528,7 @@ def gap_sound_units(songs) -> list:
             fastest = part_fastest(s, role)             # the part's speed class (round 35): FFVI's string pad played fast sounds a
             speed = speed_tier(fastest if fastest is not None else 0.0)   # fifth to a third of its gap, played slow nearly all of it
             if len(voices) >= 2:
-                line = line_voice(voices, role)
+                line = line_voice(voices, role, s)
                 streams = (("line", voices[line]), ("second", [n for v, x in voices.items() if v != line for n in x]))
             else:
                 streams = (("only", next(iter(voices.values()))),)
@@ -460,6 +539,34 @@ def gap_sound_units(songs) -> list:
                     if gap > readings_mod.NEAR:
                         share = round(min(1.0, n[1] / gap) / SOUND_BIN) * SOUND_BIN
                         out.append(tables.Unit(s.sid, s.game, f"{share:.1f}", {"part": role, "voice": which, "speed": speed, "gap": gap_class(gap)}))
+    return out
+
+
+TUNE_KINDS = ("held", "detached")    # a tune note sounding readings.SHORT of its gap or more is held, else detached (the values word's classes)
+
+
+def tune_sound_units(songs) -> list:
+    """Each tune's and counter-line's held notes, and its detached ones, as a unit (round 98): its outcome the median share
+    of its gap such a note sounds (to SOUND_BIN), its values the part and the note's kind (TUNE_KINDS; readings.SHORT splits
+    them, as the values word's units are classed). Drawn once a song a part on its own streams, for the melody and
+    counter writers' note lengths: they had sounded every held note 0.95 of its gap and every detached one 0.5
+    (writer.HELD, DETACHED), where FFVI's tunes hold 0.91 and detach 0.40 at the median, its counter-lines 0.92 and
+    0.41."""
+    out = []
+    for s in songs:
+        for role in (R.MELODY, R.COUNTER):
+            if role not in s.notes:
+                continue
+            line = arrangement_mod._line(s.notes[role])
+            by = {kind: [] for kind in TUNE_KINDS}
+            for n, after in zip(line, line[1:]):
+                gap = after[0] - n[0]
+                if gap <= readings_mod.NEAR or math.isnan(n[1]):
+                    continue
+                by["held" if n[1] / gap >= readings_mod.SHORT else "detached"].append(min(1.0, n[1] / gap))
+            for kind, xs in by.items():
+                if len(xs) >= 8:
+                    out.append(tables.Unit(s.sid, s.game, f"{round(statistics.median(xs) / SOUND_BIN) * SOUND_BIN:.1f}", {"part": role, "note": kind}))
     return out
 
 
@@ -612,9 +719,15 @@ def part_voices(song: readings_mod.Song, role: str) -> dict:
     return {v: ns for v, (r, ns) in song.voice_notes.items() if r == role and ns}
 
 
-def line_voice(voices: dict, role: str):
+def line_voice(voices: dict, role: str, song: "readings_mod.Song | None" = None):
     """A layered part's line among its voices: the bass's the voice with the longest notes (its sustained voice under a
-    busier one), another part's the voice with the most notes (layer_units' rule)."""
+    busier one), another part's the voice with the most notes (layer_units' rule); the melody's, given the song, the heard
+    tune (round 90: a melody voice with an `of` in Song.voice_of is a layer of the tune, whatever its note count; The
+    Decisive Battle's parallel voice plays more notes than its tune)."""
+    if role == R.MELODY and song is not None:
+        heard = [v for v in voices if (getattr(song, "voice_of", None) or {}).get(v) is None]
+        if len(heard) == 1:
+            return heard[0]
     if role == R.BASS:
         lengths = {v: statistics.median([n[1] for n in ns if not math.isnan(n[1])] or [0.0]) for v, ns in voices.items()}
         return max(lengths, key=lambda v: (lengths[v], -v))
@@ -629,13 +742,16 @@ def line_notes(song: readings_mod.Song, role: str) -> list | None:
     a bar together, the line 6.6 and the second voice 4.5, and a line
     written to the merged count with a second line beside it had struck
     10.3 (2026-10-23); its two-voice basses are a sustained line under a
-    busy staccato voice in the same register."""
-    if role not in readings_mod.UPPER + (R.BASS,):
+    busy staccato voice in the same register. Since round 90 the melody's
+    and the counter's too (the melody's line the heard tune, line_voice):
+    a tune with a voice doubling it in octaves had its figures, habit and
+    speed counted over both voices."""
+    if role == R.DRUMS:
         return None
     voices = part_voices(song, role)
     if len(voices) < 2:
         return None
-    return voices[line_voice(voices, role)]
+    return voices[line_voice(voices, role, song)]
 
 
 
@@ -652,14 +768,16 @@ def second_figure_units(songs) -> list:
     of five of its onsets with the line's; its slap bass strikes with three
     quarters of the sustained line's notes and twice as often in all (a
     second bass drawn as a figure of its own, given the line's bar, had
-    struck with 41 % of the line's notes: two basses, 2026-10-24)."""
+    struck with 41 % of the line's notes: two basses, 2026-10-24). The
+    counter's voices beside its line since round 76 (part counter), the
+    mask their bar is written from beside a counter that follows the tune."""
     out = []
     for s in songs:
-        for role in readings_mod.UPPER + (R.BASS,):
+        for role in readings_mod.UPPER + (R.BASS, R.COUNTER):
             voices = part_voices(s, role)
             if len(voices) < 2:
                 continue
-            line = line_voice(voices, role)
+            line = line_voice(voices, role, s)
             others = [n for v, ns in voices.items() if v != line for n in ns]
             key = lambda struck, a: readings_mod.pattern(p for p, _ in struck)   # noqa: E731  (the line's positions; the bass's marks are the line's own)
             line_bars = {k: key(struck, a) for k, a, struck in readings_mod.numbered_bars_of(s, role, voices[line])}
@@ -714,7 +832,7 @@ def tune_line(song: readings_mod.Song, role: str) -> list:
     (line_voice), else the part's notes; [] where the song has no such part."""
     voices = part_voices(song, role)
     if len(voices) >= 2:
-        return voices[line_voice(voices, role)]
+        return voices[line_voice(voices, role, song)]
     return song.notes.get(role, [])
 
 
@@ -949,7 +1067,7 @@ def layer_sample_units(songs) -> list:
             voices = part_voices(s, role)                   # own, and a draw for it fell through to the root: an accompaniment pair)
             if len(voices) < 2:
                 continue
-            line = line_voice(voices, role)
+            line = line_voice(voices, role, s)
             other = max((v for v in voices if v != line), key=lambda v: (len(voices[v]), -v))
             keys = []
             for v in (line, other):
@@ -975,7 +1093,7 @@ def layer_sound_units(songs) -> list:
             voices = part_voices(s, role)
             if len(voices) < 2:
                 continue
-            line = line_voice(voices, role)
+            line = line_voice(voices, role, s)
             for which, ns in (("line", voices[line]), ("second", [n for v, x in voices.items() if v != line for n in x])):
                 share = sounded_share(ns)
                 if share is not None:
@@ -1010,7 +1128,7 @@ def tune_doubling_units(songs) -> list:
         if found is None:
             continue
         cells, _, theme_w, theme = found
-        tune = sorted(arrangement_mod._line(s.notes.get(R.MELODY, [])))
+        tune = sorted(arrangement_mod._line(tune_line(s, R.MELODY)))
         others = {role: (melody_cells(s, role), sorted(arrangement_mod._line(s.notes[role]))) for role in THEME_PARTS if s.notes.get(role)}
         for k, c in enumerate(cells):
             if not c or c == theme:
@@ -1043,7 +1161,7 @@ def theme_doubling_units(songs) -> list:
         if found is None:
             continue
         cells, _, theme_w, theme = found
-        tune = sorted(arrangement_mod._line(s.notes.get(R.MELODY, [])))
+        tune = sorted(arrangement_mod._line(tune_line(s, R.MELODY)))
         others = {role: (melody_cells(s, role), sorted(arrangement_mod._line(s.notes[role]))) for role in THEME_PARTS if s.notes.get(role)}
         for k, c in enumerate(cells):
             if c != theme:

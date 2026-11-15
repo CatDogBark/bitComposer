@@ -19,7 +19,7 @@ def _song(sid="a", bars=4):
 class WriterTests(unittest.TestCase):
     def test_tones(self):
         major = {0, 2, 4, 5, 7, 9, 11}
-        self.assertEqual([writer.tone(0, "", m, major) for m in ("R", "r", "?", "3", "5", "7", "s", "+")], [0, 0, 0, 4, 7, 10, 5, 2])
+        self.assertEqual([writer.tone(0, "", m, major) for m in ("R", "r", "?", "3", "5", "7", "s", "+")], [0, 0, 0, 4, 7, 0, 4, 2])   # a 7 or an s the triad lacks: its nearest tone (round 96)
         self.assertEqual([writer.tone(7, "m7", m, major) for m in ("3", "5", "7")], [10, 2, 5])
         self.assertEqual(writer.tone(0, "dim", "5", major), 6)
         self.assertEqual(writer.tone(4, "", "+", major), 2)                  # on E in C major the step above (F#) is out: the step below (D)

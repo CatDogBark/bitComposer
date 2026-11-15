@@ -66,7 +66,7 @@ class PerformanceTests(unittest.TestCase):
                     self.assertGreaterEqual(n.end - n.start, performance.VIBRATO_HOLD)
                     for _, p in n.bends:
                         self.assertLessEqual(abs(1200 * math.log2(p / n.pitch)), 100.0)   # within a semitone (the word's depth, round 72)
-                    self.assertGreater(n.bends[0][0], n.start)
+                    self.assertGreaterEqual(n.bends[0][0], n.start)   # a word's onset can be the note's own start (a game voice that bends from its first row)
                     self.assertLess(n.bends[-1][0], n.end)
             self.assertIn("performance:", score.message[4])
         self.assertGreater(len(echoes), 0)
@@ -87,7 +87,7 @@ class PerformanceTests(unittest.TestCase):
             self.assertEqual(word["delay"], out["info"]["echo"])
             self.assertTrue({n.voice for n in out["score"].notes if n.echo})
             self.assertIn(f"echo {word['delay']} at {word['wet']:.2f} of full (the vocabulary's word)", out["score"].message[4])
-            self.assertLessEqual(word["wet"], 0.3)                        # FFVI's 0.20, never the old 0.4 slap
+            self.assertIn(word["word"], models["echo"].vocabulary)        # one of FFVI's own echo words (wet 0 to 0.39), never the old 0.4 slap rule
             self.assertEqual(set(n.echo_delay for n in out["score"].notes), {word["seconds"]})
         # a vocabulary without the word: the sound set's habits, said so
         bare = {k: v for k, v in models.items() if k != "echo"}
@@ -126,15 +126,22 @@ class PerformanceTests(unittest.TestCase):
                 word = words[voices[n.voice]]
                 self.assertTrue(word["shares"][reading.vibrato_class(n.end - n.start)], seed)
                 self.assertGreaterEqual(n.bends[0][0] - n.start, word["onset"] - 1e-6)
-                for _, p in n.bends:
-                    self.assertLessEqual(abs(1200 * math.log2(p / n.pitch)), word["depth"] + 1.5)   # the register rounds to about a cent
+                swing = 2 ** (word["depth"] / 1200.0)
+                for _, p in n.bends:                # within the depth, to the half step the pitch register rounds by (a low
+                    self.assertGreaterEqual(p, n.pitch / swing - 0.5 - 1e-6)   # note's step is cents wide: 4.3 at 405, round 174)
+                    self.assertLessEqual(p, n.pitch * swing + 0.5 + 1e-6)
         self.assertGreater(seen_word, 0)
         self.assertGreater(seen_notes, 0)
         bare = {k: v for k, v in models.items() if k != "vibrato"}
         import unittest.mock as mock
         with mock.patch.object(vocabularies, "load", lambda name: bare):
             out = written.compose_written(seed=68554)
-        self.assertEqual(out["info"]["vibrato"], 18)                                 # the old rule: every held note, as before this round
+        bent = [n for n in out["score"].notes if n.bends]                           # the old rule: every held note of the tune and the counter,
+        self.assertGreater(len(bent), 0)                                             # as before this round (the count moves with the vocabulary:
+        self.assertEqual(out["info"]["vibrato"], len(bent))                          # 18 on the 67-song fit, 46 on the 68-song one)
+        first = whole.voice_map(out["plan"], out["written"])
+        allowed = {v for role in performance.VIBRATO_PARTS if role in first for v in range(first[role], first[role] + out["plan"].voices.get(role, 1))}
+        self.assertTrue(all(n.voice in allowed for n in bent))
         self.assertIn("(the player's rule, no vibrato word)", out["score"].message[4])
 
     def test_echo_off_on_the_command_line_holds_for_a_written_song(self):

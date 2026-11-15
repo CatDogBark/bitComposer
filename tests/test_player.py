@@ -14,6 +14,7 @@ try:
 except ImportError:          # discover -s tests imports the modules top-level
     from support import compose_and_save
 from bitcomposer.player import engine
+from bitcomposer.player import level as leveling
 from bitcomposer.player.openmpt import LibraryMissing, lib
 
 
@@ -103,6 +104,13 @@ class EngineHeadless(unittest.TestCase):
         self.assertTrue(p.set_channel_volume(1, 5))
         p.seek(20.0); self.pump(0.3)
         self.assertEqual(p.channel_volumes()[1], 5)
+        # the stereo width: libopenmpt's separation on the playing module, 100 the pans as written; WIDTH sets it live
+        self.assertEqual(p.module.stereo_separation(), 100)
+        p.set_width(0.6)
+        self.assertEqual(p.width, 0.6)
+        self.assertAlmostEqual(p.module.stereo_separation(), 60, delta=1)   # libopenmpt keeps it in 128ths: 59 or 60 back
+        p.set_width(1.0)
+        self.assertEqual(p.module.stereo_separation(), 100)
         self.assertTrue(p.apply_mix_to_file())
         with open(p.playlist[1], "rb") as fh:
             fh.seek(0x80)
@@ -137,6 +145,270 @@ class EngineHeadless(unittest.TestCase):
         before = os.stat(older).st_mtime_ns
         engine.write_channel_volumes(older, [5] * 19)                # APPLY TO TRACK
         self.assertEqual(os.stat(older).st_mtime_ns, before)
+
+    def heard(self, index, seconds=4.0):
+        """What reaches the output when the player plays a song: its first `seconds` as blocks' mean squares (the
+        level's own blocks), taken at the device, after the gain."""
+        p, got = self.p, bytearray()
+        want = int(seconds * engine.SAMPLE_RATE) * engine.CHANNELS * 2
+
+        class Tap:
+            def open(self): pass
+            def close(self): pass
+            def write(self, data):
+                got.extend(data)
+                return len(got) < want
+
+        with unittest.mock.patch.object(engine, "make_output", lambda rate, kind: Tap()):
+            p.play(index)
+            end = time.time() + 30
+            while len(got) < want and time.time() < end:
+                time.sleep(0.02)
+            p.stop()
+        self.assertGreaterEqual(len(got), want)
+        import array
+        frames = int(leveling.BLOCK_SECONDS * engine.SAMPLE_RATE) * engine.CHANNELS
+        samples = array.array("h")
+        samples.frombytes(bytes(got[:want]))
+        return [leveling._square_sum(samples[i:i + frames]) / frames for i in range(0, len(samples) - frames + 1, frames)]
+
+    def test_every_song_plays_at_one_level(self):
+        """LEVEL: a song is measured once and trimmed at playback to the common level, the file untouched. Two files of
+        one song, the second at half the volume (the IT header's global volume), leave the player the same; with the
+        level off they leave it 6 dB apart, as written."""
+        import json
+        import shutil
+        p = self.p
+        loud, quiet = os.path.join(self.music, "Kept.it"), os.path.join(self.music, "Quiet.it")
+        shutil.copyfile(loud, quiet)
+        with open(quiet, "r+b") as fh:
+            fh.seek(0x30)
+            volume = fh.read(1)[0]
+            fh.seek(0x30)
+            fh.write(bytes([volume // 2]))
+        from pathlib import Path
+        before = {f: Path(f).read_bytes() for f in (loud, quiet)}
+        a, b = leveling.measure(loud), leveling.measure(quiet)
+        self.assertAlmostEqual(a - b, 20 * __import__("math").log10(volume / (volume // 2)), delta=0.3)   # the measure hears the 6 dB
+        p.scan()
+        i, j = p.playlist.index(loud), p.playlist.index(quiet)
+        self.assertTrue(p.level_on)                                  # on unless turned off
+        on_loud, on_quiet = self.heard(i), self.heard(j)
+        self.assertAlmostEqual(p.level_trim(), leveling.TARGET_DB - b, delta=0.01)   # the song loaded last: the quiet one's trim
+        for x, y in zip(on_loud, on_quiet):                          # block for block the same level at the device
+            self.assertAlmostEqual(leveling._db(x), leveling._db(y), delta=0.5)
+        p.set_level(False)
+        self.assertIsNone(p.level_trim())
+        off_loud, off_quiet = self.heard(i), self.heard(j)
+        apart = [leveling._db(x) - leveling._db(y) for x, y in zip(off_loud, off_quiet)]
+        self.assertAlmostEqual(sum(apart) / len(apart), a - b, delta=0.5)            # as written: 6 dB apart
+        trim = [leveling._db(x) - leveling._db(y) for x, y in zip(on_loud, off_loud)]
+        self.assertAlmostEqual(sum(trim) / len(trim), leveling.TARGET_DB - a, delta=0.3)   # the trim is the gain heard
+        self.assertEqual({f: Path(f).read_bytes() for f in (loud, quiet)}, before)   # no file changed
+        p.set_level(True)
+        self.assertAlmostEqual(p.level_trim(), leveling.TARGET_DB - b, delta=0.01)   # on again, on the loaded song at once
+        # the setting and the levels survive a restart: a second player measures nothing it has measured
+        p.shutdown()
+        with open(engine.state_file()) as fh:
+            self.assertTrue(json.load(fh)["level"])
+        with open(engine.levels_file()) as fh:
+            self.assertEqual(set(json.load(fh)), set(p.playlist))
+        calls = []
+        with unittest.mock.patch.object(leveling, "measure", lambda path, *a: calls.append(path) or -20.0):
+            again = engine.Player(music_dir=self.music, schedule=self.q.put, output_kind="null")
+            again.on_log = lambda *_: None
+            again.scan()
+            self.assertAlmostEqual(again.level_of(quiet), b, places=3)   # the kept level; two measures of a file differ in the seventh place (libopenmpt dithers)
+            self.assertEqual(calls, [])
+            os.utime(quiet, (time.time() + 5, time.time() + 5))      # a file changed since is measured again
+            self.assertEqual(again.level_of(quiet), -20.0)
+            self.assertEqual(calls, [quiet])
+            again._load(again.playlist.index(loud))
+            self.assertTrue(again.apply_mix_to_file())               # a new mix keeps the file's time and size: measured again
+            self.assertEqual(again.level_of(loud), -20.0)
+            again.shutdown()
+
+    def test_a_measure_cut_short_by_a_shutdown_writes_nothing_after_it(self):
+        """The folder's songs are measured in the background. A shutdown does not wait for a long measure, and the
+        pass, ended, saves nothing: the settings folder may be gone by then (a test's, or an uninstall's)."""
+        import threading
+        p, gate, started = self.p, threading.Event(), threading.Event()
+
+        def slow(path, *a):
+            started.set()
+            gate.wait(10)
+            return -20.0
+        with unittest.mock.patch.object(leveling, "measure", slow), unittest.mock.patch.object(engine, "MEASURE_JOIN", 0.05):
+            p.scan()
+            self.assertTrue(started.wait(5))
+            thread = p._measure_thread
+            p.shutdown()                                   # gives up on the measure still running
+            self.assertTrue(thread.is_alive())
+            if os.path.exists(engine.levels_file()):
+                os.remove(engine.levels_file())
+            gate.set()
+            thread.join(5)
+        self.assertFalse(thread.is_alive())
+        self.assertFalse(os.path.exists(engine.levels_file()))
+
+    def test_the_background_measure_leaves_the_saving_to_the_face(self):
+        """The folder's pass, ended, asks the face's thread to save and writes nothing by its own: a second player in
+        one process whose settings folder is taken away under it (a test's, shut down after its folder goes) left a
+        file behind in it. A save asked for and reached after the shutdown is not made."""
+        p = self.p
+        p.scan()
+        p._measure_thread.join(30)
+        self.assertFalse(p._measure_thread.is_alive())
+        self.assertFalse(os.path.exists(engine.levels_file()))       # measured, and nothing written yet
+        asked = []
+        while not self.q.empty():
+            asked.append(self.q.get())
+        self.assertIn(p._save_levels, asked)                         # the save handed to the face
+        p._save_levels()
+        self.assertTrue(os.path.exists(engine.levels_file()))        # the face's thread writes it
+        p.shutdown()
+        os.remove(engine.levels_file())
+        p._save_levels()                                             # one that arrives after the shutdown
+        self.assertFalse(os.path.exists(engine.levels_file()))
+
+    def test_the_level_s_gates_and_trim(self):
+        full = leveling.FULL_SCALE
+        self.assertIsNone(leveling.gated([]))
+        self.assertIsNone(leveling.gated([0.0, full * 1e-9]))                        # nothing over the absolute gate
+        self.assertAlmostEqual(leveling.gated([full / 100] * 5), -20.0, places=6)
+        self.assertAlmostEqual(leveling.gated([full / 100] * 5 + [0.0] * 20), -20.0, places=6)          # a rest is not counted
+        self.assertAlmostEqual(leveling.gated([full / 100] * 5 + [full / 100000] * 20), -20.0, places=6)   # nor a tail 30 dB under
+        self.assertLess(leveling.gated([full / 100] * 5 + [full / 400] * 5), -20.0)                      # a passage 6 dB under is
+        self.assertEqual(leveling.gain_for(None), 1.0)
+        self.assertAlmostEqual(leveling.gain_for(leveling.TARGET_DB), 1.0)
+        self.assertAlmostEqual(leveling.gain_for(leveling.TARGET_DB + 6.0), 10 ** (-6 / 20))
+        self.assertAlmostEqual(leveling.gain_for(-90.0), 10 ** (leveling.MAX_TRIM_DB / 20))              # near silence is not made a song
+        self.assertIsNone(leveling.measure(os.path.join(self.music, "no such file.it")))
+
+    def test_the_band_s_mute_and_solo(self):
+        """THE BAND's M and S silence channels in the playing module: a part's echo with it, every other part for a
+        solo, through a seek and a pause, and for the loaded song only."""
+        p = self.p
+        p.scan()
+        p.play(1)
+        self.pump(0.5)
+        layout = p.metadata()["layout"]
+        self.assertEqual(layout[12:], ["echo.melody"] * 2 + ["echo.harmony"] * 3 + ["echo.arp"] * 2)
+        silent = lambda: [ch for ch in range(len(layout)) if p.module.channel_muted(ch)]   # noqa: E731
+        self.assertEqual(silent(), [])
+        p.set_band([0], [])                                   # the tune muted: its two echo returns go with it
+        self.assertEqual(silent(), [0, 12, 13])
+        p.set_band([0, 1], [])                                # one harmony voice of three: the harmony's echo still sounds
+        self.assertEqual(silent(), [0, 1, 12, 13])
+        p.set_band([1, 2, 3], [])                             # all three: now it does not, and the tune is back
+        self.assertEqual(silent(), [1, 2, 3, 14, 15, 16])
+        p.set_band([1, 2, 3], [4])                            # the bass alone: a solo wins over the mutes
+        self.assertEqual(silent(), [ch for ch in range(19) if ch != 4])
+        p.set_band([1, 2, 3], [4, 5])                         # a second solo adds its part, and its echo
+        self.assertEqual(silent(), [ch for ch in range(19) if ch not in (4, 5, 17, 18)])
+        self.assertEqual(p.band(), {"muted": [1, 2, 3], "soloed": [4, 5], "echoOff": False})
+        p.seek(20.0); self.pump(0.3)
+        p.pause(); self.pump(0.2)
+        p.pause(); self.pump(0.3)
+        self.assertEqual(silent(), [ch for ch in range(19) if ch not in (4, 5, 17, 18)])
+        p.set_band([1, 2, 3], [])                             # the last solo off: back to what the mutes say
+        self.assertEqual(silent(), [1, 2, 3, 14, 15, 16])
+        p.play(0)                                             # another song: every channel heard, nothing kept
+        self.pump(0.3)
+        self.assertEqual(silent(), [])
+        self.assertEqual(p.band(), {"muted": [], "soloed": [], "echoOff": False})
+
+    def test_a_written_song_s_echo_goes_with_its_voice(self):
+        """A written song's echo repeats are on channels after its voices, each sending voice's own: a part muted
+        takes its own, a part soloed keeps its own, and the master volume's channel always plays. A song written
+        before the message named them loses all its echo while a part is silenced."""
+        from bitcomposer import written
+        from bitcomposer.spc import convert
+        out = written.compose_written(seed=5)
+        song = convert.render(out["score"], os.path.join(self.music, "A new one.it"))
+        with unittest.mock.patch.object(convert, "_channel_lines", lambda *_: []):
+            convert.render(out["score"], os.path.join(self.music, "An old one.it"))
+        echoes, channels = song["info"]["echo_channels"], song["info"]["channels"]
+        voices, master = min(min(chs) for chs in echoes.values()), channels - 1   # the repeats begin where the voices end
+        tune = max(echoes)                                    # the last sending voice: the melody
+        p = self.p
+        p.scan()
+        silent = lambda: {ch for ch in range(channels) if p.module.channel_muted(ch)}   # noqa: E731
+        p.play(p.playlist.index(os.path.join(self.music, "A new one.it")))
+        self.pump(0.3)
+        self.assertEqual(p.module.num_channels, channels)
+        self.assertEqual(len(p.metadata()["layout"]), voices)
+        p.set_band([0], [])
+        self.assertEqual(silent(), {0, *echoes[0]})
+        p.set_band([0], [tune])
+        self.assertEqual(silent(), set(range(channels)) - {tune, *echoes[tune], master})
+        self.assertFalse(p.band()["echoOff"])
+        p.set_band([echoes[0][0], master], [channels + 3])   # only a part can be muted or soloed
+        self.assertEqual(p.band(), {"muted": [], "soloed": [], "echoOff": False})
+        self.assertEqual(silent(), set())
+        p.play(p.playlist.index(os.path.join(self.music, "An old one.it")))
+        self.pump(0.3)
+        self.assertEqual(silent(), set())
+        p.set_band([0], [])
+        self.assertEqual(silent(), {0, *range(voices, master)})
+        self.assertTrue(p.band()["echoOff"])
+        p.set_band([], [tune])
+        self.assertEqual(silent(), set(range(channels)) - {tune, master})
+        p.set_band([], [])
+        self.assertEqual(silent(), set())
+        self.assertFalse(p.band()["echoOff"])
+
+    def test_what_a_mute_silences(self):
+        """engine.silenced on a written song's channels: the voices, each sending voice's echo repeats, the master
+        volume's channel last."""
+        layout = ["accompaniment", "bass", "melody"]
+        echo_of = {3: 0, 4: 0, 5: 2, 6: 2}                    # channels 3-4 the accompaniment's repeats, 5-6 the tune's
+        of = lambda muted, soloed, echo=echo_of, master=7: engine.silenced(layout, 8, set(muted), set(soloed), echo, master)   # noqa: E731
+        self.assertEqual(of([], []), (set(), False))
+        self.assertEqual(of([0], []), ({0, 3, 4}, False))     # a voice and its echo
+        self.assertEqual(of([1], []), ({1}, False))           # a dry voice
+        self.assertEqual(of([], [2]), ({0, 1, 3, 4}, False))  # the tune alone keeps its echo; the master is never silenced
+        self.assertEqual(of([0, 1, 2], []), ({0, 1, 2, 3, 4, 5, 6}, False))
+        self.assertEqual(of([2], [7, 9]), ({2, 5, 6}, False))  # a solo on no named channel is no solo
+        # a file from before the echo channels line: whose echo is whose cannot be told, so all of it goes while a part is silenced
+        self.assertEqual(of([], [], echo={}), (set(), False))
+        self.assertEqual(of([1], [], echo={}), ({1, 3, 4, 5, 6}, True))
+        self.assertEqual(of([], [2], echo={}), ({0, 1, 3, 4, 5, 6}, True))
+        # a module with no layout names every channel: each is its own row, and the master still plays
+        raw = [f"ch{i + 1}" for i in range(8)]
+        self.assertEqual(engine.silenced(raw, 8, set(), {0}, {}, 7), ({1, 2, 3, 4, 5, 6}, False))
+        self.assertEqual(engine.silenced(raw, 8, set(), {0}, echo_of, 7), ({1, 2, 5, 6}, False))   # and an echo it names follows its voice
+        self.assertEqual(engine.silenced(raw, 8, {3, 7}, {4}, echo_of, 7), (set(), False))        # an echo's own row, or the master's, does nothing
+        # the lines a converted or written module carries, counted from 1 there and from 0 here
+        info = engine.parse_message("T\rlayout: accompaniment, bass, melody\rrows at 100 a second; 9 notes\recho channels: 1=4-5, 3=6-7\rmaster channel: 8\r")
+        self.assertEqual(info["echo_of"], echo_of)
+        self.assertEqual(info["master"], 7)
+        self.assertEqual(info["lines"], ["T", "rows at 100 a second; 9 notes"])
+
+    def test_what_the_deck_says_of_a_song(self):
+        """engine.song_card: the facts beside the title and the details behind MORE, from each kind of message."""
+        card = lambda message, title: engine.song_card(engine.parse_message(message)["lines"], title, engine.parse_message(message)["drew"])   # noqa: E731
+        written = ("Winding Valley - E minor - 70 BPM - form A B C\rlayout: bass, melody\r"
+                   "Written by bitComposer on its own sounds (seed 3; docs/IDIOM.md): the band, the figures, the tune and its\r"
+                   "balance drawn from a vocabulary of counted habits, none of any song's notes.\r"
+                   "performance: the theme returns with the band, the loop twice\rrows at 100 a second; 1286 notes\r"
+                   "echo channels: 2=3-4\rmaster channel: 5")
+        self.assertEqual(card(written, "Winding Valley"),
+                         (["E minor", "70 BPM", "form A B C"],
+                          ["Written by bitComposer on its own sounds (seed 3; docs/IDIOM.md)",       # less what every written song's message says
+                           "the theme returns with the band, the loop twice", "rows at 100 a second; 1286 notes"]))
+        self.assertEqual(card(written, "A title given since")[0], ["E minor", "70 BPM", "form A B C"])   # the tempo finds the facts, not the title
+        classic = ("The Canyon of Tides\rG harmonic minor - 106 BPM\rchip - standard form\rsquare_lead / triangle_bass\r"
+                   "seed 1 - bitcomposer 2.0.0\rdrew: sound=chip,form=standard\rlayout: melody,bass")
+        self.assertEqual(card(classic, "The Canyon of Tides"),
+                         (["G harmonic minor", "106 BPM", "standard form"],
+                          ["chip - standard form", "square_lead / triangle_bass", "seed 1 - bitcomposer 2.0.0"]))
+        converted = "Terra - Final Fantasy VI - Nobuo Uematsu\rConverted from an SPC snapshot by bitComposer\rrows on the driver's clock, 62.50 Hz"
+        self.assertEqual(card(converted, "Terra"),
+                         (["Final Fantasy VI", "Nobuo Uematsu"], ["Converted from an SPC snapshot by bitComposer", "rows on the driver's clock, 62.50 Hz"]))
+        other = "\r".join(f"line {i}" for i in range(20))            # any other module: no facts, the message's first lines
+        self.assertEqual(card(other, "Some Module"), ([], [f"line {i}" for i in range(engine.DETAIL_LINES)]))
+        self.assertEqual(card("", "Untitled"), ([], []))
 
     def test_message_parsing_and_header_write(self):
         info = engine.parse_message("Title\r\nC major - 120 BPM\r\nvoices: melody=a,harmony=b\r\ndrew: sound=chip,form=aaba\r\nlayout: melody,harmony,echo.melody\r\n")
@@ -426,6 +698,16 @@ class WindowHeadless(unittest.TestCase):
         self.assertFalse(b.checkUpdates)
         with open(state_file()) as fh:
             self.assertFalse(json.load(fh)["check_updates"])
+        # LEVEL: on unless turned off, the loaded song's trim in the state, and the switch saved
+        self.assertTrue(b.state["level"])
+        self.assertIsInstance(b.state["levelTrim"], float)
+        b.setLevel(False)
+        self.assertFalse(b.state["level"])
+        self.assertIsNone(b.state["levelTrim"])
+        with open(state_file()) as fh:
+            self.assertFalse(json.load(fh)["level"])
+        b.setLevel(True)
+        self.assertTrue(b.state["level"])
 
     def test_window_loads_and_fits(self):
         from pathlib import Path
@@ -451,6 +733,150 @@ class WindowHeadless(unittest.TestCase):
         self.assertGreater(win.property("contentH"), 672)
         self.assertLessEqual(win.height(), 672)
         self.assertLessEqual(win.width(), 1280)
+        win.close()
+        del eng
+
+    def test_the_band_s_buttons(self):
+        """Each row of THE BAND has an M and an S: pressed, they light, the row dims, and the engine silences the
+        part (the kit's row every piece)."""
+        from pathlib import Path
+        from PySide6.QtCore import QMetaObject, QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        from PySide6.QtQuick import QQuickWindow  # noqa: F401
+        import bitcomposer.player as pkg
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        eng.rootContext().setContextProperty("backend", self.b)
+        eng.setInitialProperties({"still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        win = eng.rootObjects()[0]
+        self.b.playIndex(1)
+        win.show()
+        self.assertTrue(self.pump(3, lambda: self.b.state.get("status") == "Playing"))
+        self.pump(0.3)
+
+        def find(item, name):                                 # a Repeater's rows are in the item tree, not the object tree
+            if item.objectName() == name:
+                return item
+            for kid in item.childItems():
+                got = find(kid, name)
+                if got is not None:
+                    return got
+            return None
+
+        def press(name):
+            QMetaObject.invokeMethod(find(win.contentItem(), name), "clicked")
+            self.pump(0.2)
+
+        module = self.b.player.module
+        silent = lambda: [ch for ch in range(19) if module.channel_muted(ch)]   # noqa: E731
+        lit = lambda name: find(win.contentItem(), name).property("on")         # noqa: E731
+        press("bandMute0")
+        self.assertEqual(silent(), [0, 12, 13])
+        self.assertTrue(lit("bandMute0"))
+        self.assertFalse(lit("bandMute1"))
+        self.assertEqual(list(self.b.mutedChannels), [0])
+        press("bandSoloKit")                                  # the kit alone: its six pieces
+        self.assertEqual(silent(), [0, 1, 2, 3, 4, 5, 12, 13, 14, 15, 16, 17, 18])
+        self.assertTrue(lit("bandSoloKit"))
+        self.assertEqual(list(self.b.soloChannels), [6, 7, 8, 9, 10, 11])
+        press("bandSoloKit")
+        press("bandMute0")
+        self.assertEqual(silent(), [])
+        self.assertFalse(lit("bandMute0"))
+        press("bandMuteKit")
+        self.assertEqual(silent(), [6, 7, 8, 9, 10, 11])
+        self.b.playIndex(0)                                   # the next song starts with every part heard
+        self.assertTrue(self.pump(3, lambda: not self.b.mutedChannels))
+        self.assertFalse(lit("bandMuteKit"))
+        self.assertEqual(warnings, [])
+        win.close()
+        del eng
+
+    def test_the_deck_folds_and_the_songs_take_the_room(self):
+        """PLAY's top is one panel, the deck: the title with the song's key, tempo and form, the position between the
+        transport and GENERATE, the rest of the message behind MORE. THE BAND and GAIN & WIDTH fold to their headings,
+        remembered, and the song list takes what the window has left, so the page itself does not scroll."""
+        import json
+        import shutil
+        from pathlib import Path
+        from PySide6.QtCore import QMetaObject, QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        from PySide6.QtQuick import QQuickWindow  # noqa: F401
+        import bitcomposer.player as pkg
+        for i in range(30):
+            shutil.copy(os.path.join(self.music, "Kept.it"), os.path.join(self.music, f"Copy {i:02d}.it"))
+        self.b.rescan()
+        self.assertTrue(self.pump(2, lambda: len(self.b.playlist) == 32))
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        self.b.set_screen(1920, 1000)
+        eng.rootContext().setContextProperty("backend", self.b)
+        eng.setInitialProperties({"still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        win = eng.rootObjects()[0]
+        self.b.playIndex(0)
+        win.show()
+        self.assertTrue(self.pump(3, lambda: win.property("_sized")))
+        self.pump(0.5)
+
+        def find(name, item=None):
+            item = item or win.contentItem()
+            if item.objectName() == name:
+                return item
+            for kid in item.childItems():
+                got = find(name, kid)
+                if got is not None:
+                    return got
+            return None
+
+        def signal(name, what):
+            QMetaObject.invokeMethod(find(name), what)
+            self.pump(0.3)
+
+        flick, songs = find("scroll"), find("songList")
+        fits = lambda: flick.property("contentHeight") <= flick.height() + 1     # noqa: E731
+        row = songs.property("rowH")
+        # the deck: one panel, the facts beside the title, the position in the transport's row
+        self.assertLess(find("deck").height(), 120)
+        self.assertEqual(find("deckTitle").property("text"), self.b.state["title"])
+        self.assertIn(" BPM  ·  ", find("deckFacts").property("text"))
+        self.assertTrue(find("deckPosition").property("visible"))
+        self.assertFalse(find("deckDetails").property("visible"))
+        signal("deckMore", "clicked")
+        self.assertTrue(find("deckDetails").property("visible"))
+        signal("deckMore", "clicked")
+        # the list: more songs than fit, so it takes what is left and the page stays put
+        self.assertTrue(fits())
+        before = songs.height()
+        self.assertGreaterEqual(before, 4 * row)
+        self.assertLess(before, songs.property("contentHeight"))
+        # THE BAND folded: its rows go, its heading says what it holds and what is silenced out of sight, the list grows
+        signal("bandMute0", "clicked")
+        signal("bandHeading", "toggled")
+        self.assertFalse(win.property("bandOpen"))
+        self.assertIsNone(find("bandMute0"))
+        self.assertEqual(find("bandHeading").property("aside"), "7 parts · 1 muted")
+        self.assertTrue(self.b.player.module.channel_muted(0))
+        self.assertGreater(songs.height(), before + 4 * row)
+        self.assertTrue(fits())
+        folded = songs.height()
+        signal("soundHeading", "toggled")
+        self.assertEqual(find("soundHeading").property("aside"), "gain 100% · width 100%")
+        self.assertGreater(songs.height(), folded + 2 * row)
+        self.assertTrue(fits())
+        saved = json.loads(self.b.loadUi())                   # remembered for the next start
+        self.assertEqual((saved["bandOpen"], saved["soundOpen"], saved["showDetails"]), (False, False, False))
+        signal("bandHeading", "toggled")
+        self.assertIsNotNone(find("bandMute0"))
+        self.assertTrue(find("bandMute0").property("on"))
+        # a narrow window: the position goes over the buttons
+        win.setWidth(440)
+        self.pump(0.4)
+        self.assertFalse(find("deckPosition").property("visible"))
+        self.assertEqual(warnings, [])
         win.close()
         del eng
 
@@ -515,6 +941,72 @@ class WindowHeadless(unittest.TestCase):
         win.close()
         del eng
 
+    def test_an_import_shows_each_stage_with_its_own_count(self):
+        """LIBRARY while an import runs: which step of the import the worker
+        is at, and the bar and the count for that stage's songs alone, from
+        nothing again as the next stage begins."""
+        from pathlib import Path
+        from PySide6.QtCore import QObject, QUrl
+        from PySide6.QtQml import QQmlApplicationEngine
+        import bitcomposer.player as pkg
+        from bitcomposer.translate import pack
+        b = self.b
+        warnings = []
+        eng = QQmlApplicationEngine()
+        eng.warnings.connect(lambda ws: warnings.extend(w.toString() for w in ws))
+        eng.rootContext().setContextProperty("backend", b)
+        eng.setInitialProperties({"still": True})
+        eng.load(QUrl.fromLocalFile(str(Path(pkg.__file__).parent / "qml" / "Main.qml")))
+        win = eng.rootObjects()[0]
+        win.show()
+        win.setProperty("showPacks", True)
+        b._import_state = dict(b._import_state, busy=True, name="test_quest_spc")   # as import_from leaves it, with no worker
+        b.packsChanged.emit()
+        self.pump(0.3)
+        bar, count, words = (win.findChild(QObject, name) for name in ("importBar", "importCount", "importStage"))
+        self.assertTrue(bar.property("visible"))
+
+        def shown():
+            self.pump(0.1)
+            said = words.property("text")
+            return b.importState["bar"], count.property("text"), said.split("…")[0] if "…" in said else ""
+        self.assertEqual(shown(), (-1.0, "", ""))                                # before the worker's first word
+        b._import_stage(pack.UNPACKING)
+        self.assertEqual(shown(), (-1.0, "", "step 1 of 5: unpacking the set"))
+        b._import_stage(pack.READING)
+        b._import_progress(0, 82)
+        self.assertEqual((shown()[1], bar.property("on")), ("0 of 82 songs", 0))
+        b._import_progress(41, 82)
+        self.assertEqual(shown(), (0.5, "41 of 82 songs", "step 2 of 5: reading the songs"))
+        self.assertIn("if you stop, the next import starts from the first song again", words.property("text"))   # a stopped import keeps no song
+        self.assertEqual(bar.property("on"), 20)
+        b._import_progress(82, 82)
+        self.assertEqual((shown()[1], bar.property("on")), ("82 of 82 songs", 40))
+        b._import_stage(pack.HEARING)                                            # the lead pass: the bar and the count are its own
+        self.assertEqual(shown(), (-1.0, "", "step 3 of 5: hearing which voice leads"))
+        self.assertEqual((b.importState["done"], b.importState["total"]), (0, 0))
+        b._import_progress(0, 67)
+        self.assertEqual((shown()[1], bar.property("on")), ("0 of 67 songs", 0))
+        b._import_progress(17, 67)
+        self.assertEqual((shown()[1], bar.property("on")), ("17 of 67 songs", 10))
+        b._import_progress(67, 67)
+        self.assertEqual((shown()[1], bar.property("on")), ("67 of 67 songs", 40))
+        b._import_stage(pack.COUNTING_GAME)                                      # nothing to count: the bar steps by the second
+        self.assertEqual(shown(), (-1.0, "", "step 4 of 5: counting the game's vocabulary"))
+        self.assertLess(bar.property("on"), 40)
+        self.assertTrue(self.pump(10, lambda: bar.property("on") > 0))
+        b._import_stage(pack.COUNTING_LIBRARY)
+        self.assertEqual(shown(), (-1.0, "", "step 5 of 5: counting the library's vocabulary"))
+        b._import_stage("something a newer worker says")                         # a stage this player does not know: no step
+        self.assertEqual(shown(), (-1.0, "", "something a newer worker says"))
+        b._import_state = dict(b._import_state, busy=False)
+        b.packsChanged.emit()
+        self.pump(0.2)
+        self.assertFalse(bar.property("visible"))
+        self.assertEqual(warnings, [])
+        win.close()
+        del eng
+
     def test_minimized_start_stays_in_the_tray(self):
         """--minimized (start at login): no window until asked for; shown
         later, it sizes itself as a normal start does."""
@@ -569,7 +1061,7 @@ class WindowHeadless(unittest.TestCase):
             self.assertFalse(json.load(fh)["prereleases"])
 
     def test_get_the_emulator(self):
-        """PACKS' GET THE EMULATOR, on a pipx install: the update screen,
+        """LIBRARY's GET THE EMULATOR, on a pipx install: the update screen,
         worded for it, asks first; GET IT runs pipx with the import extra at
         this very version; a failure says why it may have failed and leaves
         the player as it was; CLOSE goes back to a plain update screen."""

@@ -1,12 +1,16 @@
 # Pack files
 
 A pack is a sound for the generator: a palette (the chip it imitates),
-voices for each part, and the habits of the scores it follows. The four
-built-in packs are code; a **pack file** is the same thing as data, so a
+voices for each part, and the habits of the scores it follows. The five
+built-in packs (`bit`, bitComposer's own, and Classic's four styled sets)
+are code; a **pack file** is the same thing as data, so a
 pack can be added without touching the code. The SPC importer writes
 them from a game's songs: the player's LIBRARY screen (IMPORT), or
 `python -m bitcomposer.spc --pack OUT FOLDER|ARCHIVE`, a first thin pack
-(`TRANSLATOR.md`, stage 2).
+(`TRANSLATOR.md`, stage 2). A written song, the default, takes only a
+pack's sounds (`translate/whole/render.py`); the tempo, the form, the
+other habits and the trims apply with `--classic`, and the echo habits
+stand in for a written song only where its vocabulary has no echo word.
 
 A pack file is a JSON file, with the pack's own voices as WAV files
 beside it. It is data only: a pack someone sends you cannot run anything.
@@ -21,16 +25,17 @@ a random sound, only used when named.
 
 In the player, LIBRARY keeps the packs on this machine, each a folder in the
 user's data folder (`~/.local/share/bitcomposer/packs`, or under
-`BITCOMPOSER_DATA_DIR`): ADD brings one in from its pack file or from an
-exported pack (one zip file of its folder, which EXPORT writes), and USE
-puts it in SOUND.
+`BITCOMPOSER_DATA_DIR`): ADD A PACK brings one in from its pack file or
+from an exported pack (one zip file of its folder, which EXPORT writes),
+and USE ITS SOUNDS plays the next songs on it (WRITE shows it under YOUR
+GAMES).
 
 Since 2.0rc1 an import also counts the game's tables into its pack file
 (the second format, `bitcomposer_pack: 2`, with `tables` beside the voices:
 `translate/packtables.py`) and keeps the songs' readings in the data
 folder's `readings.db`, so the pack is a vocabulary the writer draws from
 as well as a set of sounds (`bitcomposer --vocabulary pack:NAME`; the
-README's "Written from a game's vocabulary").
+README's "Packs from your games").
 
 ## An example
 
@@ -85,10 +90,12 @@ README's "Written from a game's vocabulary").
   A voice name is one of the pack's own `samples`, or a built-in voice
   (any voice the palettes and packs have: `snes_strings`, `ffvi_harp`,
   `gen_lead`, ...).
-- **`habits`**: weighted draws and settings the composer follows. Any
-  habit left out is drawn the way the palette draws it. The list is below.
-- **`trims`**: channel volumes (0 to 64) by part, over the mix: `melody`,
-  `harmony`, `bass`, `arp`, `kick`, `snare`, `hihat`, `tom`, `crash`,
+- **`habits`**: weighted draws and settings the composer follows (Classic,
+  with `--classic`; a written song reads only the echo habits, as above).
+  Any habit left out is drawn the way the palette draws it. The list is
+  below.
+- **`trims`**: channel volumes (0 to 64) by part, over Classic's mix:
+  `melody`, `harmony`, `bass`, `arp`, `kick`, `snare`, `hihat`, `tom`, `crash`,
   `openhat`, `echo.melody`, `echo.harmony`, `echo.arp`.
 - **`samples`**: the pack's own voices, by name (see below).
 
@@ -111,7 +118,29 @@ frames).
 - **`percussion`**: `true` for a kit voice: it is left at its own level
   rather than evened out with the tonal voices. Defaults to `true` for a
   voice the `drums` use and `false` otherwise.
+- **`tonal`**: on a kit voice only, the same recording read as a pitched
+  instrument: `{"note": 45.04, "loop": [2720, 7104]}`, with `note` or
+  `hz` as above and `loop` and `release` optional, as above. A game may
+  play as an instrument a recording the pack holds as a kit voice (Final
+  Fantasy VI's distorted rhythm guitar, a snare to the pack's drum
+  namer, is Battle Theme's riff). The kit still strikes the voice as
+  recorded; a pitched part given it is tuned, and looped, by this
+  reading. Without one a pitched part plays the kit voice as the kit
+  does, its pitch unknown, and the written song's log says so. The
+  reading is kept as a sample of its own under the voice's name with
+  `_tonal` after it, so no other sample may take that name. The pack
+  builder writes it for a kit sample the game plays as a pitched part;
+  `tools/pack_tonal.py` adds it to a pack already built.
 - **`volume`**: the default note volume, 1 to 64. Defaults to 60.
+- **`envelope`**: the SNES chip envelope the game plays the sample with,
+  as the chip's own register bytes (0 to 255): `{"adsr": [ADSR1, ADSR2]}`
+  or `{"gain": GAIN}`, one of the two. A written song plays the voice's
+  notes with it, and the voice's `tonal` reading takes it too; without
+  one they play flat at full level. Classic does not use it. The pack
+  builder writes the envelope the game plays the sample with most.
+- **`piece`**: on a kit voice, the drum the pack builder's namer took it
+  for (`kick`, `snare`, `hat`, `tom`, `cymbal`). A record only: the
+  reader accepts it and nothing reads it.
 
 Tonal voices are evened out the way the built-in ones are: a sustaining
 voice by its loop, so like voices sit at like levels. A voice whose loop
@@ -175,14 +204,15 @@ beside the voices: what the game's songs do, counted from their readings
 kept). Everything else is as in format 1, and a format 1 file still
 loads. The importer's pack is written in format 2 when its tables are
 counted (`python -m bitcomposer.translate.packtables --db READINGS
---game NAME --into pack.json`); the generator's use of them is phase 4's.
+--game NAME --into pack.json`); since 2.0 the writer draws from them
+(`docs/IDIOM.md`, phase 6), as above.
 
 ```json
 "tables": {
-  "source": {"game": "Final Fantasy VI", "songs": 82, "version": 1, "votes": "shares", "discount": 0.75},
+  "source": {"game": "Final Fantasy VI", "songs": 82, "version": 1, "votes": "shares", "discount": null},
   "tables": {
     "bass": {"what": "the bass's bar as a figure: positions with chord-tone marks",
-             "shape": ["part", "meter", "habit", "previous"], "mixture": true,
+             "shape": ["part", "meter", "tempo", "habit", "feel", "previous"], "mixture": true,
              "units": 4210, "songs": 71,
              "model": {"table": {"conditionings": [...], "vocabulary": [...], "contexts": [...], "floor": {...}},
                        "recall": {...}}},
@@ -194,12 +224,12 @@ counted (`python -m bitcomposer.translate.packtables --db READINGS
 
 - **`source`**: the game, how many of its songs were read, the tables'
   layout version, and how they were counted (share votes, the discount).
-- **`tables`**: by name (`rhythm`, `values`, `habits`, `bass`,
-  `bass_habits`, `drums-KSt`, `drums-h`, `drums-c`, `drums-o`,
-  `drum_habits`, `voicings`, `widths`, `chords`, `changes`, `cadences`,
-  `loops`, `form`, `lengths`, `contours`, `peaks`, `endings`,
-  `relations`, `texture`, `presence`, `parts`, `voices`, `doubles`,
-  `layers`; a table with nothing to count is left out). Each says what it
+- **`tables`**: by name, the tables `translate/packtables.py` keeps
+  (`KEPT`: `rhythm`, `bass`, `chords`, `balance`, `echo` and the rest;
+  `docs/idiom/VOCABULARY.md` names and explains every one, and CI checks
+  that it does), among them the kit's bar tables a second time with `@2`
+  after the name, counted in double time (`drums@2`, `drums-KSt@2`, ...);
+  a table with nothing to count is left out. Each says what it
   is (`what`), its conditionings in order (`shape`), whether it is drawn
   as the song's own mixture (`mixture`: the model then holds the `table`
   and the `recall` shares), how much it was counted from (`units`,

@@ -152,7 +152,7 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
         for role, blob in db.execute("SELECT role, notes FROM voices WHERE song = ?", (sid,)):
             if role in ROLES:
                 song.notes.setdefault(role, []).extend(
-                    (s, length, m) for s, length, m, _, _, _ in store.unpack(blob)
+                    (s, length, m) for s, length, m, *_ in store.unpack(blob)
                     if s < end and not math.isnan(m))
         songs.append(song)
     return songs, dict(out)

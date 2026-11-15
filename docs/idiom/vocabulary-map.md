@@ -12,19 +12,20 @@ flowchart LR
   P[the plan: one draw a song] --> D[drums] --> B[bass] --> U[upper parts] --> M[the tune] --> C[the counter-line] --> R[render]
 ```
 
-### the plan, drawn once a song (54)
+### the plan, drawn once a song (66)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
-| `habits` | part, tempo, weight | _plan_once, compose, game_habits, habit_near, melody_models, write_melody, write_upper | `bass`, `cell_handoffs`, `changes`, `drum_group_habits`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | a part's density and repetition habit, drawn once a song given the tempo and the part's weight in the band |
-| `bass_habits` | part, tempo, weight | _plan_once, write, write_bass | `bass`, `cell_handoffs`, `changes`, `drum_group_habits`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | the bass's habit (density, tones, octaves), drawn once a song given the tempo and its weight |
-| `drum_habits` | part | _plan_once | `bass`, `cell_handoffs`, `changes`, `drum_group_habits`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | the drums' density habit, drawn once a song |
-| `kit_pieces` | part, habit | _plan_once | `drums` | the kit pieces a song's drums strike (letters: kick, snare, hat, tom, cymbal, other), by the kit's habit tier, drawn once a song |
-| `voicing_habits` | part | _plan_once, write_upper | `voicings`, `widths` | an upper part's richness habit, drawn once a song |
+| `habits` | part, tempo, weight | _plan_once, compose, game_habits, habit_near, melody_models, write_melody, write_upper | `bass`, `cell_handoffs`, `changes`, `drum_group_habits`, `drums`, `drums@2`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | a part's density and repetition habit, drawn once a song given the tempo and the part's weight in the band |
+| `bass_habits` | part, tempo, weight | _plan_once, write, write_bass | `bass`, `cell_handoffs`, `changes`, `drum_group_habits`, `drums`, `drums@2`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | the bass's habit (density, tones, octaves), drawn once a song given the tempo and its weight |
+| `drum_habits` | part | _plan_once | `bass`, `cell_handoffs`, `changes`, `drum_group_habits`, `drums`, `drums@2`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | the drums' density habit, drawn once a song |
+| `kit_pieces` | part, habit | _plan_once | `drums`, `drums@2` | the kit pieces a song's drums strike (letters: kick, snare, hat, tom, cymbal, other), by the kit's habit tier, drawn once a song |
+| `voicing_habits` | part | _plan_once, write_upper | `tone_degrees`, `voicings`, `widths` | an upper part's richness habit, drawn once a song |
 | `motions` | part | _plan_once, write_upper | - | how an upper part moves through its tones (block, mixed, arpeggiated), drawn once a song |
 | `chords` | part, mode, previous | plan_chords | - | a bar's chord as a numeral in the key, after the bar before's |
 | `loops` | part | plan_chords | - | the chord the loop returns to |
-| `form` | part, meter, index | plan_form | `part_entries`, `part_textures`, `phrase_letters`, `section_levels` | a part of the form: new, again or back, by its index |
+| `loop_parts` | part, intro | plan_loop | - | the form's part the loop returns to (0 the first, 1 the second), by whether the song opens with an intro the form never comes back to; drawn once a song on an own stream (round 98) |
+| `form` | part, meter, index | plan_form, plan_loop | `part_entries`, `part_textures`, `phrase_letters`, `section_levels` | a part of the form: new, again or back, by its index |
 | `lengths` | part, meter, habit | plan_form | `cadences`, `part_entries`, `periods` | a part's length in bars, by the song's habit |
 | `letters` | part | _plan_once, carry_theme, plan_form, write | `part_entries`, `part_textures`, `phrase_letters`, `section_levels` | a song's form as its parts' letters in order (A B A B C), drawn whole |
 | `phrase_letters` | part, phrases, form | _plan_once | - | a part's phrases as letters: the theme head again, an earlier head again, or new |
@@ -38,7 +39,7 @@ flowchart LR
 | `parts` | part, band | compose | `voices` | whether a song has each part, by the band's size |
 | `voices` | part, band | compose | - | how many voices a song uses |
 | `layers` | part, rank | _plan_once, layers_of | `second_figures`, `voice_intervals`, `voice_moves` | what each voice of a part beside its line does, by its rank: doubling at an interval, alternating, or apart (how far off, how dense) |
-| `feels` | part | _plan_once | `bass`, `counter_figures`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `rhythm`, `second_figures` | a song's feel, duple or triple (a quarter of its onsets or more on triplet positions), drawn once a song; every figure table is drawn by it |
+| `feels` | part | _plan_once | `bass`, `counter_figures`, `drums`, `drums-KSt`, `drums-KSt@2`, `drums-c`, `drums-c@2`, `drums-h`, `drums-h@2`, `drums-o`, `drums-o@2`, `drums@2`, `rhythm`, `second_figures` | a song's feel, duple or triple (a quarter of its onsets or more on triplet positions), drawn once a song; every figure table is drawn by it |
 | `period_holds` | part, period | _plan_once | - | inside a backing part's period, a bar playing the bar a period before again (held) or not (varied) |
 | `layer_samples` | part | pair_for | - | the samples a layered part's line and its second voice play, as a pair, drawn once a song |
 | `counter_samples` | part | _plan_counter | `voice_intervals`, `voice_moves` | whether a song's counter-line plays the tune's sample (same) or another (other), drawn once a song: the kind its interval and move words are drawn under, and its sample at the rendering |
@@ -49,29 +50,40 @@ flowchart LR
 | `cell_handoffs` | part, habit, place | hand_off_cells | - | a tune's half-bar cell taken up by another part in a later bar: which part and how many bars on, by the song's echo habit and the cell's place (theme or other) |
 | `part_speeds` | part, habit | _plan_speeds | `gap_sounds`, `part_samples`, `sample_lengths` | a part's fastest bars (notes a second, a class), by the part and its habit's density: what its sample is fitted to for speed before the part is written |
 | `registers` | part | _plan_once | - | the register a part plays in (midi low-high) |
-| `keys` | part | _plan_once | `cadences`, `chords`, `contour_sizes`, `contours`, `endings`, `moves`, `peaks`, `phrase_shifts`, `relations` | a song's key, tonic and mode |
-| `tempos` | part, tempo | _plan_once | `bass`, `bass_habits`, `counter_figures`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `echo_habits`, `habits`, `periods`, `rhythm`, `second_figures` | a song's tempo, to five beats a minute, by its class (the balance token's since round 54) |
+| `keys` | part | _plan_once | `cadences`, `chords`, `contour_sizes`, `contours`, `endings`, `moves`, `off_scale`, `peaks`, `phrase_shifts`, `relations` | a song's key, tonic and mode |
+| `tempos` | part, tempo | _plan_once, tempo_near | `bass`, `bass_habits`, `counter_figures`, `drums`, `drums-KSt`, `drums-KSt@2`, `drums-c`, `drums-c@2`, `drums-h`, `drums-h@2`, `drums-o`, `drums-o@2`, `drums@2`, `echo_habits`, `habits`, `periods`, `rhythm`, `second_figures` | a song's tempo, to five beats a minute, by its class (the balance token's since round 54) |
 | `sizes` | part | plan_form | - | how many parts a song's form has |
 | `length_habits` | part | plan_form | `cadences`, `part_entries`, `periods` | a song's part-length habit (short, medium, long), drawn once a song |
-| `balance` | part | _plan_once, kit_piece_level | `bass`, `bass_habits`, `cell_handoffs`, `changes`, `counter_figures`, `counter_pairs`, `counter_shares`, `drum_group_habits`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `echo_habits`, `habits`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `parts`, `periods`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `second_figures`, `tempos`, `tune_grain`, `values`, `voice_intervals`, `voice_moves`, `voices`, `voicings` | a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) and, for the counter, whether it plays the tune's sample (same/other) in it, drawn once a song as one unit |
-| `sounds` | part | _plan_once | - | the share of its gap a part's note sounds |
+| `balance` | part | _plan_once, kit_piece_hold | `bass`, `bass_habits`, `cell_handoffs`, `changes`, `counter_figures`, `counter_pairs`, `counter_shares`, `drum_group_habits`, `drums`, `drums-KSt`, `drums-KSt@2`, `drums-c`, `drums-c@2`, `drums-h`, `drums-h@2`, `drums-o`, `drums-o@2`, `drums@2`, `echo_habits`, `habits`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `parts`, `periods`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `second_figures`, `tempos`, `tune_grain`, `values`, `voice_intervals`, `voice_moves`, `voices`, `voicings` | a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) and, for the counter, whether it plays the tune's sample (same/other) in it, each pitched part's voices' pans (the right side's share, the line first; round 84), the song's key (key=9:minor), and the drums' kit (each piece's sample, level, struck note (a tonal piece's as a degree of the key, d9; a drum piece's the chip's rate as a note, r48 an octave under, r63t where the game tunes it), hold, strike class (round 81: its sample's hits a bar in the song, x/a/s/m/d) and echo mark (round 82: an e where the game sends the sample's channel to echo)), and the song's echo word (round 82, echo=0.20:80:0.78:sends:dry, as the echo table counts it), drawn once a song as one unit |
+| `tune_sounds` | part, note | _plan_once, write | - | the share of its gap a tune's or counter-line's note sounds, its held notes and its detached ones apart (the values word says which a note is), the median to a tenth, drawn once a song a part on its own streams (round 98) |
+| `sounds` | part | _plan_once, struck_with | - | the share of its gap a part's note sounds |
 | `gap_sounds` | part, voice, speed, gap | _plan_once, _plan_sounds | - | the share of its gap a note sounds, by the voice, the part's speed class (its fastest bar: slow, medium, fast) and the gap's length (under a beat, one to two, two to four, a bar or more) |
 | `bass_locks` | part | _plan_once | - | the share of the kit's accents (two pieces together) the bass strikes with, in tenths |
 | `levels` | part | _plan_once | `counter_pairs`, `counter_shares` | a part's level as a share of the song's loudest part's, in tenths |
 | `top_levels` | part | _plan_once | - | a song's loudest part's level of full, drawn once a song: what the band's shares are shares of |
 | `layer_levels` | part | _plan_once | - | a layered part's second voice's level against its line's, in tenths (the fallback for a part the balance token has no second-voice shares for) |
 | `sample_ambitus` | part | ambitus_of | - | the whole range a sample is played in, lowest note to highest, by the sample: the tune's bound |
+| `kit_seconds` | part, place | _plan_once, kit_second, kit_second_pick, write | - | whether a kit letter's hit takes the slot's second sample (the letter's other sample, struck eight times or more in the song) or the slot's own, by the letter and the hit's place in the beat (on the beat, an eighth, a sixteenth, a triplet, finer); the writer draws it a hit for a letter whose token carries a second, holding the letter's hits to the token's share for it (round 99) |
+| `kit_rates` | part, piece | _plan_once, kit_piece_rate, kit_rate_wall | - | the rate a percussion kit sample is struck at, as a note (60 as recorded), by the sample and the piece: the wall a tuned slot's moved rate stays inside |
 | `articulation` | part | _plan_once, melody_models, write_melody | - | the tune's articulation habit (detached, mixed, held), drawn once a song |
 | `part_textures` | part, habit, form, previous | plan_texture | - | the texture a part of the form keeps (which parts sound), by the kit's density tier (round 59; NO_TIER without drums), its place in the form and the part before's |
 | `section_levels` | part, form | plan_section_levels | - | a part's level in a section over its level in the whole song, in tenths, by the part and the section's place in the form: dynamics by section |
+| `section_fills` | part, voice, place | plan_section_fills | - | what a voice does in a section's last bar against the section's bars before (fuller, the same, thinner), by its part, whether it is the line or a voice beside it, and the section's place in the form: the flourish into the next section |
+| `section_densities` | part, step | plan_section_densities | - | a part's density tier in a section against its song density (denser, the same, sparser), by the step the section's level makes: a level step rides a figure change as the game's does |
 | `part_entries` | part, habit, form, length | plan_texture | - | where inside a section a part present in it enters and leaves (so many bars after its start, so many before its end, or whole), by the part, for the drums the kit's density tier (round 59), the section's place in the form and its length class |
-| `drum_group_habits` | part, habit | _plan_once | `bass`, `cell_handoffs`, `changes`, `drums`, `drums-KSt`, `drums-c`, `drums-h`, `drums-o`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | a drum group's own habit given the kit's, drawn once a song |
-| `chord_tones` | part | _plan_once, write | - | the share of the tune's notes on a beat that are chord tones, drawn once a song |
+| `drum_group_habits` | part, classes, habit | _plan_once | `bass`, `cell_handoffs`, `changes`, `drums`, `drums@2`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | a drum group's own habit given its backbone slot's strike class (round 81: the densest of the kick, snare and toms for their limb) and the kit's habit, drawn once a song on its own stream |
+| `chord_tones` | part | _plan_once, write | - | the share of a line's notes on a beat that are chord tones, for the tune and (since round 96) the counter-line, each drawn once a song and held by its writer |
+| `off_scale` | part, mode, place | _plan_once, write | - | the share of a part's notes off the song's natural scale, by the part, the mode and the beat (strong, weak); the tune's drawn once a song and held in place of a ban |
+| `clashes` | part, place | _plan_once, late_stretch_notes, write | - | a part's share of onsets under a sounding note of a part written before it (the bass, then the chord parts, then the tune, then the counter) that sit a semitone from it, by the beat; each writer holds its draw |
+| `voice_keeps` | sample | settle_chord_parts | - | the share of a voice's strikes, where its chord part's line keeps its note, on which the voice keeps its own, by whether the voice plays the line's sample; drawn once a voice, on an own stream, for a voice its balance token gives no share (round 167) |
+| `chord_follows` | part | follow_share | - | of a tune's or a counter-line's notes on a tone a chord has off the key or on the key's tone a semitone over it, the share on the chord's tone, and the same against the key's tone a semitone under it; drawn once a line, on an own stream, for a line its balance token gives no shares (round 171) |
+| `parallel_intervals` | interval, tone, part, previous | parallel | - | where a parallel voice's note sits against the chord at each shared onset (the chord tone it lands on, or its semitones from the line's note off the chord), by the stretch's nominal interval in scale steps, the tone class of the line's note against the chord, the part and the landing before: the writer's parallel voice lands where the game's does, on the chord, instead of the line again in the scale (round 97) |
+| `tone_tiers` | part | _plan_once | `tone_figures` | how much of a chord part's line leaves the chord over the song (rare: under a tenth of its onsets, some: under 0.3, many), drawn once a song a part on an own stream: the tier its tone figures are drawn under (round 96) |
 | `repeat_rates` | part | _plan_once | - | the share of the tune's moves that repeat the note, drawn once a song |
 | `tune_grain` | part, habit | _plan_once | - | the tune's grain (on-beat, eighths, fine: its share of onsets off the beat), by the part and its habit's density tier, drawn once a song and held over the melody writer's new rhythms |
 | `attacks` | part | attack_for | - | whether a part's line plays a struck sample (its strike over 6 dB above its loop body: a sound that decays) or a sustaining one, by the part; a built-in set's pool rule matches the drawn class (FFVI's tunes: sustaining in 63 of 66 songs) |
 
-### the parts' writing (whole.write hands the table to a writer) (9)
+### the parts' writing (whole.write hands the table to a writer) (10)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -82,31 +94,39 @@ flowchart LR
 | `moves` | part, mode, habit, place, tone, previous | melody_models, write | - | the tune's move note to note, under the song's stepwise habit, by where the arriving note falls in its beat and the tone the note left stands on against the chord, after the move before |
 | `melody_recall` | part, habit | melody_models, write, write_melody | - | the tune's urn: a bar the same as the one before, an earlier one again, or new, by the song's echo habit |
 | `layer_sounds` | part, voice | write | - | the share of its gap a note sounds for a layered part's line and for its second voice |
-| `second_figures` | part, layer, feel, tempo, onsets, line | write | - | a layered part's second line, under its voices' note share over the line (sparse, half, full; round 65) (an upper part's pattern, the bass's figure) under the line's own bar, by the song's feel and tempo band, where the part holds two voices or more |
+| `second_figures` | part, layer, feel, tempo, onsets, line | write | - | a layered part's second line, under its voices' note share over the line (sparse, half, full; round 65) (an upper part's pattern, the bass's figure, the counter's bar beside its line since round 76) under the line's own bar, by the song's feel and tempo band, where the part holds two voices or more |
 | `counter_figures` | part, weight, feel, tempo, onsets, line | write | - | the counter-line's bar as a mask over the tune's bar: which of the tune's onsets it strikes with and its own, by the counter's weight in the band, the song's feel and tempo band, the tune's onset count and pattern (its own onsets alone where the tune rests) |
+| `recall_moves` | part, recall, chord | write | - | how far a recalled tune cell sits from its last occurrence (at pitch, with the chord root, or by semitones), by whether it is the bar before's cell and whether the chord under it is the one under its source: the tune's echoes land as the game's do |
 
-### the drums (5)
+### the drums (10)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
-| `drums` | part, meter, kit, tempo, habit, feel, previous | compose, drums, samples_for, write | - | the kit's bar as one figure, every piece, under the pieces the song's kit strikes, then the tempo class (round 61), before its habit and feel (round 58: a draw backing off past the kit had landed on every kit's bars, none on this kit's pieces, and left the bar silent): what a song written whole repeats and varies as a kit does |
-| `drums-KSt` | part, meter, tempo, habit, feel, previous | _plan_once, drums, write, write_drums | - | the kick, snare and toms' bar |
-| `drums-h` | part, meter, tempo, habit, feel, previous | _plan_once, drums, write, write_drums | - | the hat's bar |
-| `drums-c` | part, meter, tempo, habit, feel, previous | _plan_once, drums, write, write_drums | - | the cymbals' bar |
-| `drums-o` | part, meter, tempo, habit, feel, previous | _plan_once, drums, write, write_drums | - | the other drum sounds' bar |
+| `drums` | part, meter, kit, tempo, habit, feel, previous | compose, drums, samples_for, write | - | the kit's bar as one figure, every piece on its slot's sample (round 81), under the pieces the song's kit strikes, then the tempo class (round 61), before its habit and feel (round 58: a draw backing off past the kit had landed on every kit's bars, none on this kit's pieces, and left the bar silent): what a song written whole repeats and varies as a kit does; a kit whose token carries strike classes is written from its limbs instead (round 81) |
+| `drums-KSt` | part, meter, limb1, limb2, limb3, tempo, feel, previous | _plan_once, drums, write, write_drums | - | the kick, snare and toms' bar, under the three slots' strike classes, the densest slot's first (round 81: each slot's sample's hits a bar in its song, rare under half, an accent under one, sparse to two, medium to six, dense over) |
+| `drums-h` | part, meter, classes, tempo, feel, previous | _plan_once, drums, write, write_drums | - | the hat's bar, under the hat slot's strike class (round 81: Strago's click on beat two is an accent, a ride in eighths is dense) |
+| `drums-c` | part, meter, classes, tempo, feel, previous | _plan_once, drums, write, write_drums | - | the cymbals' bar, under the cymbal slot's strike class (round 81) |
+| `drums-o` | part, meter, classes, tempo, feel, previous | _plan_once, drums, write, write_drums | - | the other drum sounds' bar, under the slot's strike class (round 81: Wild West's pitched blip, two a bar, is medium) |
+| `drums@2` | part, meter, kit, tempo, habit, feel, previous | compose, drums, samples_for, write | - | the `drums` table with a song the reading has at half its speed counted in double time, for a song written on such a song's token (round 145) |
+| `drums-KSt@2` | part, meter, limb1, limb2, limb3, tempo, feel, previous | _plan_once, drums, write, write_drums | - | the `drums-KSt` table with a song the reading has at half its speed counted in double time, for a song written on such a song's token (round 145) |
+| `drums-h@2` | part, meter, classes, tempo, feel, previous | _plan_once, drums, write, write_drums | - | the `drums-h` table with a song the reading has at half its speed counted in double time, for a song written on such a song's token (round 145) |
+| `drums-c@2` | part, meter, classes, tempo, feel, previous | _plan_once, drums, write, write_drums | - | the `drums-c` table with a song the reading has at half its speed counted in double time, for a song written on such a song's token (round 145) |
+| `drums-o@2` | part, meter, classes, tempo, feel, previous | _plan_once, drums, write, write_drums | - | the `drums-o` table with a song the reading has at half its speed counted in double time, for a song written on such a song's token (round 145) |
 
 ### the bass (2)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
-| `voice_intervals` | part, kind, line, previous | bass, upper, write | - | a voice beside the line's interval to the line's note where they strike together, in scale steps (7 an octave) where the line's note is on the scale and in semitones (s-4) where it is off it, by the part, the relation (the counter-line's: same sample as the tune, or other), the line note's state (scale, altered) and its interval before |
+| `voice_intervals` | part, kind, line, previous | bass, upper, write | - | a voice beside the line's interval to the line's note where they strike together, in scale steps (7 an octave) where the line's note is on the scale and in semitones (s-4) where it is off it, by the part, the relation (apart or alternating; the counter-line's beside the tune: same sample as the tune, or other), the line note's state (scale, altered) and its interval before |
 | `voice_moves` | part, kind, place | bass, upper, write | - | a voice beside the line's move from its own last note, in scale steps, by the part, the relation and whether it strikes with the line or alone |
 
-### the upper parts (1)
+### the upper parts (3)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
 | `periods` | part, length, tempo | _free_figures, _plan_once, song_of, upper | `period_holds` | a backing part's period inside a part of the form: the lag in bars at which its bars repeat (1, 2, 4, 8) or none, by the part's length and the tempo |
+| `tone_figures` | part, tier, onsets, line | tone_figure_for, upper | - | a chord part's line bar as its onsets' tone classes against the chord sounding (c a tone of the chord, x a tone off it), by the part, the song's tier, the onset count and the line's own pattern: where the line leaves the chord, drawn a bar under the line's bar by the upper writer (round 96) |
+| `tone_degrees` | part, shape, previous | tone_degree_for, upper | - | the degree a chord part's line plays where it leaves the chord, as semitones from the chord's root (2 a ninth, 5 a fourth, 9 a sixth), by the part, the chord's shape and the bar's previous off-chord degree; drawn an off-chord onset, which takes the degree nearest the voicing tone it replaces (round 96) |
 
 ### the tune (15)
 
@@ -134,9 +154,9 @@ flowchart LR
 |---|---|---|---|---|
 | `ranges` | part, role | samples_for | - | the register a sample is played in, by the sample and the part playing it |
 | `part_samples` | part, speed | samples_for | - | the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing |
-| `echo` | part | compose, echo_of, echo_word, hand_off_cells, write_melody | - | the song's echo as the chip had it: its volume of full, its delay in ms, its feedback, the parts that send to it and the parts that stay dry, drawn once a song on its own stream (round 70) |
+| `echo` | part | _plan_once, compose, echo_of, echo_word, hand_off_cells, write_melody | - | the song's echo as the chip had it: its volume of full, its delay in ms, its feedback, the parts that send to it and the parts that stay dry, drawn once a song on its own stream (round 70) |
 
-### counted, drawn nowhere (the measures' words) (9)
+### counted, drawn nowhere (the measures' words) (10)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -148,6 +168,7 @@ flowchart LR
 | `presence` | part, meter, previous | - | - | a part playing or resting in a bar |
 | `doubles` | part | - | - | what a song's double voices double, and how |
 | `weights` | part | - | `bass_habits`, `counter_figures`, `echo_habits`, `habits` | a part's weight in the band (minor, half, main) |
+| `song_answers` | song, word, context | - | - | each song's own answer to the once-a-song words (the list rhythm.OWN), by the song, the word and the word's context; not drawn: the plan looks the balance token's song up in it and draws the pooled word where that song has no answer (round 172) |
 | `vibrato` | part | - | - | a part's vibrato on its held notes: the share carrying it in each length class (0.35-0.5 s, 0.5-1, 1-2, 2 and over), its depth in cents, its rate in Hz and its onset in seconds, drawn once a song a part by the player's performance on its own stream (round 72) |
 
 ## What conditions what
@@ -171,6 +192,7 @@ flowchart LR
     motions["motions"]
     chords["chords"]
     loops["loops"]
+    loop_parts["loop_parts"]
     form["form"]
     lengths["lengths"]
     letters["letters"]
@@ -201,6 +223,7 @@ flowchart LR
     sizes["sizes"]
     length_habits["length_habits"]
     balance["balance"]
+    tune_sounds["tune_sounds"]
     sounds["sounds"]
     gap_sounds["gap_sounds"]
     bass_locks["bass_locks"]
@@ -208,12 +231,22 @@ flowchart LR
     top_levels["top_levels"]
     layer_levels["layer_levels"]
     sample_ambitus["sample_ambitus"]
+    kit_seconds["kit_seconds"]
+    kit_rates["kit_rates"]
     articulation["articulation"]
     part_textures["part_textures"]
     section_levels["section_levels"]
+    section_fills["section_fills"]
+    section_densities["section_densities"]
     part_entries["part_entries"]
     drum_group_habits["drum_group_habits"]
     chord_tones["chord_tones"]
+    off_scale["off_scale"]
+    clashes["clashes"]
+    voice_keeps["voice_keeps"]
+    chord_follows["chord_follows"]
+    parallel_intervals["parallel_intervals"]
+    tone_tiers["tone_tiers"]
     repeat_rates["repeat_rates"]
     tune_grain["tune_grain"]
     attacks["attacks"]
@@ -273,6 +306,7 @@ flowchart LR
   habits -- habit --> part_textures
   habits -- habit --> tune_grain
   keys -- mode --> chords
+  keys -- mode --> off_scale
   length_habits -- length --> part_entries
   lengths -- length --> part_entries
   letters -- form --> part_entries
@@ -318,6 +352,7 @@ flowchart LR
     layer_sounds["layer_sounds"]
     second_figures["second_figures"]
     counter_figures["counter_figures"]
+    recall_moves["recall_moves"]
   end
   balance -- habit --> bass
   balance -- tempo --> bass
@@ -382,49 +417,56 @@ flowchart LR
     drums_h["drums-h"]
     drums_c["drums-c"]
     drums_o["drums-o"]
+    drums@2["drums@2"]
+    drums_KSt@2["drums-KSt@2"]
+    drums_h@2["drums-h@2"]
+    drums_c@2["drums-c@2"]
+    drums_o@2["drums-o@2"]
   end
   balance -- habit --> drums
   balance -- kit --> drums
   balance -- tempo --> drums
-  balance -- habit --> drums_KSt
   balance -- tempo --> drums_KSt
-  balance -- habit --> drums_c
+  balance -- tempo --> drums_KSt@2
   balance -- tempo --> drums_c
-  balance -- habit --> drums_h
+  balance -- tempo --> drums_c@2
   balance -- tempo --> drums_h
-  balance -- habit --> drums_o
+  balance -- tempo --> drums_h@2
   balance -- tempo --> drums_o
+  balance -- tempo --> drums_o@2
+  balance -- habit --> drums@2
+  balance -- kit --> drums@2
+  balance -- tempo --> drums@2
   bass_habits -- habit --> drums
-  bass_habits -- habit --> drums_KSt
-  bass_habits -- habit --> drums_c
-  bass_habits -- habit --> drums_h
-  bass_habits -- habit --> drums_o
+  bass_habits -- habit --> drums@2
   drum_group_habits -- habit --> drums
-  drum_group_habits -- habit --> drums_KSt
-  drum_group_habits -- habit --> drums_c
-  drum_group_habits -- habit --> drums_h
-  drum_group_habits -- habit --> drums_o
+  drum_group_habits -- habit --> drums@2
   drum_habits -- habit --> drums
-  drum_habits -- habit --> drums_KSt
-  drum_habits -- habit --> drums_c
-  drum_habits -- habit --> drums_h
-  drum_habits -- habit --> drums_o
+  drum_habits -- habit --> drums@2
   feels -- feel --> drums
   feels -- feel --> drums_KSt
+  feels -- feel --> drums_KSt@2
   feels -- feel --> drums_c
+  feels -- feel --> drums_c@2
   feels -- feel --> drums_h
+  feels -- feel --> drums_h@2
   feels -- feel --> drums_o
+  feels -- feel --> drums_o@2
+  feels -- feel --> drums@2
   habits -- habit --> drums
-  habits -- habit --> drums_KSt
-  habits -- habit --> drums_c
-  habits -- habit --> drums_h
-  habits -- habit --> drums_o
+  habits -- habit --> drums@2
   kit_pieces -- kit --> drums
+  kit_pieces -- kit --> drums@2
   tempos -- tempo --> drums
   tempos -- tempo --> drums_KSt
+  tempos -- tempo --> drums_KSt@2
   tempos -- tempo --> drums_c
+  tempos -- tempo --> drums_c@2
   tempos -- tempo --> drums_h
+  tempos -- tempo --> drums_h@2
   tempos -- tempo --> drums_o
+  tempos -- tempo --> drums_o@2
+  tempos -- tempo --> drums@2
 ```
 
 ### the bass
@@ -454,13 +496,19 @@ flowchart LR
   length_habits(["length_habits"])
   lengths(["lengths"])
   tempos(["tempos"])
+  tone_tiers(["tone_tiers"])
+  voicing_habits(["voicing_habits"])
   subgraph stage_upper["the upper parts"]
     periods["periods"]
+    tone_figures["tone_figures"]
+    tone_degrees["tone_degrees"]
   end
   balance -- tempo --> periods
   length_habits -- length --> periods
   lengths -- length --> periods
   tempos -- tempo --> periods
+  tone_tiers -- tier --> tone_figures
+  voicing_habits -- shape --> tone_degrees
 ```
 
 ### the tune
@@ -570,6 +618,7 @@ flowchart LR
     presence["presence"]
     doubles["doubles"]
     weights["weights"]
+    song_answers["song_answers"]
     vibrato["vibrato"]
   end
   balance -- habit --> changes

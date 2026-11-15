@@ -7,8 +7,9 @@ correction overrides it. Drums first: noise, samples with no pitch, or one
 sample struck at one or two pitches (FFVI's percussion plays at G#3, the
 driver's own pitch), or whose samples the drum namer calls drums (drums.py,
 named as a reading names its samples: a tom played at several pitches is a
-drum, a bass pumping one note on an instrument held is not). Then the
-pitched voices by register and motion: the
+drum, a bass pumping one note on an instrument held is not, and nor is a
+pitched pad held two beats or more on a sample the namer took for a kick,
+round 89). Then the pitched voices by register and motion: the
 bass the lowest line, held notes harmony, fast cycling ones an arp; a
 voice playing another's notes (the same pitches and rhythm, a delay or an
 octave apart) its doubling. The melody is the most varied line among the
@@ -17,7 +18,26 @@ readers.md) the most varied line outright was a voice playing six notes in
 a song or a quiet high line under a louder one in two songs of three, so a
 candidate must sound on a quarter of the beats, at a quarter of the loudest
 voice's level, with its median below C6 (Jungle's noises sit above), and
-its variety is weighed by how much it is heard."""
+its variety is weighed by how much it is heard.
+
+A channel is one voice, except where it plays two things: a tune on a drum
+channel (split_melodic_pieces, round 83), and on a channel under the tune
+a second instrument in a register of its own (split_second_instruments,
+round 89), each get a voice of their own before the parts are read; a
+tune's or counter's second instrument is the line changing colour and
+stays on its voice.
+
+A voice is read in stretches too (round 90): runs of notes on one sample
+(stretches_of, blips folded), each asked what it does beside another
+voice (stretch_relation: a double at so many semitones, parallel at one
+generic interval, or its own line). A voice that doubles the tune or
+runs parallel with it for half its notes or more is the tune's: a layer
+of the melody (`of` the tune's voice), whatever its own motion says.
+Kefka's three "counter" channels double its tune in octaves and thirds
+for whole stretches and the bass for another; the whole-voice doubling
+test never fires on a stretch, and parallel thirds are another pitch
+class, so they read as a counter-line with layers and were written as a
+three-voice block of their own at the song's loudest level."""
 import bisect
 import math
 import statistics
@@ -30,8 +50,15 @@ DRUM_PIECES = {"kick", "snare", "hat", "tom", "cymbal"}   # the drum namer's pie
 BY_SOUND = 0.8                        # the share of a voice's notes on drum samples (or on instruments held) that decides
 FEW_PITCHES = 4                       # pitches a sample a drum voice plays at most: a bass on a low sample plays many
                                       # (728 bass voices became drums without this, the namer calling their samples toms)
+DRUM_HOLD = 2.0                       # beats: a voice on a tonal sample taken for a drum by how it plays (one or two pitches, eight
+                                      # notes or more) holds its notes under this at the median. FFVI's 109 drum voices on percussion
+                                      # samples hold a median 0.45 beats, three quarters under 0.95, only cymbal swells two or more;
+                                      # of its 31 drum voices on tonal samples eight held two beats or more, pads and a lead
+                                      # (Another World of Beasts' bowed strings for seven beats, The Phantom Forest's lead for twelve),
+                                      # and a kit written from them struck a pad once a bar (round 77, from Song Check 63)
 LOW_PIECES = {"kick", "tom"}          # the pieces a bass sample can pass for; a voice on them is a drum voice only
-SPARSE = 0.5                          # where it sounds on under this share of the beats (fills), a bass playing on
+SPARSE = 0.5                          # where it sounds on under this share of the beats (fills), a bass playing on,
+                                      # or where an instrument plays under it (round 175: it is not the song's bass then)
 
 
 @dataclass
@@ -190,23 +217,316 @@ def echoes(song) -> dict:
     return out
 
 
+SPLIT_BASE = 100                      # a melodic kit piece's own voice (split_melodic_pieces): SPLIT_BASE + its channel; a channel is 0 to 7
+MELODIC_PITCHES = 3                   # pitches a tonal sample on a drum voice is struck on to be a tune there (Wild West's blip: 15)
+MELODIC_SHARE = 0.5                   # and no one pitch holds this share of its notes (a bell on one note is a drum, however many its notes)
+MELODIC_NOTES = 8                     # notes it needs
+TUNE_FLOOR = 55                       # midi: a split voice at or over this is a counter-line, under it a bass (the register the bass rule reads)
+SECOND_BASE = 200                     # a channel's second instrument's own voice (split_second_instruments, round 89): SECOND_BASE + its channel, + 10 for a
+                                      # third (the channel stays readable in the id: (voice - SECOND_BASE) % 10)
+UNDER_THE_TUNE = (BASS, HARMONY, ARP, ACCOMP)   # the parts whose channels are split so: a tune's or counter's second instrument is the line changing colour
+SECOND_SHARE = 0.1                    # the share of a channel's pitched notes a second sample carries to be a part of its own,
+SECOND_NOTES = 16                     # and the notes it needs (the echo reader's floor for a voice): an eight-note pedal or effect stays on its channel
+SECOND_APART = 12                     # semitones between the two samples' median pitches that make the second's register its own where the
+                                      # registers (each sample's 10th to 90th percentile pitches) overlap; disjoint registers are two at any distance
+STRETCH_NOTES = 8                     # a voice's stretches (round 90): runs of notes on one sample; a run under this many notes spanning under
+STRETCH_BEATS = 8.0                   # this many beats is a blip (a grace, an effect) and folds into the run before it
+STRETCH_NEAR = 0.06                   # beats: onsets this close are one event (rhythm.NEAR, which this module cannot import)
+STRETCH_DOUBLE = 0.8                  # the share of a stretch's notes that start with another voice's at the same pitch class: a double
+STRETCH_PARALLEL = 0.8                # the share that start with another voice's at all, and
+STRETCH_ONE_INTERVAL = 0.5            # the share of those pairs at one generic interval (thirds alternate 3 and 4 semitones): parallel
+STRETCH_COVER = 0.5                   # and either way the stretch strikes with this share of the followed voice's notes within its span (a pad
+                                      # holding the root under a tune that lands on the root at its eight onsets is no double of the tune)
+TUNE_LAYER = 0.5                      # a voice whose stretches double the tune or run parallel with it for this share of its notes or more is
+TUNE_LAYER_OF = (COUNTER, ACCOMP, ARP, HARMONY)   # a layer of the melody, from these parts (the bass stays the song's floor whatever it doubles),
+                                      # with SECOND_NOTES pitched notes at least (Good Night's three-note chord voices had become its tune's)
+GENERIC = (0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6)   # semitones within an octave as scale steps, key-free: a second 1 or 2, a third 3 or 4, a fourth
+                                      # 5, a fifth 6 or 7, a sixth 8 or 9, a seventh 10 or 11
+
+
+def under_of(feats: dict, voice) -> float | None:
+    """The median note of the lowest of a song's other voices on instruments held (the namer's "none" on BY_SOUND of
+    their notes), from every voice's features; None where no other voice is one. What plays under a voice, for
+    drum_clause."""
+    return min((f["median"] for v, f in feats.items() if v != voice and f["median"] is not None and f["no_drum_sound"] >= BY_SOUND),
+               default=None)
+
+
+def drum_clause(f: dict, under: float | None = None) -> str | None:
+    """Which of assign's two drum clauses a voice's features meet: "sound" (a drum voice by what its samples are: the namer
+    called them drums, struck at few pitches, and not a kick or tom sample sounding on half the beats, a bass passing for one),
+    "play" (by how it plays them: noise, or one sample at one or two pitches, eight notes or more, held under DRUM_HOLD), or
+    None. A kick or tom sample sounding on half the beats is a bass passing for a drum only where it can be the song's
+    bass: with an instrument's voice playing under it (`under`, under_of: that voice's median note below this one's
+    lowest) it is the drum the namer called it (round 175: Mt. Koltz's toms, three pitches on nine beats in ten over a
+    string bass, were read an accompaniment, the song had no kit, and its written songs played a chord line on a tom). A voice whose samples are instruments held (named "none") is no drum however it plays them (a bass pumping one
+    note). A voice on drum-named samples whose notes are pitched and held DRUM_HOLD or more at the median is a pad the namer
+    took for a kick (round 89: The Empire Gestahl's and Another World of Beasts' bowed strings, three and two pitches held
+    eight and seven beats; FFVI's thirteen cymbal voices held two beats or more are unpitched and stay drums)."""
+    over_a_bass = under is not None and f["low"] is not None and under < f["low"]
+    if (f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE or over_a_bass)
+            and not (f["unpitched"] < 0.5 and f["length_beats"] >= DRUM_HOLD)):
+        return "sound"
+    if f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2
+                                                                     and f["length_beats"] < DRUM_HOLD)):
+        return "play"
+    return None
+
+
+def is_drum_voice(f: dict, under: float | None = None) -> bool:
+    """assign's two drum clauses on a voice's features: a drum voice by what its samples are, or by how it plays them."""
+    return drum_clause(f, under) is not None
+
+
+def _register(mids) -> tuple:
+    """A sample's register on a channel: its notes' 10th and 90th percentile pitches."""
+    s = sorted(mids)
+    return s[int(0.1 * (len(s) - 1))], s[int(0.9 * (len(s) - 1))]
+
+
+def generic(semitones: int) -> int:
+    """A semitone interval as scale steps, key-free (GENERIC): thirds (3 or 4 semitones) are two steps, sixths five, an
+    octave seven, so parallel thirds that alternate major and minor are one interval."""
+    s = abs(int(semitones))
+    steps = 7 * (s // 12) + GENERIC[s % 12]
+    return steps if semitones >= 0 else -steps
+
+
+def stretches_of(notes: list) -> list:
+    """A voice's notes ((beat, midi, sample key), sorted) as stretches: runs on one sample, in time order, each
+    {"key", "notes", "a", "b"} (its sample, its notes, its first and last beat). A run under STRETCH_NOTES notes spanning
+    under STRETCH_BEATS beats is a blip (a grace, an effect) and folds into the run before it (a leading blip into the run
+    after); a voice of blips alone is one stretch on its commonest sample."""
+    runs = []
+    for n in notes:
+        if runs and runs[-1]["key"] == n[2]:
+            runs[-1]["notes"].append(n)
+        else:
+            runs.append({"key": n[2], "notes": [n]})
+    out = []
+    for r in runs:
+        blip = len(r["notes"]) < STRETCH_NOTES and r["notes"][-1][0] - r["notes"][0][0] < STRETCH_BEATS
+        if blip and out:
+            out[-1]["notes"].extend(r["notes"])
+        elif blip:
+            out.append({"key": None, "notes": list(r["notes"])})
+        elif out and out[-1]["key"] is None:
+            out[-1]["key"] = r["key"]
+            out[-1]["notes"].extend(r["notes"])
+        else:
+            out.append({"key": r["key"], "notes": list(r["notes"])})
+    for r in out:
+        if r["key"] is None:
+            r["key"] = Counter(n[2] for n in r["notes"]).most_common(1)[0][0]
+        r["notes"].sort()
+        r["a"], r["b"] = r["notes"][0][0], r["notes"][-1][0]
+    return out
+
+
+def stretch_relation(stretch: dict, others: dict, near: float = STRETCH_NEAR) -> tuple:
+    """What a stretch does beside the other voices ({voice: [(beat, midi, key)], sorted}): ("double", voice, semitones)
+    where STRETCH_DOUBLE of its notes start with that voice's at the same pitch class; ("parallel", voice, semitones) where
+    STRETCH_PARALLEL of them start with that voice's and STRETCH_ONE_INTERVAL of those pairs sit at one generic interval
+    (the semitones the commonest of them); else ("own", None, None). Either way the stretch must strike with STRETCH_COVER
+    of the followed voice's notes within its span (a sparse pad under a busy tune follows nothing). The voice sharing the
+    most onsets is the one asked."""
+    best = None
+    for u, uns in others.items():
+        starts = [n[0] for n in uns]
+        within = bisect.bisect_right(starts, stretch["b"] + near) - bisect.bisect_left(starts, stretch["a"] - near)
+        hits = same = 0
+        semis, steps = Counter(), Counter()
+        for t, m, _ in stretch["notes"]:
+            lo, hi = bisect.bisect_left(starts, t - near), bisect.bisect_right(starts, t + near)
+            if lo == hi:
+                continue
+            k = min(range(lo, hi), key=lambda i: abs(starts[i] - t))
+            iv = int(round(m - uns[k][1]))
+            hits += 1
+            same += iv % 12 == 0
+            semis[iv] += 1
+            steps[generic(iv)] += 1
+        n = len(stretch["notes"])
+        if best is None or (hits / n, same / n) > (best[0], best[1]):
+            best = (hits / n, same / n, u, semis, steps, hits, within)
+    if best is None or best[5] == 0:
+        return ("own", None, None)
+    onsets, same, u, semis, steps, hits, within = best
+    if hits < STRETCH_COVER * within:
+        return ("own", None, None)
+    if same >= STRETCH_DOUBLE:
+        return ("double", u, semis.most_common(1)[0][0])
+    step, count = steps.most_common(1)[0]
+    if onsets >= STRETCH_PARALLEL and count >= STRETCH_ONE_INTERVAL * hits:
+        return ("parallel", u, Counter({iv: c for iv, c in semis.items() if generic(iv) == step}).most_common(1)[0][0])
+    return ("own", None, None)
+
+
+WITH_SHARE = 0.8                      # the share of a stretch's notes that start with another voice's for the stretch to be struck with it (round 107)
+
+
+def with_relation(stretch: dict, candidates: dict, near: float = STRETCH_NEAR) -> tuple | None:
+    """A stretch struck with another voice (round 107): the candidate ({voice: [(beat, midi, key)], sorted}) that WITH_SHARE
+    of the stretch's notes start with (within `near`), the one sharing the most onsets where several do, and the semitones
+    from that voice's note the commonest of them: ("with", voice, semitones); None where none reaches the share. Battle
+    Theme's synth is two voices struck as one, a fourth or a fifth apart by the chord (78 fifths, 64 fourths, 25 thirds of
+    202 onsets), which stretch_relation's one generic interval cannot call parallel, and the lower of the two strikes with
+    the guitar riff on 0.89 of its notes at chord tones an octave and more up: a stab is struck with something, on the
+    chord, not at one interval. FFVI: 39 own-reading stretches of voices beside a line strike with the line, 9 with a
+    sibling voice, 71 stay their own."""
+    best = None
+    for u, uns in candidates.items():
+        starts = [n[0] for n in uns]
+        hits, semis = 0, Counter()
+        for t, m, _ in stretch["notes"]:
+            lo, hi = bisect.bisect_left(starts, t - near), bisect.bisect_right(starts, t + near)
+            if lo == hi:
+                continue
+            k = min(range(lo, hi), key=lambda i: abs(starts[i] - t))
+            hits += 1
+            semis[int(round(m - uns[k][1]))] += 1
+        n = len(stretch["notes"])
+        if n and hits / n >= WITH_SHARE and (best is None or hits > best[1]):
+            best = (u, hits, semis)
+    if best is None:
+        return None
+    return ("with", best[0], best[2].most_common(1)[0][0])
+
+
+def voice_relations(by_voice: dict) -> dict:
+    """Every voice's stretches and what each does (stretches_of, stretch_relation): {voice: [(first beat, last beat,
+    sample key, kind, the voice it follows or None, semitones or None, notes)]}; `by_voice`: {voice: [(beat, midi,
+    key)]}, pitched."""
+    out = {}
+    for v, ns in by_voice.items():
+        if not ns:
+            continue
+        others = {u: uns for u, uns in by_voice.items() if u != v and uns}
+        rows = []
+        for st in stretches_of(sorted(ns)):
+            kind, of, semi = stretch_relation(st, others)
+            rows.append((st["a"], st["b"], st["key"], kind, of, semi, len(st["notes"])))
+        out[v] = rows
+    return out
+
+
+def _beat_notes(notes, grid) -> list:
+    """A voice's pitched notes as (beat, midi, sample key), sorted, for the stretch functions."""
+    return sorted((grid.beats(p.start) if grid else p.start / 0.5, p.midi, p.sample.key) for p in notes if p.midi is not None)
+
+
+def split_second_instruments(song, roles, grid=None) -> dict:
+    """A second instrument in its own register on a channel under the tune is a part of its own (round 89): on each voice
+    whose part (`roles`, assign's first reading of the whole channels) is a bass or a chord part (UNDER_THE_TUNE), the notes
+    on a sample other than the one most of its pitched notes are on, carrying SECOND_SHARE of them and SECOND_NOTES or more,
+    whose register is its own (median pitches SECOND_APART apart, or registers that do not overlap), move to a voice of
+    their own (SECOND_BASE + the channel, + 10 for a third), their chip notes with them (so the echo and vibrato readers see
+    the voice); the channel keeps its main instrument, and assign reads the parts again, the second never setting the song's
+    floor nor taking the lead. The readings keep the second's voice beside the counts (readings.Song.second_voices), not in
+    them: the band a token describes is the channels' main instruments, and the second instrument's stretches await a word
+    of their own (a voice's instrument by stretch), since a voice of its own would ask the writer for a ninth chip voice in
+    the eight-channel songs that time-share one. FFVI changes instrument on 108 of
+    its 381 pitched channels and in 61 of them the second plays in a register of its own; on a bass or chord channel that
+    is a second function (Wild West's bass 28 to 80: a bass, then chords two octaves up), and the register word had spanned
+    both. A tune's or counter's second instrument is the line changing colour (47 of 56 take the line over for stretches,
+    a third of the notes, 19 an octave apart) and stays on its voice. Returns {new voice: (channel, sample key, part)}."""
+    parts = {r.voice: r.role for r in roles}
+    by_voice = {}
+    for p in song.notes:
+        by_voice.setdefault(p.voice, []).append(p)
+    out = {}
+    for v, ns in sorted(by_voice.items()):
+        if v >= SPLIT_BASE or parts.get(v) not in UNDER_THE_TUNE:
+            continue
+        by_sample = {}
+        for p in ns:
+            if p.sample is not None and p.midi is not None:
+                by_sample.setdefault(p.sample.key, []).append(p)
+        if len(by_sample) < 2:
+            continue
+        total = sum(len(mine) for mine in by_sample.values())
+        main = max(sorted(by_sample), key=lambda key: len(by_sample[key]))
+        main_mids = [p.midi for p in by_sample[main]]
+        main_low, main_high = _register(main_mids)
+        k = 0
+        for key, mine in sorted(by_sample.items()):
+            if key == main or len(mine) < max(SECOND_NOTES, SECOND_SHARE * total):
+                continue
+            mids = [p.midi for p in mine]
+            low, high = _register(mids)
+            if abs(statistics.median(mids) - statistics.median(main_mids)) < SECOND_APART and min(high, main_high) - max(low, main_low) > 0:
+                continue                                    # the same register: one line on two instruments
+            new = SECOND_BASE + v + 10 * k
+            k += 1
+            for p in ns:
+                if p.sample is not None and p.sample.key == key:
+                    p.voice = new
+                    if p.note is not None:
+                        p.note.voice = new
+            out[new] = (v, key, parts[v])
+    return out
+
+
+def split_melodic_pieces(song, grid=None) -> dict:
+    """A tune on the drum channel is a part (round 83): on each voice that would be a drum voice, the notes on a sample the
+    namer called "other" (a tonal sample, no drum) struck on MELODIC_PITCHES pitches or more with no pitch holding
+    MELODIC_SHARE of them, MELODIC_NOTES notes or more, move to a voice of their own (SPLIT_BASE + the channel, + 1 for a
+    second such sample), their chip notes with them (so the echo and vibrato readers see the voice); the drum voice keeps
+    its drums. FFVI: Wild West's blip on fifteen pitches beside its hat, Dancing Mad (part 5)'s rim on sixteen, Kefka's on
+    eight, The Decisive Battle's on nine; the written kit had struck each on one note (round 75's most struck, round 79's
+    degree). Returns {new voice: (channel, sample key, pitches)}."""
+    by_voice = {}
+    for p in song.notes:
+        by_voice.setdefault(p.voice, []).append(p)
+    out = {}
+    feats = {v: _features(ns, grid) for v, ns in by_voice.items() if ns}
+    for v, ns in sorted(by_voice.items()):
+        if v >= SPLIT_BASE or not ns or not is_drum_voice(feats[v], under_of(feats, v)):
+            continue
+        by_sample = {}
+        for p in ns:
+            if p.sample is not None and p.sample.piece == "other" and p.midi is not None:
+                by_sample.setdefault(p.sample.key, []).append(p)
+        k = 0
+        for key, mine in sorted(by_sample.items()):
+            pitches = Counter(round(p.midi) for p in mine)
+            if len(mine) >= MELODIC_NOTES and len(pitches) >= MELODIC_PITCHES and pitches.most_common(1)[0][1] < MELODIC_SHARE * len(mine):
+                new = SPLIT_BASE + v + k
+                k += 1
+                for p in mine:
+                    p.voice = new
+                    if p.note is not None:
+                        p.note.voice = new
+                out[new] = (v, key, len(pitches))
+    return out
+
+
 def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     """Each voice's part over the song (echoed: voices found to be another's
-    echo, by echoes(), each that voice's double)."""
+    echo, by echoes(), each that voice's double). A voice split from a drum
+    channel (split_melodic_pieces, round 83) is a counter-line, or a bass
+    where it sits low: a tune on the drum channel, never the song's lead."""
     by_voice = {}
     for p in song.notes:
         by_voice.setdefault(p.voice, []).append(p)
     feats = {v: _features(ns, grid) for v, ns in by_voice.items() if ns}
     roles = {}
     for v, f in feats.items():
+        if v >= SECOND_BASE:                                # a second instrument split from a channel under the tune (round 89): a pitched part
+            continue
+        if v >= SPLIT_BASE:                                 # a melodic kit piece, split from its channel (round 83)
+            roles[v] = Role(v, BASS if f["median"] is not None and f["median"] < TUNE_FLOOR else COUNTER,
+                            evidence={"melodic_piece": v - SPLIT_BASE, "distinct": f["distinct"], "median": round(f["median"], 1) if f["median"] is not None else None})
+            continue
         # a voice is a drum voice by what its samples are (the namer: a tom at several pitches is a drum), and
         # only otherwise by how it plays them (noise, or one sample at one or two pitches); a voice whose samples
-        # are instruments held (named "none") is no drum however it plays them (a bass pumping one note)
-        if (f["drum_sound"] >= BY_SOUND and f["pitches_per_sample"] <= FEW_PITCHES
-                and (f["low_sound"] < BY_SOUND or f["presence"] < SPARSE)):
+        # are instruments held (named "none") is no drum however it plays them (a bass pumping one note), and a
+        # pitched pad held like a pad on a sample the namer took for a kick is none either (drum_clause, round 89)
+        clause = drum_clause(f, under_of(feats, v))
+        if clause == "sound":
             roles[v] = Role(v, DRUMS, evidence={"by_sound": round(f["drum_sound"], 2), "distinct": f["distinct"], "presence": round(f["presence"], 2)})
-        elif f["no_drum_sound"] < BY_SOUND and (f["unpitched"] >= 0.5 or (f["pitches_per_sample"] <= 2 and f["notes"] >= 8 and f["distinct"] <= 2)):
-            roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")})
+        elif clause == "play":                              # held like a drum, not a pad (round 77)
+            roles[v] = Role(v, DRUMS, evidence={k: f[k] for k in ("unpitched", "distinct")} | {"length_beats": round(f["length_beats"], 2)})
     for v, (u, delay, *_) in (echoed or {}).items():
         if v in feats and v not in roles:
             roles[v] = Role(v, DOUBLE, of=u, evidence={"echo_ms": round(delay * 1000, 1)})
@@ -223,7 +543,8 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
     if not tonal:
         return sorted(roles.values(), key=lambda r: r.voice)
     loudest = max(feats[v]["level"] for v in tonal)
-    lowest = min(tonal, key=lambda v: feats[v]["median"])
+    floor = [v for v in tonal if v < SECOND_BASE] or tonal     # a second instrument never sets the song's floor (round 89: an eight-note
+    lowest = min(floor, key=lambda v: feats[v]["median"])      # pedal split from a chord channel had taken the bass from a 137-note line)
     for v in tonal:
         f = feats[v]
         if f["median"] <= feats[lowest]["median"] + 3 and f["median"] < 55:
@@ -245,7 +566,7 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
         return (f["pc_entropy"] * (1 + f["steps"]) * (1 - f["leaps"]) * math.sqrt(f["presence"] * f["level"])
                 * min(1.0, MELODY_DENSE / max(f["per_beat"], 1e-9)))
     heard = [v for v in rest if feats[v]["presence"] >= MELODY_PRESENT and feats[v]["level"] >= MELODY_HEARD * loudest
-             and feats[v]["median"] <= MELODY_CEILING]
+             and feats[v]["median"] <= MELODY_CEILING and v < SECOND_BASE]   # a second instrument split from a channel under the tune is never the lead
     if heard:
         top = max(heard, key=melodic)
         roles[top] = Role(top, MELODY, evidence={k: round(feats[top][k], 2) for k in ("pc_entropy", "steps", "leaps", "presence", "level", "median")})
@@ -259,4 +580,20 @@ def assign(song, grid, echoed: dict | None = None) -> list[Role]:
             roles[v] = Role(v, COUNTER, evidence={"entropy": round(f["entropy"], 2), "steps": round(f["steps"], 2)})
         else:
             roles[v] = Role(v, ACCOMP, evidence={"per_beat": round(f["per_beat"], 2), "distinct": f["distinct"]})
+    # a voice that doubles the tune or runs parallel with it for half its notes or more, stretch by stretch, is the tune's
+    # (round 90): a layer of the melody, `of` the tune's voice, the part it read as kept in the evidence. Kefka's three
+    # "counter" channels double its tune in octaves and thirds for whole stretches (and the bass for another); the
+    # whole-voice doubling test above never fires on a stretch, nor on parallel thirds (another pitch class), and read as
+    # a counter line with layers they were written as a three-voice block of their own at the song's loudest level
+    if heard:
+        tune = _beat_notes(by_voice[top], grid)
+        for v in list(roles):
+            if v == top or v >= SECOND_BASE or roles[v].role not in TUNE_LAYER_OF:
+                continue
+            mine = _beat_notes(by_voice[v], grid)
+            if len(mine) < SECOND_NOTES:
+                continue
+            with_tune = sum(len(st["notes"]) for st in stretches_of(mine) if stretch_relation(st, {top: tune})[0] != "own")
+            if with_tune >= TUNE_LAYER * len(mine):
+                roles[v] = Role(v, MELODY, of=top, evidence={"with_tune": round(with_tune / len(mine), 2), "was": roles[v].role})
     return sorted(roles.values(), key=lambda r: r.voice)

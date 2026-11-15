@@ -1,7 +1,8 @@
 # Phase 5: packs
 
 Planned in outline (2026-10-20); the detail is written when the phase
-begins. See `../IDIOM.md`.
+begins. See `../IDIOM.md`. Superseded as a picker by phase 6 (2026-10-29;
+`phase-6-generator.md` names the pieces of this one that survive).
 
 ## Goal
 
@@ -14,7 +15,8 @@ SNES packs move over if chosen.
 Three things the user can pick, and nothing finer:
 
 - **Chip**, the default: the built-in generator as it is, needing no
-  tables and no imports. It always plays.
+  tables and no imports. It always plays. (Since 2.0 this is Classic, and
+  the default is the writer on bitComposer's own `bit` sounds.)
 - **SNES**, and later **Genesis**: the writing of phase 4 on tables fitted
   over everything the user has imported for that system, all games
   together. A style is earned by importing: with too few songs behind it
@@ -44,7 +46,8 @@ count it needs, and the game packs under their system.
 
 Both are conditions on draws the tables already make. The tables, the
 vocabulary and the writer are unchanged; a switch only says which of a
-table's own outcomes the song may keep. Off by default. Offered on the
+table's own outcomes the song may keep. Off by default (since 2.0 the
+player turns both on). Offered on the
 SNES and Genesis styles and on game packs (Chip has no theme vocabulary),
 kept in the pack's source so an export carries them, written into each
 song's plan under `options`, and named on the Song Check pages.
@@ -67,9 +70,9 @@ song's plan under `options`, and named on the Song Check pages.
   (`band_returns=True`, `--band-returns`). It only acts where a return
   exists, so it is a second switch, not a setting of the first.
 
-The owner's reading of Song Check 5 (seventeen songs whose theme returns
+The reading of Song Check 5 by ear (seventeen songs whose theme returns
 with the band): the themed songs are much more listenable. The switches
-are for the listener who wants every song to carry a tune, and the cost is
+are for a listener who wants every song to carry a tune, and the cost is
 named in the picker: the game's through-composed forms, its battle and
 event cues, are left out while they are on. Measured on Song Check 6
 (both switches on, 2026-10-23): see `phase-4-writing.md`, round 13.
@@ -120,6 +123,8 @@ PACKS panel as stage 5 left it (`../TRANSLATOR.md`).
   Fixed here, when the loader is touched for format 2: refuse a load whose
   keys collide with a loaded pack's (no migration needed), or a separator
   a name cannot contain, with the voice names in saved songs migrated.
+  Fixed in 2.0rc1 the first way: the loader refuses a pack whose keys
+  collide (`phase-6-generator.md`, pieces 4 and 5).
 - Export and add carry the tables; `PACKS.md` describes the second format.
 - The built-in SNES packs re-made from their games, if chosen: a release of
   its own, since it changes how they sound.

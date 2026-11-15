@@ -30,7 +30,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 29 | 2026-10-24 | the counter-line beside the tune | 23 |
 | 30 | 2026-10-24 | the counter's sample as a pair word | 24 |
 | 31 | 2026-10-24 | the counter's level under the tune's share | 24, 25 |
-| 32 | 2026-10-24 | the voice beside a line kept where the game plays its sample | 26 |
+| 32a | 2026-10-24 | the voice beside a line kept where the game plays its sample | 26 |
 | 32 | 2026-10-24 | the band's levels as one unit on the balance token | 26 |
 | 33 | 2026-10-25 | the second voices' levels with the band's on the balance token | 26, 27 |
 | 34 | 2026-10-27 | the sample before the notes | 28 |
@@ -65,6 +65,111 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 71 | 2026-10-30 | measured: the note's envelope in the counted level; the pack's envelope reaches the written note | - |
 | 72 | 2026-10-30 | the default player's sound: the echo word played, vibrato counted and played, the bit set's envelope | 58 |
 | 73 | 2026-10-31 | the part's attack class counted (attacks); a built-in set's pool rule matches it | 61 |
+| 74 | 2026-10-31 | a kit piece on a tonal sample leaves the pack's own drum in its slot | 62 |
+| 75 | 2026-10-31 | the kit token's struck note; the kit at its habit's density (the limbs' tables); the tempo redraw inside its class | 63 |
+| 76 | 2026-11-06 | a voice beside a counter that follows the tune | 64 |
+| 77 | 2026-11-06 | the role reader's drum clause holds its notes like a drum, and a kit piece's hold | 64 |
+| 78 | 2026-11-06 | a percussion piece at the rate the game struck it | 64 |
+| 79 | 2026-11-06 | the struck note as a degree of the key | 65 |
+| 80 | 2026-11-06 | the kit slot's sample is the one the kit leans on | 65 |
+| 81 | 2026-11-06 | the slot's figure | 66 |
+| 82 | 2026-11-06 | the kit's echo rides the token | 66 |
+| 83 | 2026-11-06 | a tune on the drum channel is a part | 66 |
+| 84 | 2026-11-06 | the pans ride the balance token | 67 |
+| 85 | 2026-11-06 | a voice in two places | 68 |
+| 86 | 2026-11-06 | the token song's own range for its own sample | 69 |
+| 87 | 2026-11-06 | the kit's channels ride the balance token | 70 |
+| 88 | 2026-11-06 | a tuned slot's rate stays inside the game's rates | 71 |
+| 89 | 2026-11-06 | a channel's second instrument is a voice of its own, and a pad is no kit | 72 |
+| 90 | 2026-11-07 | a voice's stretches | 73 |
+| 91 | 2026-11-07 | the line's instrument by stretch | 74 |
+| 92 | 2026-11-07 | a register a bar, and a voice beside a line's instrument by stretch | 75 |
+| 93 | 2026-11-07 | off the scale and clashes as counted words | 76 |
+| 94 | 2026-11-07 | the clashes word by the write order | 77 |
+| 95 | 2026-11-07 | a voice beside a line written where the game plays its sample, and a line's note lengths its song's own | 78 |
+| 96 | 2026-11-07 | a chord part's line leaves the chord as the game's does, the counter's chord tones, a mark's nearest tone, a stretch's own edge | 79 |
+| 97 | 2026-11-07 | a parallel voice lands where the game's does | 80 |
+| 98 | 2026-11-07 | the small words | 81 |
+| 99 | 2026-11-07 | a kit slot's second sample | 82 |
+| 100 | 2026-11-08 | a recalled tune cell lands where the game's does | 83 |
+| 101 | 2026-11-08 | a section's density by the step its level makes | 84 |
+| 102 | 2026-11-08 | a looped drum-named sample struck across the chords is an instrument | 85 |
+| 103 | 2026-11-08 | a chord part's line motion and off-chord tier ride the balance token | 86 |
+| 104 | 2026-11-08 | a stretch's range is its own sample's notes' ambitus | 87 |
+| 105 | 2026-11-08 | each section's bar from its kit | 89 |
+| 106 | 2026-11-08 | the riff as the token song's own | 89 |
+| 107 | 2026-11-08 | a voice struck with another | 90 |
+| 108 | 2026-11-09 | a struck voice's share, lengths and longest note are the token song's | 91 |
+| 109 | 2026-11-09 | the struck stretches counted into the interval word; an off-chord landing from the nominal placing | 92 |
+| 110 | 2026-11-09 | a nominal one song plays keeps that song's chain | 93 |
+| 111 | 2026-11-09 | a backing line's chord-tone profile is the token song's | 94 |
+| 112 | 2026-11-09 | the song's chord-shape profile is the token song's | 95 |
+| 113 | 2026-11-09 | the form is the token song's | 96 |
+| 114 | 2026-11-09 | the bass line's pitch continuity is the token song's | 96 |
+| 115 | 2026-11-09 | a struck voice's sounding share is the token song's | 97, 98 |
+| 116 | 2026-11-09 | a struck voice's cell repetition is the token song's | 97, 98 |
+| 117 | 2026-11-09 | a backing line's step profile is the token song's | 97, 98 |
+| 118 | 2026-11-09 | the flourish at a section's end, a section_fills word | 97, 98 |
+| 119 | 2026-11-09 | a kit voice carries its tonal reading, and a pitched part is tuned by it | 98 |
+| 120 | 2026-11-09 | no voice over what the SNES chip can play of its sample | - |
+| 121 | 2026-11-09 | a backing voice loops where the token song's does | 99 |
+| 122 | 2026-11-09 | what a voice beside a line does is read part by part of the form | 99 |
+| 123 | 2026-11-09 | a chord part's line doubles the bass where the token song's does | 99 |
+| 124 | 2026-11-10 | the parts that sound in each part of the form are the token song's | 101 |
+| 125 | 2026-11-10 | how busy each part is in each part of the form is the token song's | 101 |
+| 126 | 2026-11-10 | the bass's second voice does what the token song's does | 101 |
+| 127 | 2026-11-10 | a chord takes the quality its degree has in the token song, and keeps it | 101 |
+| 128 | 2026-11-10 | the harmony's loops are read by their roots | 101 |
+| 129 | 2026-11-10 | the bass strikes a bar's first beat on the chord's root as often as the token song's does | 101 |
+| 130 | 2026-11-10 | a tune moves as its token song's tune does | 101 |
+| 131 | 2026-11-10 | a song read at half its speed is counted in double time | 101 |
+| 132 | 2026-11-10 | a song loops where its token song loops | 101 |
+| 133 | 2026-11-10 | the bass strikes a bar's first beat as often as the token song's does | 101 |
+| 134 | 2026-11-11 | a part back with the theme keeps within its part of the form's own onsets | 102 |
+| 135 | 2026-11-11 | a chord part strikes a bar's first beat as often as the token song's does | 102 |
+| 136 | 2026-11-11 | a tune's note sounds no shorter than its token song's tune's shortest usual note | 102 |
+| 137 | 2026-11-11 | a written song runs within a tenth of its token song's own tempo | 102 |
+| 138 | 2026-11-11 | a tune keeps within its token song's notes a bar by the part of the form | 102 |
+| 139 | 2026-11-11 | a part plays the tune's bar only where its own bar keeps within its own onsets | 102 |
+| 140 | 2026-11-11 | a tune's note is measured to the next note across the bar line | 103 |
+| 141 | 2026-11-11 | a tune sounds its notes as its token song's tune does | 103 |
+| 142 | 2026-11-11 | a chord part plays an earlier bar on its chord again as often as its token song's part does | 105 |
+| 143 | 2026-11-11 | the counter-line beside a tune keeps to its token song's own line | 105 |
+| 144 | 2026-11-11 | a part comes back with its lead as often as its token song's part does | 105 |
+| 145 | 2026-11-11 | a song counted in double time takes its kit's bars from the kit tables counted so | 105 |
+| 146 | 2026-11-11 | the tune comes back with the bass as often as its token song's does | 105 |
+| 147 | 2026-11-12 | a tune keeps to the places in the beat its token song's tune plays on | 105 |
+| 148 | 2026-11-12 | a song is written in its token song's feel | - |
+| 149 | 2026-11-12 | the bass and the tune strike with the kit as often as their token song's | - |
+| 150 | 2026-11-12 | a part's level changes by section only where its token song's does | - |
+| 151 | 2026-11-12 | a bass's doubling voice does what its token song's does of its own | - |
+| 152 | 2026-11-13 | the lead pass run again, nine tunes back on the voice heard as the tune | - |
+| 153 | 2026-11-13 | a line keeps its song's pace where the form is not its own | - |
+| 154 | 2026-11-13 | a short form is the song's own, played round again | - |
+| 155 | 2026-11-13 | a kit keeps its song's pieces where the song has no form | - |
+| 156 | 2026-11-13 | a harmony's figure of two bars is not written on one chord | - |
+| 157 | 2026-11-13 | a theme's return brings no chords where the tune cannot follow | - |
+| 158 | 2026-11-13 | a voice beside a chord part's line hears its own part's voices | - |
+| 159 | 2026-11-13 | a struck voice no mask could thin strikes where its token voice does | - |
+| 160 | 2026-11-13 | a block line's note changes where its token song's does, and a voice on its sample holds with it | - |
+| 161 | 2026-11-14 | a moving chord line is held to its token song's line by its place in the beat | - |
+| 162 | 2026-11-14 | a struck voice is taken for one no mask could thin only where a mask ran out | - |
+| 163 | 2026-11-14 | a note left where it follows another part is heard by every voice of its part | - |
+| 164 | 2026-11-14 | a voice beside a line keeps its token voice's pace in the bars that are its own | - |
+| 165 | 2026-11-14 | a voice keeps its token voice's share of semitones with its own part | - |
+| 166 | 2026-11-14 | a voice thinned to its token voice's pace keeps the notes at that voice's places | - |
+| 167 | 2026-11-14 | a voice keeps its note with its line as often as its token voice does | - |
+| 168 | 2026-11-14 | a block line turns by the move its token song's line makes there | - |
+| 169 | 2026-11-14 | a tune keeps its token song's tune's share of notes on the half beat, in a triple feel | - |
+| 170 | 2026-11-14 | a bass keeps its token song's bass's share of notes on the half beat, in a triple feel | - |
+| 171 | 2026-11-14 | a tune and a counter-line go with a chord that leaves the key | - |
+| 172 | 2026-11-14 | a song's own answers to the once-a-song words, before the pool: the mode, the clashes, the off-scale share, the chord tones | - |
+| 173 | 2026-11-14 | thirteen more words by the song: the tune's manner and note lengths, the voices, the voicing, the kit's limbs | - |
+| 174 | 2026-11-14 | the voices' note lengths by the gap and the vibrato by the song; a word a song answers many times gives its middle answer | - |
+| 175 | 2026-11-14 | the role reader: a tom on the beats over a bass is a drum (Mt. Koltz reads with its kit); the game read again | - |
+| 176 | 2026-11-14 | a kit piece's rate by its place in the bar, the token song's own: a word with no pooled table | - |
+| 177 | 2026-11-14 | the counter-line with its tune by part of the form: its share of notes with the tune and its intervals to it, the token song's own | - |
+| 178 | 2026-11-14 | a chord part's voice struck with another part's line (the bass, the tune): the struck-with word names a part | - |
 
 ## Goal
 
@@ -76,7 +181,7 @@ chip and Genesis palettes unchanged.
 
 The score of voices and the back end (phase 2); the tables and the format
 2 pack (phase 3: `translate/packtables.py`, the FFVI pack in format 2);
-the bass and drum writers and the harness that passed the listener's ear
+the bass and drum writers and the harness that passed the ear
 in substitution (`translate/writer/`, `translate/harness.py`); the
 current writing, replaced slice by slice behind the same `compose_song`.
 
@@ -120,7 +225,7 @@ current writing, replaced slice by slice behind the same `compose_song`.
 Each slice replaces one piece of the old writing behind `compose_song`
 for a format 2 pack, so a whole song plays at every step and each slice
 is an A/B against the old writing in the same song. A slice is done when
-its measures are recorded and the listener has heard it.
+its measures are recorded and it has been heard.
 
 1. **The bass and the drums** into the old generator's songs. The
    writers exist and passed the ear. The phase 2 bridge reads a generated
@@ -156,8 +261,8 @@ and, from slice 4, no four-bar phrase matching the reference set.
 
 ## The listening
 
-Two instruments, the listener's choice (2026-10-22), and the order he set
-after hearing slice 1's plan: **the gold standard first.** Comparing a
+Two instruments, chosen by ear (2026-10-22), and the order set after
+hearing slice 1's plan: **the gold standard first.** Comparing a
 written part against the old generator's measures "better than before",
 not "belongs in the music", and only the second trains the ear or proves
 the writing. So every slice that can be substituted into a real song goes
@@ -174,11 +279,11 @@ plumbing and measures.
   against the new inside the same generated song, several seeds on one
   page, a switch and a verdict a part, notes saved in the page's store.
 - **Per milestone, a Song Check**: whole written songs over several seeds,
-  mute and solo a part so the listener can say which part breaks a song,
+  mute and solo a part so a listener can say which part breaks a song,
   a verdict and notes a song, and "keep this one" recording the seed.
 - **The blind test** (two versions of the generator, which is which)
-  after the listener has compared the new writing to the music he knows,
-  so he can read his own bias against the blind pick rate.
+  after the new writing has been compared by ear to music already known,
+  so the ear's own bias can be read against the blind pick rate.
 
 Before each slice's page is built, what the slice added is said plainly,
 so the listening can focus on it.
@@ -277,9 +382,9 @@ so a game's own table tells mostly by its vocabulary and recall shares.
 harmony and arp, the form, the tempo, the mix and the samples are the
 old generator's; the drumless songs (the pack's habit, four of twelve)
 stay drumless; a written part rests where the old one rested. The twelve
-songs, old and new, sit in the listener's folder (`~/Music/bitComposer-dev/Slice 1/`).
+songs, old and new, sit in the listening folder (`~/Music/bitComposer-dev/Slice 1/`).
 
-**The listening moved to the gold standard** (the listener, 2026-10-22):
+**The listening moved to the gold standard** (by decision, 2026-10-22):
 not the new part against the old generator's but against the real song,
 so the free writing, slice 1's new thing, went onto the Substitution
 Check as a third option a part, Original / Written (the first round, the
@@ -310,7 +415,7 @@ dense mixed on its ride. Verdicts in the page's store as
 `verdicts/<id>bassfree` and `verdicts/<id>drumsfree`, the first round's
 kept beside them.
 
-**The free round heard** (the listener, 2026-10-22): free bass and drums
+**The free round heard** (by ear, 2026-10-22): free bass and drums
 belong in six of eight; two "nearly", both the bass, with notes that say
 one thing: The Decisive Battle's "loses the tune some", Johnny C. Bad's
 "flops on its opportunity to do some phrasing around 28 seconds". The
@@ -347,7 +452,7 @@ three-voice harmony (sparse varied, thin) and one accompaniment voice
 (sparse mixed, full); Johnny C. Bad a three-voice accompaniment (medium
 repeating, full).
 
-**Terra's bell** (the listener, 2026-10-22: "that one voice at a high
+**Terra's bell** (by ear, 2026-10-22: "that one voice at a high
 pitch just sounds like a really high bell or ring, super abrasive; a bug
 or a writing choice?"). A bug. Terra's accompaniment voices 4 and 3,
 whose own notes sit at midi 56 to 61 and 58 to 68, were written at 63 to
@@ -367,7 +472,7 @@ drives the writer. Terra after the fix: no written note above any
 voice's own top; the pad on 68 to 78 against its own 71 to 78. The four
 songs rewritten and the page republished.
 
-**The Decisive Battle's chop** (the listener, 2026-10-22: "super choppy
+**The Decisive Battle's chop** (by ear, 2026-10-22: "super choppy
 and staccato, which seems off for that voice"). The writing, in two
 places, not the voice: the song's own accompaniment is two voices of
 staccato sixteenths (15 and 19 strikes a bar, notes of 0.20 beats, the
@@ -394,7 +499,7 @@ so all twelve free stems were republished. This is the first piece of
 slice 4's question, how a part moves through its tones, which the melody
 needs in full.
 
-**Johnny C. Bad "doing its own thing"** (the listener, 2026-10-22: "having
+**Johnny C. Bad "doing its own thing"** (by ear, 2026-10-22: "having
 a hard time following the tune"; Terra, The Decisive Battle and
 Searching for Friends' chords passed). Measured: the written
 accompaniment sat a semitone from a sounding melody note in 17 % of its
@@ -413,7 +518,7 @@ earlier are the tune to avoid). Johnny after: clashes 8 % against the
 original's 7 %, no chordless voicing; the four songs' chords rewritten
 and republished. Heard: "much better".
 
-**The 28-second stretch** (the listener, 2026-10-22: "all the free
+**The 28-second stretch** (by ear, 2026-10-22: "all the free
 styles seem to struggle in the 28 sec part on that song"). An
 arrangement event, not a phrase one: from bar 13 Johnny's band drops to
 a drum feature for four bars (the accompaniment from 22 to 37 strikes a
@@ -474,7 +579,7 @@ keeps: a generated song draws from its pack's tables alone, and a thin
 pack will meet the same thinness; the product may carry the shared
 tables as a floor (the plan's open question).
 
-**Johnny C. Bad's chords "repetitive and off pitch"** (the listener,
+**Johnny C. Bad's chords "repetitive and off pitch"** (by ear,
 2026-10-22, after the round above; Terra's chords passed). Measured: the
 rhythm was as varied as the song's own (23 distinct bars of 38 against
 27, the ostinato share 0.24 for both), but the voicings were 9 distinct
@@ -499,7 +604,7 @@ sevenths with blue notes over them), and a written chord follows the
 reader, so in those bars it is the wrong chord by any writing. Reader
 work, not writer work; the melody slice does not touch it. The four
 songs' chords rewritten and republished. Heard: "that's good"; the
-chords round closed on the listener's word (no verdict rows clicked for
+chords round closed on that word (no verdict rows clicked for
 the chords; the free bass and drums stand at six belongs and two nearly).
 
 **Slice 2 closed (2026-10-22).** Carried as known issues: the
@@ -559,7 +664,7 @@ What to listen for: whether the tune belongs over the real band,
 whether its phrases breathe and end, and whether it rings as FFVI or as
 a generator.
 
-**Heard** (the listener, 2026-10-22): "definitely sounds like a
+**Heard** (by ear, 2026-10-22): "definitely sounds like a
 generator, doesn't belong over the real band in any of them, closer to
 random than anything else; not close to even being a melody; the voice
 is right and sometimes the notes hit, but it's kinda just doing
@@ -868,9 +973,9 @@ part (bass 4, accompaniment 4, counter 3, melody 4 against 8, 8, 10.5,
 where it finds four in FFVI (the plan's parts are 2 to 8; the reader
 hears every loop now).
 
-**The causes found, round 3** (the mixtures run free, `freerun2.py` on
-Ragnarok: from START for 32 bars under each habit, as the writer runs
-them, beside FFVI's own songs of that habit):
+**The causes found, round 3** (the mixtures run free, `freerun2.py`:
+from START for 32 bars under each habit, as the writer runs them, beside
+FFVI's own songs of that habit):
 
 - *The urn's "same" sat on top of the chain's.* Under a "varied" habit
   the free run repeated a bar in 0.31 to 0.37 of its bars where FFVI's
@@ -991,10 +1096,9 @@ within-bar chord changes (`changes`) and cadences unused; the counter is
 a second tune, not a response line; the lock acts on no part now (the
 upper parts see too few voices written, the melody writer takes no lock);
 the rendering's levels, pans, voice allotment and sample pools are
-hand-set. Twenty songs a round are at Ragnarok
-`~/diags/bitcomposer/idiom/phase4/whole/round7/` (a module and a record
-a seed); the Song Check page is to be designed with the owner before it
-is built.
+hand-set. Twenty songs a round are kept outside the repository (a module
+and a record a seed); the Song Check page's design is to be agreed before
+it is built.
 
 What the integration added, for the ear: whole songs with no original
 under them, every part free on a skeleton the tables gave (key, tempo,
@@ -1006,7 +1110,7 @@ the game's songs, and a pack's tables drawn on the data.
 ### The Song Check, first notes (2026-10-23)
 
 Twenty whole songs on a page (per-part switches, a verdict and a note a
-song; verdicts in its store). Song 4 in, the owner's word: "definitely
+song; verdicts in its store). Song 4 in, by ear: "definitely
 Final Fantasy, and much better than our other generator, in song
 diversity alone and nuance". Ten notes asked bug or writing. Run down in
 the tables, two causes behind most of them:
@@ -1064,10 +1168,10 @@ first drew three songs of three to four bars, FFVI's jingles).
 
 ### Depth: the orchestration FFVI has and the written songs lacked (2026-10-23)
 
-The owner's second-set note: the songs sound like FFVI but not like its
+The second set's note, by ear: the songs sound like FFVI but not like its
 epic ones; "little pieces, not epic orchestration", though a song like
 Terra is simple and only fills the space. Measured on FFVI's 67 songs
-against the written twenty (`fullness.py`, `coverage.py` on Ragnarok):
+against the written twenty (`fullness.py`, `coverage.py`):
 
 - FFVI uses all eight voices in every song; at any instant a median 6.7
   notes sound (quartiles 5.5 / 8.0; Shadow, Blackjack, Dancing Mad, The
@@ -1107,9 +1211,9 @@ third listening set (Song Check 3) is written from this.
 
 ### The theme: the hook as vocabulary (2026-10-23)
 
-The owner's third-set note: the songs never carry a tune; Whole 14 opens
+The third set's note, by ear: the songs never carry a tune; Whole 14 opens
 with a hook it never comes back to; Terra states its tune, goes away,
-and comes back to it. Measured (`hooks.py`, `heads.py` on Ragnarok,
+and comes back to it. Measured (`hooks.py`, `heads.py`,
 FFVI's 65 songs with a tune against the written set):
 
 - Exact repeats are not the difference. Keyed by rhythm and intervals,
@@ -1161,9 +1265,9 @@ listening set (Song Check 4) is written from this.
 
 ### What comes back with the theme (2026-10-23)
 
-The owner heard the callback in one of the fourth set's twenty (Whole
-11) where the plan's letters had eight songs return to their theme, and
-asked whether FFVI holds the tune in the melody alone. Measured on FFVI's
+The callback was heard in one of the fourth set's twenty (Whole 11)
+where the plan's letters had eight songs return to their theme. Asked:
+whether FFVI holds the tune in the melody alone. Measured on FFVI's
 46 theme returns, bar for bar against the theme phrase (`theme_band.py`,
 `theme_band2.py`): the chords under the returning phrase are the theme's
 in 41 % of bars (19 % at any other phrase), the bass's figures in 54 %
@@ -1224,9 +1328,8 @@ the reader's parts are as round 12 left them.
 
 ### Round 12's open items, investigated (2026-10-23; nothing changed)
 
-Measured on Ragnarok (`phase4/openlib.py`, `ffvi_open.py`,
-`written_open.py`, `steps_stages.py`, `steps_roles.py`, `repeat_check.py`,
-`ffvi_accomp.py`); the written side is the set 6 options.
+Measured with scratch tools, not in the repository; the written side is
+the set 6 options.
 
 **The theme travelling.** In FFVI another part plays the theme's head
 cell in 12 of 52 counter-lines (44 places), 11 of 63 basses (46) and 9
@@ -1290,7 +1393,7 @@ the drums, the melody writer for the tune). With two to four of eight
 voices playing new material the reader hears no repeat and no boundary.
 A writing fault, not vocabulary.
 
-### Round 14: the four open items built (2026-10-23, on the owner's go)
+### Round 14: the four open items built (2026-10-23)
 
 Each as the investigation above named it: a writing fault fixed as a
 fault, a vocabulary gap given a table.
@@ -1304,8 +1407,8 @@ fault, a vocabulary gap given a table.
   parts, and the median stays 2 against FFVI's 4. What remains is FFVI's
   backing repeating itself inside a part as a block (a riff of two or four
   bars in every part at once), which our parts' mixtures do not do
-  together: a vocabulary question (the backing's period), put to the
-  owner.
+  together: a vocabulary question (the backing's period), left for a
+  decision.
 - **The line and its second** (`rhythm.line_notes`, `second_figure_units`;
   tables `rhythm` recounted, `second_figures` new). The figure table counts
   an upper part's own line where it holds two voices or more, and a second
@@ -1335,14 +1438,14 @@ fault, a vocabulary gap given a table.
   weighting on strong beats, which holds the chord-tone rate; recovering
   them means moves counted by whether they land on a chord tone, a
   vocabulary choice left open.
-- **Elsewhere:** the player's music folder renamed on the owner's machine
+- **Elsewhere:** the player's music folder renamed locally
   (`~/Music/bitComposer`; the code already defaulted there, the old folder
   had won as a fallback); the vocabulary documented, every table with what
   it counts and what it controls (`VOCABULARY.md`).
 
 Song Check 7 is written from this (set 6's options, the same seeds).
 
-### Round 15: the riff and the landing (2026-10-23, on the owner's go)
+### Round 15: the riff and the landing (2026-10-23)
 
 Two vocabulary expansions, each checked for generality on all 39 games
 before it was built (`phase4/period_count.py`, `period_roles.py`).
@@ -1380,11 +1483,10 @@ before it was built (`phase4/period_count.py`, `period_roles.py`).
 - Two-voice accompaniments 8.2 onsets a bar merged (8.6 before, FFVI
   7.3). Song Check 8 is written from this.
 
-### Round 16: the feel and the layered bass (2026-10-23, from the owner's notes on set 8)
+### Round 16: the feel and the layered bass (2026-10-23, from the notes on set 8)
 
-The owner heard the bass stumble (Whole 10 of set 8) and the crash cymbal
-played fast as a constant noise. Investigated first, then built on his
-go.
+By ear, the bass stumbled (Whole 10 of set 8) and the crash cymbal
+played fast as a constant noise. Investigated first, then built.
 
 - **The stumble** was two faults in the vocabulary's reach. First, no word
   for the feel: FFVI's bass bars on triplet positions, 18 % of its bars,
@@ -1432,7 +1534,7 @@ go.
   onsets a bar merged (7.3), one voice 6.4 (5.8), the reader's parts 3
   (4). Song Check 9 is written from this. Pack: 64 tables.
 
-### Round 17: the kit from the namer's names, the cymbal habit honored (2026-10-23, on the owner's go)
+### Round 17: the kit from the namer's names, the cymbal habit honored (2026-10-23)
 
 - **The kit.** The thin pack builder (`translate/pack.py`) now names a
   game's drum samples with the drum namer, each measured as the game plays
@@ -1456,7 +1558,7 @@ go.
 - Song Check 10 is written from this: the first set on FFVI's own snare
   and cymbal.
 
-### Round 18: the second line's tempo and feel, the layered part's samples (2026-10-23, from the owner's note on set 10)
+### Round 18: the second line's tempo and feel, the layered part's samples (2026-10-23, from a note on set 10)
 
 Whole 03's second bass line went "super fast": a 22-strike bar, Dancing
 Mad's tremolo bass, which FFVI plays at 60 BPM (5.5 notes a second, its
@@ -1478,7 +1580,7 @@ long sustained bass sample. Two words were missing.
   layered basses: the long sample under the short one, as FFVI pairs them.
 - The pack: 65 tables. Song Check 11 is written from this.
 
-### Round 19: a line and its voices, no stack (2026-10-23, from the owner's note on set 11)
+### Round 19: a line and its voices, no stack (2026-10-23, from a note on set 11)
 
 Whole 01's accompaniment overpowered the song, most of all in its fast
 bars. Not the levels: the voices. The part had drawn four voices; the
@@ -1505,7 +1607,7 @@ them too). Levels stay hand-set a part; the readings keep no note levels
 (the raw readings do; storing them is import work). Song Check 12 is
 written from this.
 
-### Round 20: the voice beside the line (2026-10-23, from the owner's note on set 12)
+### Round 20: the voice beside the line (2026-10-23, from a note on set 12)
 
 Set 12's Whole 01 and 02 came out garbled: round 19 had made each voice
 beside an upper part's line an independent line, its own figure drawn
@@ -1538,10 +1640,10 @@ with the line); voices striking together 2.06 to an onset (FFVI 1.46; set
 11's stack three and more, set 12 1.81). Doubling voices 1.0 throughout,
 as FFVI's. Song Check 13 is written from this.
 
-### Round 21: the sample for a register, the register of a voice (2026-10-23, from the owner's note on set 13)
+### Round 21: the sample for a register, the register of a voice (2026-10-23, from a note on set 13)
 
-The owner heard piercing pitches in the accompaniment and the tune on
-several songs (Whole 01 among them) and took it for a level. It was
+Piercing pitches were heard in the accompaniment and the tune on
+several songs (Whole 01 among them) and taken for a level. It was
 pitch. The parts sit where FFVI's sit (accompaniment median 61 against
 62, melody 68 against 69), but the samples were being played far above
 their recording: FFVI plays a sample more than an octave above its
@@ -1571,9 +1673,9 @@ never past +20; the written songs in 10 % and 8 %, up to +27 and +28
 
 The measures after the fix are in the set's lede (Song Check 14).
 
-### Round 22: the voice that doubled a pitch, the sample's playing habits (2026-10-23, from the owner's note on set 14)
+### Round 22: the voice that doubled a pitch, the sample's playing habits (2026-10-23, from a note on set 14)
 
-The owner heard Whole 02's accompaniment "glitching" from about seven
+Whole 02's accompaniment was heard "glitching" from about seven
 seconds, as if its voice played too fast. Bars 3 and 4 there are
 sixteenth bars on all three accompaniment voices (eight notes a second,
 50 ms notes from the line's 0.4 sounds draw) on sample f89f5aedfd, a pad
@@ -1629,12 +1731,12 @@ still stands open from round 20.
 
 ### The exit checks, run (2026-10-24; checks only, nothing in the writer changed)
 
-Set 15 passed the owner's ear ("almost every song is good now, the misses
+Set 15 passed the ear ("almost every song is good now, the misses
 are acceptable"), so two of the exit criteria were measured on its twenty
-songs (seeds 1-20, both switches). The scripts sit beside the others on
-Ragnarok (`fourbar_check.py`, `nearest_check.py`, `nearest_tables.py`,
-`octave_check.py`); the games' tables they fit are cached under
-`~/diags/bitcomposer/idiom/phase4/nearest/tables/`.
+songs (seeds 1-20, both switches). The scripts are scratch tools, not in
+the repository (`fourbar_check.py`, `nearest_check.py`,
+`nearest_tables.py`, `octave_check.py`); the games' tables they fit are
+cached outside the repository.
 
 - **No four-bar phrase matches a game's: passed.** Every part's line
   (melody, counter, bass, accompaniment), windows of four bars at every
@@ -1668,7 +1770,7 @@ Ragnarok (`fourbar_check.py`, `nearest_check.py`, `nearest_tables.py`,
   common outcomes. A fair per-table distance would score each song
   against the game's own songs' spread under its table; not built.
   Reading: the backing and the plan are FFVI's by the tables; the tune is
-  where the songs are least FFVI, which is where the owner's ear put it.
+  where the songs are least FFVI, which is where the ear put it.
 - **The octave, measured while the writing items were listed.** FFVI's
   voices beside a line share a pitch class in 0.286 of the two-voice
   onsets where the voices' rhythms differ (an octave apart in 15 %, the
@@ -1683,23 +1785,23 @@ Ragnarok (`fourbar_check.py`, `nearest_check.py`, `nearest_tables.py`,
 
 Not run: the spread over twenty seeds against the game's own (slice 1's
 distinct-figures and ostinato measure, over the whole song); the blind
-pick rate, on hold by the owner's call until a game he does not know by
-heart; the nearest-game test in the other direction, which needs a second
-game's pack (Mega Man X, after phase 5 by his call). The owner holds the
-writer where it is for now and has ideas of his own to put first.
+pick rate, on hold by decision until a game not known by heart; the
+nearest-game test in the other direction, which needs a second game's
+pack (Mega Man X, after phase 5 by decision). The writer is held where it
+is for now, with other ideas to put first.
 
-### Round 23: the voice beside the line as a melody of its own (2026-10-24, on the owner's go)
+### Round 23: the voice beside the line as a melody of its own (2026-10-24)
 
-Set 15 passed the ear, and the owner asked for the writing items and chose
-this one first: the voice beside the line (round 20's mask gave it the
+Set 15 passed the ear; the writing items came next, and this one was
+chosen first: the voice beside the line (round 20's mask gave it the
 line's rhythm; its pitch was a hand rule, a tone of the line's voicing up
-from its rank). He asked whether the fix was a rule replacing a rule; it
-is a word replacing a rule, and the open choice in it was settled by
-counting, as the rules of evidence ask.
+from its rank). The question was whether the fix was a rule replacing a
+rule; it is a word replacing a rule, and the open choice in it was
+settled by counting, as the rules of evidence ask.
 
-**Counted first (interval_check.py, move_check.py, product_check.py on
-Ragnarok).** FFVI's voice beside a line, where the two strike together
-(3352 onsets): a third below the line most (12 %), an octave off in 13 %,
+**Counted first (interval_check.py, move_check.py, product_check.py).**
+FFVI's voice beside a line, where the two strike together (3352 onsets):
+a third below the line most (12 %), an octave off in 13 %,
 on the line's own pitch in 5 %, its interval kept from one such onset to
 the next 37 % of the time; where it strikes alone (1546 onsets, a third
 of its onsets) it repeats its note 29 % and moves a step 37 %. Held out
@@ -1759,10 +1861,10 @@ makes nearly every written voice beside a line a "doubling" by the
 reader's rule, and a first after-measure had ranked the voices by note
 count and read a doubling voice's notes as an apart voice's.
 
-### Round 24: a sample given a job the game never gave it (2026-10-24, from the owner's notes on set 17)
+### Round 24: a sample given a job the game never gave it (2026-10-24, from the notes on set 17)
 
-Five new seeds (21 to 25, Song Check 17) on round 23's writing. The owner
-heard a staccato pluck in Whole 22's bass and a chirp in Whole 24's
+Five new seeds (21 to 25, Song Check 17) on round 23's writing. Heard: a
+staccato pluck in Whole 22's bass and a chirp in Whole 24's
 counter, and Whole 23 had no drums though its plan played them in 32 of 46
 bars. Three drawing faults and a kit rule of mine, all one family: a
 sample, or a bar, given a job the game never gave it.
@@ -1819,17 +1921,17 @@ without regard to where the line sits, so a counter line at 64 to 76 with
 "apart +16" puts its voice at 80 to 92, where FFVI plays nothing; the fit
 then takes the least bad sample. The word that would carry it: the layer
 offset conditioned on the line's register, or the voice's register as a
-word of its own. Not built; the owner's call. Open from before stands.
+word of its own. Not built; a product choice. Open from before stands.
 
-### Round 25: richness, measured and given words (2026-10-24, from the owner's judgment on sets 16 to 18)
+### Round 25: richness, measured and given words (2026-10-24, from listening to sets 16 to 18)
 
-The owner heard the writing as a generator's beside FFVI: staccato,
-single notes with no depth, a tune that rarely says anything, and asked
+The writing was heard as a generator's beside FFVI: staccato, single
+notes with no depth, a tune that rarely says anything; the question was
 whether the rounds were going backwards or uncovering something deeper.
-Measured (depth_check.py, envelope_check.py, timbre_check.py on
-Ragnarok), it was the second: every round so far had worked on which
-notes are written, and what he heard lives in how a note is rendered and
-mixed, and in the tune's shape over a song.
+Measured (depth_check.py, envelope_check.py, timbre_check.py), it was the
+second: every round so far had worked on which notes are written, and
+what was heard lives in how a note is rendered and mixed, and in the
+tune's shape over a song.
 
 **What the counts said.** The written notes are not short: longer and more
 legato than FFVI's (tune 0.95 of its gap against 0.87, 335 ms against
@@ -1854,8 +1956,8 @@ The tune: FFVI's peaks at 0.45 of the song with a 22-semitone range and
 repeats its cells more; the written tunes peaked at 0.24 and spanned 16,
 with no song-level word to say where a tune should climb.
 
-**Built, on his go ("the 4 word fixes for the richness"), with the kit's
-other slot (Song Check 18's Whole 29).**
+**Built on the go-ahead ("the 4 word fixes for the richness"), with the
+kit's other slot (Song Check 18's Whole 29).**
 
 - **The envelope a sample plays with.** `pack.envelope_of`: the thin pack
   builder keeps each sample's modal key-on envelope from the SPCs and
@@ -1892,7 +1994,7 @@ other slot (Song Check 18's Whole 29).**
   one (a one-song orchestral hit, round 24, Whole 29's strange sound).
 
 Song Check 19 is one seed twice, Whole 28 as set 18 published it and on
-this round, by the owner's design: a song chosen for its potential, not
+this round, by design: a song chosen for its potential, not
 for being liked, and a before and after on the same seed. Open from this
 round: vibrato (5 % of FFVI's tune notes), the tune's motif economy
 (echoes 0.27 against 0.34, a drawing question), the second voice's
@@ -1901,13 +2003,13 @@ the melody sitting a shade under the accompaniment in the drawn levels
 (FFVI's tune is 1.16 times its accompaniment; the shares are drawn a part
 at a time), and `PACKS.md` naming the envelope field.
 
-### Round 26: the bass that would not finish (2026-10-24, from the owner's notes on Song Check 19)
+### Round 26: the bass that would not finish (2026-10-24, from the notes on Song Check 19)
 
-The owner took round 25's account of Whole 28 (the bass's notes identical,
-its samples and levels changed) and heard, in both renders, a bass that
+Given round 25's account of Whole 28 (the bass's notes identical, its
+samples and levels changed), both renders were heard with a bass that
 "isn't quite finishing what it's doing": notes ending abruptly, and the
-second voice playing notes of its own instead of carrying the line. He
-asked for a bug check. Measured (bass28_check.py, bass28_check2.py), one
+second voice playing notes of its own instead of carrying the line. A
+bug check was asked for. Measured (bass28_check.py, bass28_check2.py), one
 bug and two missing words; the triplet runs are the writing (the song is
 in triple feel, and FFVI's "medium walking" bass runs so in its shuffle
 songs, in two-voice songs too, 4 of 13).
@@ -1952,9 +2054,9 @@ line (gap_sounds gives them "second" now; measure), the melody writer's
 own lengths (articulation, not this word), and the rest of round 25's
 list.
 
-### Round 27: two basses, or one in two layers (2026-10-24, from the owner's notes on Song Check 20)
+### Round 27: two basses, or one in two layers (2026-10-24, from the notes on Song Check 20)
 
-The owner heard the two bass voices as incoherent in every song: one
+The two bass voices were heard as incoherent in every song: one
 voice a hook, the other "random stuff around it". Measured
 (bass_coherence.py): in FFVI's thirteen two-voice basses the sustained
 line plays 3 strikes a bar on 2 pitches and the slap 6 on 3, twice as
@@ -1973,7 +2075,7 @@ line's bar is one FFVI never played, which is most bars, the draw backs
 off to the part's general bars and returns unrelated to the line. The
 chord parts met the same fault in round 20 and got the mask.
 
-**Built, on his go.** `second_figure_units` counts the bass as it counts
+**Built.** `second_figure_units` counts the bass as it counts
 the chord parts: the second voice's bar as a mask over the line's onsets
 (which it strikes with, plus onsets of its own, `second_mask`), by the
 feel, the tempo band, the line's onset count and pattern. `write()` draws
@@ -1999,9 +2101,9 @@ round 26's renders. Open: the slap's fills (the thin bass mask contexts);
 the line's lurch between a one-note bar and a run in thin figure
 contexts; and round 25's list.
 
-### Round 28: the bass on the kit (2026-10-24, from the owner's question on Song Check 21)
+### Round 28: the bass on the kit (2026-10-24, from a question on Song Check 21)
 
-**His question.** The sustained bass line starts and stops and leaves
+**The question.** The sustained bass line starts and stops and leaves
 odd empty space; a bass holds the rhythm, that is its job; does FFVI's?
 And then: check FFVI's themed songs with a bass in particular.
 
@@ -2018,7 +2120,7 @@ The slap's own fills were at half FFVI's rate (0.35 of its onsets off
 the line's; FFVI 0.67), the bass mask table's floor standing on
 one-song contexts.
 
-**Built, on his go.** `bass_locks` (`rhythm.kit_accents`,
+**Built.** `bass_locks` (`rhythm.kit_accents`,
 `rhythm.bass_lock_units`): the share of the kit's accents (positions
 where two pieces strike together, on the figure grid) carrying a bass
 note, in tenths, drawn once a song and given to the bass writer as the
@@ -2074,20 +2176,20 @@ strike in 0.64 to 0.68 of bar pairs (FFVI 0.74) and jumps four or more
 in 0.15 to 0.17 (FFVI 0.09): the chain is not where the steadiness
 lives. The unchained shape writes 0.64 too; the Cache's recall carries
 it (its ostinato share drawn 0.34 against FFVI's 0.40). No shape change.
-`~/diags/bitcomposer/idiom/phase4/prev_shape.py` scores any candidate
-in a minute.
+`prev_shape.py`, a scratch tool not in the repository, scores any
+candidate in a minute.
 
 Song Check 22 is Whole 28 a fifth time beside the other four; the fifth
 differs from the fourth in the slap's fills only, and the page says so.
-Open, for his decision: a counted word for the bass on the kit's onsets
+Open, for a decision: a counted word for the bass on the kit's onsets
 (`bass_on_kit`: the share of the line's strikes on some kit onset, by
 the song, drawn and asked of each bar's figure), which reaches every
 kit and would turn the ten-note run off the kit away; the slap's fills
 against the line's density; the recall share; and round 25's list.
 
-### Round 29: the counter-line beside the tune (2026-10-24, from the owner's note on Song Check 22)
+### Round 29: the counter-line beside the tune (2026-10-24, from a note on Song Check 22)
 
-The owner heard the counter-line and the tune "competing for air time
+The counter-line and the tune were heard "competing for air time
 and blending together". Measured first (counter_vs_melody.py,
 counter_split.py): FFVI's counter plays WITH the tune, not in its rests.
 In its 52 songs with both, 0.67 of the counter's onsets fall on the
@@ -2108,7 +2210,7 @@ interleaved on one timbre. The cause: `whole.write()` ran
 `writer.melody` a second time for the counter with its own random
 stream, and nothing in the vocabulary related the two lines.
 
-**Built, on his go ("good with the words, go ahead"); three words
+**Built on the go-ahead ("good with the words, go ahead"); three words
 (VOCABULARY.md).** `counter_figures`: the counter's bar as a mask over
 the tune's bar, counted as `second_figure_units` counts a voice beside
 its line with the tune's line as the line (`rhythm.counter_figure_units`,
@@ -2144,7 +2246,7 @@ register gap -6 (its counter_levels draw 1.5, the one such song in
 FFVI's 52; its tune rests 0.44 of the time and the counter fills 0.46
 of that). A first cut had given the "other" counter the pool's best
 sample, which is the tune's favourite: 10 of 14 on the tune's sample
-and the owner's complaint intact, so the word is honoured both ways; and
+and the complaint intact, so the word is honoured both ways; and
 the counter's bar-final notes cut at the bar line had filled 0.42 of
 the tune's rests, the run-on 0.59. The before and after runs are
 `phase4/r29_before.log` and `phase4/r29_after2.log`.
@@ -2183,7 +2285,7 @@ harmony gone). The draws now come once in `plan()` after the retry
 loop, after every existing draw, and every plan of the twenty-one is
 the round-28 plan again. Two changes to parts other than the counter
 remain, neither a fault in the words and neither fixable without a
-choice the owner makes: (1) the counter's units sit in the shared
+choice to be made: (1) the counter's units sit in the shared
 `voice_intervals` and `voice_moves` tables, whose coarse levels every
 part's probability mixes in, so the chord parts' and the bass's second
 voices draw a little differently (the probabilities move by 0.3 to 7 %
@@ -2193,7 +2295,7 @@ notes; across the twenty-one, ten songs' accompaniment voices and five
 songs' second bass voices, and through the tune's clash check seven
 songs' tunes. The choice is between the counter's own interval and move
 tables (the other parts untouched, two more tables) and the shared ones
-as the brief asked; it is for the owner. (2) The rendering's shared
+as the brief asked; it is left for a decision. (2) The rendering's shared
 stream: the counter's sample is now chosen after the tune's and from a
 pool without the tune's sample, so the draws after it fall elsewhere:
 Whole 28's echo is "normal" where it was "light" (wet 0.4 against 0.24)
@@ -2202,7 +2304,7 @@ and the floors on its bass samples are shorter (0.12 and 0.08 s against
 sample for the tune itself (three more the same sample under the pack's
 other name for it), four an echo come or gone and three its wetness
 changed. Nothing
-restores the round-28 draws short of replaying them. The owner hearing
+restores the round-28 draws short of replaying them. A listener hearing
 Song Check 23 against 22 hears the counter, the echo and the bass's
 floors, not the counter alone.
 
@@ -2221,7 +2323,7 @@ a counter against another tune sample. FFVI's own partners for that
 tune sample are sfd6accf98a four times in ten, s256b199ccf three, then
 s605f200105, s8320f1bea2 and s4fd4b0992b; across its 35 other-sample
 counters the counter's sample is darker than the tune's in 17 of the 23
-pairs the pack holds (its body louder in 15). The owner's decision: a
+pairs the pack holds (its body louder in 15). Decided: a
 counted pair word in place of the rule, the way `layer_samples` gives a
 layered part's second voice its sample through `pair_for`.
 
@@ -2324,7 +2426,7 @@ counter, four stems).
 
 **Open.** The level: `counter_levels` is drawn as in round 29 and Whole
 28's 1.5 stays (the report's item 1, conditioning the share on the
-tune's `levels` draw, is the owner's to decide); with the sample FFVI
+tune's `levels` draw, is left for a decision); with the sample FFVI
 pairs the counter still sits +5.6 dB over the tune at the median. The
 counter's pitch range: untouched (three notes at 78 to 94 in bar 29,
 over a sample FFVI plays no higher than 72; the report's item 3). The
@@ -2334,7 +2436,7 @@ and unisons spans two octaves or more between its tenth and ninetieth
 percentiles, and no one-song range of a sample is that wide; whether
 the check should be against the counter's planned register, the written
 register's middle, or the sample's range over all its songs is a choice
-for the owner, not made here. The pairs with a sample outside the pack
+left open, not made here. The pairs with a sample outside the pack
 (12 of 35) are passed over, as `layer_samples`' are.
 
 ### Round 31: the counter's level under the tune's share (2026-10-24, from the counter-winning report on Song Check 24)
@@ -2352,8 +2454,8 @@ tune sit on tunes at 0.59 of the loudest; the independent product gives
 P(counter at 0.9 or more of the loudest) 0.238 and P(above the loudest)
 0.035 (`cw_joint.py`). Whole 28 drew 1.5 on a tune at 0.7: the counter
 at 1.05 of the loudest, the loudest voice in the song, +3.5 dB over the
-tune by level alone. The owner's decision: the counter's level is drawn
-under the tune's share.
+tune by level alone. Decided: the counter's level is drawn under the
+tune's share.
 
 **Measured first (the round-30 code and pack; `counter-winning-report.md`
 part 1 item 1, `r31_cvm_before.log`, `r31_levels_before.log`).** Seeds 1
@@ -2490,9 +2592,9 @@ The rules the writer still decides by hand, ranked, with rounds 30 and
 31 marked done: [rules-to-words.md](rules-to-words.md) (the audit of
 2026-10-24 at 6a89f99).
 
-### Round 32a: the voice beside a line kept where the game plays its sample (2026-10-24, from the owner's note on Song Check 25)
+### Round 32a: the voice beside a line kept where the game plays its sample (2026-10-24, from a note on Song Check 25)
 
-The owner heard "a weird noise written in the counter of Whole 28 at
+Heard: "a weird noise written in the counter of Whole 28 at
 1:01". It is three notes in bar 29 (61.3 to 62.1 s), the counter's own
 onsets in the tune's rest at beats 1.5, 1.67 and 2: 78, 90 and 94 on
 sfd6accf98a, the sample round 30 gave it, which FFVI records at 69.2 and
@@ -2575,7 +2677,7 @@ alone), or the band with FFVI's own share past it; a redraw at writing
 in place of the fold, which needs the sample before the writing (the
 pair word is drawn against the written register, round 30). The span
 rule itself stands (item 7). Report: `phase4/counter-noise-report.md`;
-scripts `cn_*.py` beside it. The owner heard Song Check 26 and decided
+scripts `cn_*.py` beside it. Song Check 26 was heard, and it was decided
 (2026-10-25) to keep the fold as built, its hard edge included:
 engineered music cannot do every nuance a composer does, and the
 squeaks are gone; to be looked at again only if something is found
@@ -2583,7 +2685,7 @@ missing.
 
 ### Round 32: the band's levels as one unit on the balance token (2026-10-24, from the accompaniment report on Song Check 25)
 
-The owner heard the accompaniment steal the show from the tune in Whole
+The accompaniment was heard stealing the show from the tune in Whole
 02 and 03; the accompaniment report (`phase4/accomp-check-report.md`)
 found the whole of the advantage in the level: the plan drew each part's
 `levels` share (a part's share of the song's loudest, in tenths) apart
@@ -2597,9 +2699,9 @@ with a second voice at 1.5 on top. Round 31 had fixed the counter alone
 (`counter_shares` under the tune's band); the accompaniment's share is
 not told by the tune's band (a leave-one-song-out likelihood gains
 nothing from it), and the same product awaited the harmony and the bass.
-The owner heard the `level` renders (the accompaniment forced to FFVI's
-themed ratio 0.84 to the tune), found the themed songs much better, and
-chose the report's shape (b): the band's levels drawn as one unit, a
+The `level` renders (the accompaniment forced to FFVI's themed ratio
+0.84 to the tune) were heard, the themed songs much better, and the
+report's shape (b) was chosen: the band's levels drawn as one unit, a
 field of the `balance` token, so a song's level layout is one FFVI
 song's whole, as its registers, sounds and voice counts already are, and
 FFVI's joint is reproduced by construction.
@@ -2803,7 +2905,7 @@ reached the cap of 1.0 of full. The accompaniment report (part 1 item 1,
 "Each cause" item 2, `ac_second.py`) had measured FFVI: its loud second
 accompaniment voices (1.5 times the line or more, 12 of 43 layered
 songs) sit on lines at 0.59 of the tune at the median and reach 1.21
-times the tune, 2.05 at most. The owner chose: the balance token carries
+times the tune, 2.05 at most. Chosen: the balance token carries
 each layered part's second voices' levels too, from the same FFVI song,
 so the stack is one song's by construction; `layer_levels` stays as the
 fallback for a part whose token song has one voice, or a token without
@@ -3009,8 +3111,8 @@ the line voice's own in 8 of FFVI's 43 layered accompaniments (Epitaph
 2.8, Under Martial Law 1.8), so the written stack can pass the song's
 own there (Under Martial Law's token: the second voice 2.35 times the
 tune as played, 1.66 in the readings); the fifth field as the line
-voice's level would close it, a change to round 32's unit for the
-owner. The second counter voice apart is still not written (round 29),
+voice's level would close it, a change to round 32's unit left for a
+decision. The second counter voice apart is still not written (round 29),
 so the counter's shares (28 tokens) are read and unused. The Song Check
 JSON carries no levels field still (the round-32 review's item).
 `TOP_LEVEL` 0.85 is still a constant. Song Check 27 is Whole 28
@@ -3018,9 +3120,9 @@ JSON carries no levels field still (the round-32 review's item).
 `phase4/round33-report.md`; scripts `r33_voices.py`, `r33_levels.py`,
 `r33_pack_check.py`, `r33_diff.py` and their logs beside it.
 
-### Round 34: the sample before the notes (2026-10-27, from the owner's question on Whole 02's counter blips)
+### Round 34: the sample before the notes (2026-10-27, from a question on Whole 02's counter blips)
 
-**His question.** Whole 02's counter had two high blips; round 32a's fold
+**The question.** Whole 02's counter had two high blips; round 32a's fold
 had been meant to stop that. Should "a sample is played where the game
 plays it" not be one general thing for every voice, instead of a patch
 here and a fold there?
@@ -3038,7 +3140,7 @@ span two octaves wider), then a sample was found that reached the
 written notes, with the part's speed read off them, and what still
 stuck out was folded.
 
-**Built, on his go.** The sample comes first. `part_speeds` (a part's
+**Built.** The sample comes first. `part_speeds` (a part's
 fastest bar, by the part and its habit's density tier, drawn once a song
 after every other plan draw) gives the fit a speed before any note
 exists; `samples_for` runs before `write`, and the range the `ranges`
@@ -3086,9 +3188,9 @@ bound, would bring the gap back toward FFVI's); the pair words still pass
 over samples the pack lacks; `TOP_LEVEL`; rules-to-words.md's remaining
 items.
 
-### Round 35: the note's length under the part's speed (2026-10-27, from the owner's note on Whole 02's accompaniment)
+### Round 35: the note's length under the part's speed (2026-10-27, from a note on Whole 02's accompaniment)
 
-**His question.** Whole 02's accompaniment went staccato again, as if
+**The question.** Whole 02's accompaniment went staccato again, as if
 outside its sample's habits; should the sample's speed be handled the
 way round 34 handled its range, one level up?
 
@@ -3104,7 +3206,7 @@ class but not the part's speed. Also found: the part_speeds draw had
 given this dense accompaniment 2 notes a second, a value FFVI's dense
 accompaniments never have, from the coarser level's mass.
 
-**Built, on his go.** `gap_sounds` is counted under the part's speed
+**Built.** `gap_sounds` is counted under the part's speed
 class (its fastest bar: slow to 3 a second, medium to 6, fast beyond;
 `rhythm.speed_tier`, `part_fastest`) between the voice and the gap, and
 the plan draws it again under the part's drawn speed once that is known
@@ -3125,9 +3227,9 @@ Check 29 is Whole 28, 02 and 03 as round 34 beside round 35.
 **Open:** the counter's register against the tune's under the sample-first
 order; the pair words still pass over samples the pack lacks.
 
-### Round 36: the note's floor under the speed it is played at (2026-10-27, from the owner's note that round 35 made no audible difference)
+### Round 36: the note's floor under the speed it is played at (2026-10-27, from a note that round 35 made no audible difference)
 
-**His question.** Whole 02's accompaniment sounded the same after round
+**The question.** Whole 02's accompaniment sounded the same after round
 35; was that the intended change?
 
 **Measured first.** The share had changed (0.7 to 0.4 of the gap under a
@@ -3143,7 +3245,7 @@ had just closed for the share. Three voices on overlapping sixteenths
 make a continuous texture either way, and the pad's 167 ms attack
 retriggered every 125 ms is the stutter heard in both.
 
-**Built, on his go.** `sample_lengths` is counted under the sample's
+**Built.** `sample_lengths` is counted under the sample's
 speed class in each song (slow, medium, fast by its fastest bar), and a
 chosen sample's floor is drawn after the writing under the speed class of
 the fastest written voice playing it, on a stream of its own
@@ -3162,9 +3264,9 @@ beside round 36.
 
 **Open:** as round 35's.
 
-### Rounds 37 and 38: the tune's cells handed to the band, and the tune's memory at the half bar (2026-10-27, from the owner's note that the parts of a themed song each do their own thing)
+### Rounds 37 and 38: the tune's cells handed to the band, and the tune's memory at the half bar (2026-10-27, from a note that the parts of a themed song each do their own thing)
 
-**His question.** In Whole 28, and seemingly every song, the melody, the
+**The question.** In Whole 28, and seemingly every song, the melody, the
 accompaniment and the counter wander and compete when the song is meant
 to have a theme: "trying to be a theme but not really". Is it in the data?
 
@@ -3178,7 +3280,7 @@ the tune played by another part in another bar 0.05 against FFVI's 0.34
 handed the tune to the band was theme doubling of the theme cell in the
 same bar. Each part was faithful to its own word and none to the theme.
 
-**Built, on his go.** Round 37, `cell_handoffs`: a tune's half-bar cell
+**Built.** Round 37, `cell_handoffs`: a tune's half-bar cell
 taken up by another part in a later bar (which part and how many bars on,
 or none), counted by the song's echo habit and the cell's place (theme or
 other), drawn once a cell of the written tune after the parts are
@@ -3215,9 +3317,9 @@ against the written 0.47 and 0.24, the echo habit being drawn for all
 songs alike; the counter's register against the tune's; the pair words
 passing over samples the pack lacks.
 
-### Round 39: the counter's kind with the band's on the balance token (2026-10-27, from the owner's note that Whole 33's counter got so loud)
+### Round 39: the counter's kind with the band's on the balance token (2026-10-27, from a note that Whole 33's counter got so loud)
 
-**His question.** "The counter got so loud in 33. I thought we fixed the
+**The question.** "The counter got so loud in 33. I thought we fixed the
 volume with higher level vocabulary, but maybe we have only been
 patching it at lower level vocabulary."
 
@@ -3241,7 +3343,7 @@ counters louder than the tune are, bar one, on another sample.
 token's counter level stand. The level and the kind were separate draws
 where FFVI ties them.
 
-**Built, on his go (option 1 of two; the other, `counter_shares` by the
+**Built (option 1 of two; the other, `counter_shares` by the
 kind, a second level word fighting the token for the same part).** The
 counter's kind as the balance token's seventh field
 (`rhythm.balance_units`: `counter=minor:56-72:0.9:1:1.0::other`;
@@ -3251,14 +3353,14 @@ it (`extras.counter.sample_from` "balance" or "counter_samples"; the log
 line "counter beside the tune: other sample with the band's, level 1.0 of
 the loudest with the band's, the balance's"). The balance table rebuilt
 alone (`packtables.fit` on the units, spliced; `pack.json.r38` the
-backup on both machines): 66 outcomes in the same order with the same
+backup): 66 outcomes in the same order with the same
 votes once the field is stripped, so every balance draw lands where it
 did; 17 same, 34 other. Test extended
 (`test_the_bands_levels_are_the_balance_tokens_as_one_unit`: the unit's
 field same/other/none, the plan's kind from the token with every other
 draw identical, the log line). Pack still 83 tables.
 
-**Measured after, Whole 33 alone (his ask: a before and after of the one
+**Measured after, Whole 33 alone (as asked: a before and after of the one
 song).** The same key, form, notes and onsets; the counter now "other",
 on s256b199ccf through the pair word, written 64-72 where the game plays
 it (56-72 before), still at the token's 1.0. The stems: the counter's
@@ -3277,9 +3379,9 @@ same split at the section grain. The counter's density is still the
 habit draw's (FFVI's loud other-sample counters run 2 to 16 notes a bar,
 Whole 33's 6).
 
-### Round 40: the tune's memory at the pair, and where its echoes point (2026-10-28, from the owner's note that the melody is chaotic, with no hook and no verse)
+### Round 40: the tune's memory at the pair, and where its echoes point (2026-10-28, from a note that the melody is chaotic, with no hook and no verse)
 
-**His words.** "The melody is chaotic. There isn't a hook and verse; it
+**The note.** "The melody is chaotic. There isn't a hook and verse; it
 meanders and does whatever it wants. FFVI has distinct hooks and verses,
 which makes their themes musical."
 
@@ -3303,7 +3405,7 @@ The written tune echoed as much as FFVI, by the wrong kind (a rhythm
 with new pitches), at the wrong grain (one bar or half bar at a time,
 each drawn alone) and from anywhere in the song (B a reshuffle of A).
 
-**Built, on his go (words 1 and 2 of the three discussed; word 3, the
+**Built (words 1 and 2 of the three discussed; word 3, the
 rhythm bringing its intervals, held back to measure first).** Three
 counted words, `pair_recall`, `pair_bar_recall` and `recall_sources`
 (docs/idiom/VOCABULARY.md), and the melody writer's urn around them: in
@@ -3314,7 +3416,7 @@ pairs) and the half-bar urn inside it, and an "earlier" draw at either
 grain takes its pool from a source drawn by `recall_sources` (the bars
 of the phrase's own section, the theme phrase's, another section's).
 The three tables fitted on the readings and spliced into the FFVI pack
-(86 tables; `pack.json.r39` the backup on both machines). Test
+(86 tables; `pack.json.r39` the backup). Test
 `test_the_tunes_memory_at_the_pair_and_where_its_echoes_point` on a
 made-up tune; the whole-song test asserts the log line.
 
@@ -3332,9 +3434,9 @@ same" 17 of 38. That is why a third of the written echoes are a rhythm
 with new pitches where FFVI has a tenth (FFVI's moved cells keep their
 intervals: moved 0.20, rhythm-only 0.06), why pairs inside the own parts
 reach 0.09 against 0.18 with the word in place, and part of why the
-hook's share does not move. A drawing fault, to be fixed as one on his
-go: `again` keeping the intervals (the chord-tone landing retired, or
-counted as FFVI's moved cells do it).
+hook's share does not move. A drawing fault, to be fixed as one on the
+go-ahead: `again` keeping the intervals (the chord-tone landing retired,
+or counted as FFVI's moved cells do it).
 
 **Also open:** the echo habit for a song that carries its theme back:
 FFVI's themed tunes are mixed 14, varied 4, repeating 5 of 23, its
@@ -3343,7 +3445,7 @@ unthemed ones varied 25 of 40; the written themed songs measure mixed
 now. The CONTINUE constant (0.8: a recalled passage goes on with its
 next bar) is a rule the pair word half covers.
 
-### Round 41: a recalled cell keeps its intervals (2026-10-28, the fault found in round 40, fixed as a fault on his go)
+### Round 41: a recalled cell keeps its intervals (2026-10-28, the fault found in round 40, fixed as a fault)
 
 **The fault.** `writer.again` (a bar coming back) and the half-bar urn's
 recalled halves rebuilt the cell from its scale steps and clamped each
@@ -3382,9 +3484,9 @@ the fix because the theme's returns in a later section now match their
 source exactly, which FFVI's 0.00 does not show at its grain: open. Song
 Check 35 is five fresh band-themed seeds (36-40) on round 41.
 
-### Rounds 42 to 44: the instrument a part plays, the tune's full range, the tune doubled (2026-10-28, from the owner's note that the songs sound sparse where FFVI's sound epic)
+### Rounds 42 to 44: the instrument a part plays, the tune's full range, the tune doubled (2026-10-28, from a note that the songs sound sparse where FFVI's sound epic)
 
-**His words.** "Most of our songs seem sparse and FFVI had epic qualities
+**The note.** "Most of our songs seem sparse and FFVI had epic qualities
 to their music. We probably need some even higher level language above
 theme to dictate the epicness of a theme."
 
@@ -3400,13 +3502,13 @@ pitch class (0.22 against 0.40; its half-bar cells doubled at once 0.03
 against 0.24), and dynamics inside a part, which the readings do not yet
 hold (a median level a part). "Epic" is not one word: it is those.
 
-**Built, on his go.** Round 42, `part_samples`: which sample a part's
+**Built.** Round 42, `part_samples`: which sample a part's
 line plays, by part and speed class, drawn before the pool rule. Round
 43, `sample_ambitus`: a sample's whole played range by song; a tune's
 bound is the widest the game ever took its sample (the union of the
 word's outcomes), cut against the tune's own token register. Round 44,
 `tune_doubling`: the theme-doubling word for every other bar of the tune.
-Pack 89 tables (`pack.json.r41` the backup on both machines). Test
+Pack 89 tables (`pack.json.r41` the backup). Test
 `test_the_instrument_a_part_plays_the_range_it_was_ever_played_over_and_the_tune_doubled`.
 
 **Measured after** (themed medians):
@@ -3444,14 +3546,14 @@ parts in another bin than their token's), dynamics inside a part (FFVI's
 parts hold one level at the median, a quarter move 1.5 times or more,
 the accompaniment and arp mostly, the melody flat).
 
-**Built, on his go.** Round 45: `part_sample_for` draws over the samples
+**Built.** Round 45: `part_sample_for` draws over the samples
 the pack holds, the word's shares renormalised; the pool rule chooses
 only where the pack holds none (fallbacks 25 to 0). Round 46,
 `part_entries`: where inside a section a present part enters and leaves,
 by part, place and length class, applied in `plan_texture` after the
 section's texture (bars before the entrance and after the exit turned
 off, a repeated section copying them). Pack 90 tables (`pack.json.r44`
-the backup on both machines). Tests
+the backup). Tests
 `test_a_part_enters_and_leaves_inside_the_section_where_the_game_does`.
 
 **Measured after, seeds 1-45.** Late entrances inside a section 37, at a
@@ -3479,10 +3581,10 @@ against FFVI's 0.27: the half-bar urn (round 38) ran on every half of a
 new bar, and a recalled half always has two notes or more (the word
 counts no smaller cell), so the tune's held halves became two-note ones.
 
-**Built, on his go.** The counter's weight as a conditioning of
+**Built.** The counter's weight as a conditioning of
 counter_figures, in front of the feel and tempo (the draw's floor moved
 to keep the tune's onset count, `COUNTER_MASK_FLOOR`); the table refitted
-into the pack (`pack.json.r46` the backup on both machines; 90 tables).
+into the pack (`pack.json.r46` the backup; 90 tables).
 In `writer.new_cell_halves`, a half the drawn rhythm gives fewer than
 HALF_CELL_NOTES notes takes no urn draw and stays as drawn (a fault of
 grain, fixed as one).
@@ -3520,19 +3622,19 @@ with 9 to 13 own onsets a bar; the mask with the counter's weight can
 draw those, and the written main counters (5 of 33) sit where a mix of
 the seven lands them. Left as it is.
 
-**Built, on his go.** `section_levels` (docs/idiom/VOCABULARY.md):
+**Built.** `section_levels` (docs/idiom/VOCABULARY.md):
 `rhythm.load` keeps each note's level (`Song.note_levels`), the unit
 counts a part's section level over its song level in tenths by part and
 place, the plan draws a multiplier a part an own section it plays in
 (repeats copy), and `note_level` applies the bar's multiplier. Pack 91
-tables (`pack.json.r47` the backup on both machines). Test
+tables (`pack.json.r47` the backup). Test
 `test_a_parts_level_moves_by_section_as_the_games_does`.
 
 **A fault on the way.** The first cut drew the section levels on the
 plan's own stream, after the textures, so every habit, register and
 sample drawn after them shifted: a before-and-after of Song Check 38's
 seeds (Song Check 40's first cut) compared two different songs a pair,
-and the owner heard "different instruments sometimes" and no swell. The
+and the ear heard "different instruments sometimes" and no swell. The
 draws moved to an own stream (`whole:{seed}:levels`), as the floors and
 hand-offs are, so a seed's song is what it was with its levels alone
 changed; the pairs rendered again.
@@ -3561,14 +3663,14 @@ cells (5.1 against FFVI's new cells at 4.5) and the recalled ones (5.3
 against 3.9): the rhythm table under the habit and the recall weighted by
 plays, left open.
 
-**Built, on his go.** Round 49, two faults: the ending degree is put on a
+**Built.** Round 49, two faults: the ending degree is put on a
 phrase's last note only where the last bar is a new cell; a recalled cell
 is folded into the part's whole room (`room_high`, the arc's peak), not
 the phrase's. Round 50, `recall_continues`: whether a recalled passage
 goes on with the bar after its source, by echo habit (FFVI mixed 0.64,
 repeating 0.91, varied 0.30), in place of the CONTINUE constant (0.8),
-which stays as the fallback. Pack 92 tables (`pack.json.r48` the backup
-on both machines). Test `test_a_recalled_passage_goes_on_as_the_games_do`.
+which stays as the fallback. Pack 92 tables (`pack.json.r48` the backup).
+Test `test_a_recalled_passage_goes_on_as_the_games_do`.
 
 **Measured after, seeds 1-45.** Bent recalls 0.24 to 0.10. The themed
 medians: exact echoes 0.29 (FFVI 0.31), moved 0.14 (0.20), rhythm with
@@ -3606,7 +3708,7 @@ and the written songs rendered through the same player sat at -24.5 and
 -19.6 dBFS (medians over the first minute), the written loudest part at
 a constant 0.85 of full against FFVI's 0.2 to 0.4.
 
-**Built, on his go.** Round 51: the pack builder keeps every tonal
+**Built.** Round 51: the pack builder keeps every tonal
 sample a part's songs play (`pack.VOICES` 64, `SHARE` 0), the FFVI pack
 rebuilt from its 82 files into `pack3/ffvi` with the tables carried over,
 and `LAYER_LEVEL_CAP` 4.0 (the balance and layer_levels tables refitted;
@@ -3636,11 +3738,11 @@ with this round.
 **Open:** the readings' level against the module's (the 1.7); the pairs
 (0.24 against 0.40); the medium tune's density; the Dependabot alerts.
 
-### Rounds 53 to 55: the narrow home band, the band's own tempo, a sample's register by the part (2026-10-29, from the owner's notes on Song Check 42 and the drums-and-bass review)
+### Rounds 53 to 55: the narrow home band, the band's own tempo, a sample's register by the part (2026-10-29, from the notes on Song Check 42 and the drums-and-bass review)
 
-**His notes.** Whole 66 "a lot going on, competing"; Whole 67 "no idea
+**The notes.** Whole 66 "a lot going on, competing"; Whole 67 "no idea
 what instrument the accompaniment is"; Whole 70's bass "staccato
-nothingness". He asked whether these need new vocabulary or fixes.
+nothingness". Asked: whether these need new vocabulary or fixes.
 
 **Found.** None needs a new word. Whole 70's band is Slam Shuffle's (114
 BPM, a staccato bass at the loudest level, four notes a bar) drawn at 70
@@ -3658,14 +3760,14 @@ could not widen inside a zero-span band. Under it, a sample shared by
 parts sits 9 semitones apart by part at the median (a bass sample 54),
 so the ranges word wanted the part as a conditioning.
 
-**Built, on his go.** Round 53 (a fault): a chord part's home band under
+**Built.** Round 53 (a fault): a chord part's home band under
 MIN_SPAN gives way to the sample's whole played range (`wide_enough`, at
 every bound site; a sample the game plays at one pitch only keeps it).
 Round 54: the balance token ends with its song's tempo class, the
 `tempos` word is counted by class, and a plan whose tempo falls outside
 its token's class draws it again under the class on an own stream (31 of
 45 plans). Round 55: `ranges` by sample and part (786 units). The three
-tables refitted into pack3 (`pack.json.r52` the backup on both machines;
+tables refitted into pack3 (`pack.json.r52` the backup;
 the balance vocabulary's order kept once the tempo token is stripped).
 Tests `test_a_samples_register_is_counted_by_the_part_playing_it_and_a_narrow_band_falls_back`
 and the tempo-class assertions in the balance test.
@@ -3681,7 +3783,7 @@ after these rounds.
 the kit at half FFVI's density); the 1.7 level bridge; the pairs; the
 medium tune's density.
 
-### Round 56: levels as loudness (2026-10-29, from the owner's notes on Song Check 43: a bass and an accompaniment overpowering, a tune of "tiny squeaks")
+### Round 56: levels as loudness (2026-10-29, from the notes on Song Check 43: a bass and an accompaniment overpowering, a tune of "tiny squeaks")
 
 **Found.** Whole 68's plan had the bass at 1.0, the melody at 0.7, the
 accompaniment at 0.6; the stems had the melody 6 dB under the bass, not
@@ -3696,12 +3798,12 @@ brass lead (Battle Theme, Fanfare, Edgar and Sabin, Blackjack: seven
 tunes at 0.74 to 1.00 of the loudest part in that register); the choice
 was right, the loudness was not.
 
-**Built, on his go.** Every level the readings give is counted as
+**Built.** Every level the readings give is counted as
 loudness (the level times its sample's own loudness over -12 dBFS,
 `loudness_factor` in `rhythm.load`), and a written note plays at its
 level over its own sample's loudness, capped at full and logged. The five
-level words refitted into pack3 (`pack.json.r55` the backup on both
-machines; the top levels now 0.10 to 0.50, median 0.35). The instrument
+level words refitted into pack3 (`pack.json.r55` the backup;
+the top levels now 0.10 to 0.50, median 0.35). The instrument
 draw moved to its own stream a part (`whole:{seed}:sample:{role}`): on
 the render stream it had moved with every draw before it, and Song
 Check 43's pairs had changed instruments for that. Test
@@ -3746,7 +3848,7 @@ it); the writer's kit was every piece the pack has, so a cymbal-only song
 and a full kit drew from the same bars; and, once the kit was a word, the
 drums table conditioned on it after the habit and feel backed off past
 the kit to every kit's bars, none of which the kit filter let through, so
-five medium songs of nine wrote silence in every played bar. The owner's
+five medium songs of nine wrote silence in every played bar. The
 question of a dense-tier bias in the kit's habit draw was sampling: 0.47
 of 200 and 0.55 of 400 plans against the table's 0.60.
 
@@ -3847,7 +3949,7 @@ formula over the notes, not a render; a render of the written song
 through the player would close the tracking, and is the next step if the
 ear still hears the spread.
 
-### Round 60: the song's instruments ride the balance token (2026-10-29, from the owner's question whether the samples go together)
+### Round 60: the song's instruments ride the balance token (2026-10-29, from a question whether the samples go together)
 
 **Found.** FFVI uses a median four pitched samples a song and puts 224 of
 its 1,326 possible sample pairs together; a lead sample has a median one
@@ -3902,7 +4004,7 @@ songs of seeds 101-130 the tune runs 3.0 a second (FFVI's fast songs
 2.9), the bass 3.8 (3.9), the kit 5.5 (5.0). Song Check 49 carries seeds
 121-130.
 
-### Round 62: the song's density habits ride the token, and no theme in a one-bar section (2026-10-29, from the owner's questions on sparseness and weights)
+### Round 62: the song's density habits ride the token, and no theme in a one-bar section (2026-10-29, from questions on sparseness and weights)
 
 **Found.** Each part's density tier was drawn apart, given its part,
 tempo class and weight (weight: the part's share of the band's pitched
@@ -3947,18 +4049,18 @@ tempo class, instruments, habits and kit are one FFVI song's.
 
 ### Round 64: the lead by salience (2026-10-29, from Song Check 50's verdicts and the FFVI Lead Check)
 
-**Found.** The owner's verdicts on Song Check 50 follow one number: the
+**Found.** The verdicts on Song Check 50 follow one number: the
 tune's K-weighted margin over the loudest other pitched line, each part
 rendered alone. On top or within half a decibel, four songs of four
 belonged (135 and 140 the gold); three decibels or more under, five of
 six did not. The written balance reproduces its token song's, so the
 flat ones were inherited: in FFVI the voice the readings label melody is
 the loudest voice in 18 songs of 66, and sits 9 dB or more under the
-whole in one song of seven. Each FFVI voice rendered alone and put to
-the owner's ear (the Lead Check, 14 songs), he agreed with the label in
-9 and named another voice in 5, every one of those a song whose labelled
-melody sat 9 dB or more under; every song he agreed on had it within 8.
-The reader's only loudness test is a quarter of the loudest raw voice
+whole in one song of seven. Each FFVI voice rendered alone and put to the
+ear (the Lead Check, 14 songs), the ear agreed with the label in 9 and
+named another voice in 5, every one of those a song whose labelled melody
+sat 9 dB or more under; every song where it agreed had it within 8. The
+reader's only loudness test is a quarter of the loudest raw voice
 volume (12 dB, on volume, not on what renders), under a square root in
 the melodic score, so a buried voice with a wide line wins.
 
@@ -3970,8 +4072,8 @@ voice), else the most varied heard voice (pitch-class entropy, then
 loudness; not the bass, below the tune's ceiling) becomes the melody and
 the old melody a counter-line, or an accompaniment where a counter
 exists; the change is kept (lead/was_melody, now_melody) and the pass is
-repeatable. The rule matched 12 of the owner's 14 picks (Locke: both
-voices heard, he took the louder upper one; Gau: a loud low riff) and
+repeatable. The rule matched 12 of the 14 picks by ear (Locke: both
+voices heard, the louder upper one taken; Gau: a loud low riff) and
 relabels 9 FFVI songs of 66. `tools/salience.py` measures the margin on
 any folder of whole songs with stems. Pack4's 94 tables refit on the
 relabelled readings.
@@ -4044,7 +4146,7 @@ consistent end to end, and a consistent chain reproduces the game's own
 balance, where the labelled tune sits a median 3.5 dB under; the half
 state had leaned the tune forward of the game by counting the backing's
 attacks on one side only. Whether the written tune should sit where the
-game keeps it, or forward of it, is a question for the owner's ear, not
+game keeps it, or forward of it, is a question for the ear, not
 for the counts; Song Check 52 asks it.
 
 ### Round 66: the tune's grain, the voice's own alteration, and three songs' tokens (2026-10-29, from Song Check 52's notes: "the melody is still weak")
@@ -4117,10 +4219,9 @@ median 3.7 dB under the loudest other pitched line, three on top (round
 on top (Song Check 52's 151-160: 6.9, one). Song Check 53 (seeds 161-170)
 asks the ear whether the melody now moves like the game's and whether the
 cadences' sour counter is gone; the token draw's reach (Dancing Mad's
-organ among the themed songs) is put to the owner as a question, not
-built.
+organ among the themed songs) is left as a question, not built.
 
-### Round 67: the sustain loop reaches the render, the bridge read again (2026-10-30, from the owner's listening on Ragnarok: "the melody is just a little blip behind the music")
+### Round 67: the sustain loop reaches the render, the bridge read again (2026-10-30, from listening: "the melody is just a little blip behind the music")
 
 **Found.** Every written render since the score bridge (5284664,
 2026-10-21) had gone out with no looped sample. A preset voice carries its
@@ -4133,7 +4234,7 @@ parts decayed like plucks, which read as weak levels rather than as a blip,
 and Song Checks 40 to 53 were all heard that way, while the FFVI reference
 renders (`brr.decode` keeps the BRR loop flag) loop every sample. The
 writer's level math (`sample_strike_and_body`) reads both loops, so it set
-levels for sounds that never sustained. Measured on the owner's three songs
+levels for sounds that never sustained. Measured on the three songs heard
 on bitComposer's own sounds (stems by muting channels, through libopenmpt,
 the player's engine): the tune 9.7 to 21.6 LU under the loudest other
 pitched line; with the loop carried 2.1 to 6.6 under, and 5.1 over in one,
@@ -4145,7 +4246,7 @@ Causeway of Lanterns' crash at 64).
 
 **Fixed.** `_Pcm(sample, sustain=True)` from the writer's instrument table
 takes the sustain loop as the chip's loop (Classic's songs keep their
-one-shots, the owner's call); the readings skip the unread drum levels, the
+one-shots, a product choice); the readings skip the unread drum levels, the
 balance token never carries a non-finite level (the plan's `levels` draw
 stands in), and the plan ignores a "nan" a shipped table still holds; a
 test for each. The render bridge: with the loops carried, Song Check 53's
@@ -4170,7 +4271,7 @@ shows the voice count outweighing the level: the token's loudest part is
 the tune at 1.0, and it renders 7 dB under a three-voice accompaniment and a
 three-voice counter at 0.9.
 
-**Open, for the rounds after the owner's ear on Song Check 54.** The kit's
+**Open, for the rounds after Song Check 54 is heard.** The kit's
 level: the token's drums level (0.1 to 0.3 of the top in most tokens)
 renders the kit 11 dB under FFVI's place, so the counting of the kit's level
 against the pitched parts is off by about that much, where round 63's strike
@@ -4255,12 +4356,11 @@ Whole 162's master went from 108 to 69 of 127 to hold the song's
 loudness to its token's -24 dBFS with the kit counted louder in the mix
 estimate (-1.3 dB from -5.2).
 
-**Measured, no change (the owner's question from Whole 166's fifth
+**Measured, no change (a question from Whole 166's fifth
 accompaniment voice, an "apart" voice holding a three-second note through
 a bar its line rests in).** How often a voice beyond a part's line (as
 `layer_tokens` and `second_figures` see them) sounds in a bar where its
-line is silent, over FFVI's readings
-(`~/diags/bitcomposer/idiom/phase4/r68_layer_rests.py`): counting a voice
+line is silent, over FFVI's readings: counting a voice
 as sounding in a bar by an onset in it or a note held into it, the
 accompaniment's extra voices (44 layered songs, 73 voices) sound in 113 of
 the 187 bars where their line is silent (0.60; by voice a median 0.50 over
@@ -4294,8 +4394,8 @@ Round 67's other open items stand: the bass 3 dB forward and the counter
 
 ### Round 69: measured before the build (2026-10-30, seeds 161-170 on the r68 renders against their balance tokens' own songs)
 
-**Measured, nothing changed** (`~/diags/bitcomposer/fable/round69/report.md`,
-its scripts in `tools/` beside it). Every seed's balance token was matched to
+**Measured, nothing changed** (a report and its scripts, kept outside the
+repository). Every seed's balance token was matched to
 its FFVI song (161 Setzer, 162 Techno de Chocobo, 163 Troops March on, 164
 Johnny C. Bad, 165 The Wedding Waltz-Duel 2, 166 Good Night, 167 Overture 3,
 168 Opening Theme 3, 169 Blackjack, 170 The Prelude), and the written parts
@@ -4316,7 +4416,7 @@ voice, not the level. The echo: FFVI's echo volume is 0.20 of full in every
 song read (82), its delay 80 ms in every one, its feedback 0.78 at the median
 (0.55..0.78), and the written songs sent at `score.ECHO_WET` 0.4 (170 at 0.6)
 with a 48 to 144 ms slap: 6 dB (to 9.5 dB) wetter than the game plays, on
-every sending voice, which is what the owner heard as vibrato and blur in
+every sending voice, which is what was heard as vibrato and blur in
 166 (its voices carry no vibrato command and its samples none). The apart
 voices: 166's four extra accompaniment voices, drawn "doubling -4, apart
 -8, apart +8, apart +8", sat at a median -3, 0, 0 and 0 semitones from the
@@ -4366,9 +4466,8 @@ within the sample's whole played range); a pedal line shares its note.
 Pack4 refit (96 tables) and the shipped vocabulary written again from it.
 Tests for each; the suite at 389.
 
-**Measured, seeds 161-170 on the refit pack, LUFS** (`~/diags/bitcomposer/
-fable/round70/`: `q1.txt`, `q3_overlap.txt`, `q3_echo.txt`,
-`q2_strikes.txt`; renders in `sustain/r70`). Each part under the whole,
+**Measured, seeds 161-170 on the refit pack, LUFS** (the measures and
+renders kept outside the repository). Each part under the whole,
 median, r70 (r68; FFVI's 63): bass -4.2 (-4.1; -7.0), accompaniment -4.3
 (-4.1; -6.3), counter -5.8 (-6.5; -4.1), melody -6.6 (-8.1; -7.2), drums
 -13.5 (-15.5; -9.5). The tune's margin over the loudest other pitched line
@@ -4408,8 +4507,8 @@ Troops' two snares 32 ms apart) has no word yet. Listening on 163, 164,
 ### Round 71: measured, the note's envelope in the counted level; the pack's envelope reaches the written note (2026-10-30, from round 70's open item on the basses)
 
 **Measured first, nothing built on it**
-(`~/diags/bitcomposer/fable/round71/measure.md`, its scripts in `tools/`
-beside it). The question: the bass 2 to 4 dB forward of its token song's on
+(the measures and their scripts kept outside the repository). The
+question: the bass 2 to 4 dB forward of its token song's on
 163, 169 and 170 with a count that matches, and the readings' level blind
 to the envelope the game plays a note with. (1) The envelope the game plays
 the token songs' bass and melody voices with (161 Setzer, 163 Troops March
@@ -4495,7 +4594,7 @@ were with one-shots; the decaying samples' parts (164's counter, 168's
 accompaniment, 170's) moved 1 to 3.5 dB here and are the ones to listen
 to again. Round 70's other open items stand.
 
-### Round 72: the default player's sound, after the writer (2026-10-30, from the owner's listening on the `bit` set before round 67 and round 71's envelope finding)
+### Round 72: the default player's sound, after the writer (2026-10-30, from listening to the `bit` set before round 67 and round 71's envelope finding)
 
 The writer (`translate/`) is untouched this round; the bare path is held
 byte for byte. What GENERATE plays on bitComposer's own sounds through
@@ -4512,8 +4611,8 @@ pitch writes (six fields a note), so FFVI's 82 SPCs were decoded again as
 the import decodes them and each note's pitch register while it sounds read
 as vibrato where it swings back and forth through 1.5 cycles or more of 3
 cents or more (a slide is monotonic and counts as nothing, a swing of 90
-cents or more is a trill, counted apart; `~/diags/bitcomposer/fable/round72/
-measure.md`, `vibrato_summary.txt`). FFVI, 143,679 pitched notes: the tune's
+cents or more is a trill, counted apart; the measures kept outside the
+repository). FFVI, 143,679 pitched notes: the tune's
 4,763 held notes carry vibrato in 926 (0.19), the counter's in 0.10, the
 accompaniment's 0.08, the bass's 0.07, the drums' 0.02; 0.69 of the tune's
 held notes carry no bend at all. Depth (cents either side) on the tune 16.4
@@ -4591,13 +4690,13 @@ envelope. So the envelope's own effect on the balance is under 0.1 dB
 (a decay to 7/8 and a hold lowers every pitched part alike), where the loop
 fix moved parts 11 to 18 dB. The echo the thirteen carry: 0.20 of full at
 80 ms in every one, feedback 0.55 or 0.78, the sends the word's song's.
-Vibrato under the word on the ten owner seeds: 0, 0, 43, 0, 15, 4, 22, 8,
-14, 5 notes (68554 Hidden Frontier's tune draws a word with none, the
+Vibrato under the word on the ten listening seeds: 0, 0, 43, 0, 15, 4, 22,
+8, 14, 5 notes (68554 Hidden Frontier's tune draws a word with none, the
 game's most common case; 305253's 20 cents at 12.5 Hz on the tune and 5.5
 Hz on the counter from 0.6 to 0.8 s in).
 
-**For the owner's ear** (`~/diags/bitcomposer/idiom/phase4/whole/sustain/
-r72-bit/`): seeds 68554, 87326, 305253 and 1-7 as GENERATE writes them, by
+**For the ear** (the `r72-bit` set, kept outside the repository): seeds
+68554, 87326, 305253 and 1-7 as GENERATE writes them, by
 title with a `.plan.json` each (title, seed, key, bpm, form, band, the echo
 as played, the vibrato count and words, the voices each part got), stems
 under `stems/`, `salience.txt`. Against FFVI's own renders (63 songs,
@@ -4612,27 +4711,27 @@ whose loudness no table has counted.
 
 **Open.** The lead pool's single-period loops (the square, pulse, ocarina,
 flute and brass loop one period with no motion) and the "tune on top"
-question are the owner's; not built. The vibrato word's parts beyond the
+question are open choices; not built. The vibrato word's parts beyond the
 tune and the counter (counted, not played); the per-note draw spreads a
 part's share evenly where the game clusters it by passage; the "-" classes
 fragment the word's outcomes (one unit a song). The struck `bit` voices'
 frozen tails hold at 11 to 36 dB under their strike for as long as a note
-is held, where FFVI lets its decaying samples fall at rate 12 to 16: the
-owner's call to hear before a falling rate is given. The `bit` kit 8 dB
+is held, where FFVI lets its decaying samples fall at rate 12 to 16: to
+be heard before a falling rate is given. The `bit` kit 8 dB
 under FFVI's place. The vocabulary map cannot name the performance as a
 draw site (it reads the writer's sources), so `vibrato` shows as drawn by
 no writer, which is true.
 
 ### Round 73: the part's attack class counted, and a built-in set's pool rule matches it (2026-10-31, from Song Checks 59 and 60: "the melody is sitting behind again")
 
-**Found.** With the bit set's range tops placed by the owner's ear (the
+**Found.** With the bit set's range tops placed by ear (the
 bright single-period leads capped at C5 to F#5), the pool rule gave six of
 Song Check 60's ten default tunes to the keys, the e-piano, piano, pluck
 and nylon, which range 36 to 96 and, being struck, take any speed, where
 the sustaining leads stop at 4 to 8 notes a second. A struck voice decays
 14 to 20 dB after its attack, so a tune on one fades between its notes
 and reads weak at any measured level: Northern Tidepool's e-piano measured
-the loudest part of its song and the owner heard it hiding. FFVI's tunes
+the loudest part of its song and was heard hiding. FFVI's tunes
 ride a struck sample in 3 of 66 songs (Awakening, Spinach Rag, Good
 Night; the median strike over body is -1.7 dB), its basses in 6 of 63, its
 accompaniments in 5 of 60. Over the twenty default-set verdicts of Song
@@ -4672,10 +4771,7955 @@ the violin's 7 %; the FFVI tunes 761 to 1365 Hz.
 
 **Open.** The default player's deep margins are now the token's balance,
 FFVI's own habit (the tune under another line in 71 % of its songs); a
-"tune on top" choice in the performance layer stays the owner's. The
+"tune on top" choice in the performance layer is left for a decision. The
 bass and pad voices of the bit set hold where FFVI's basses decay (round
 72's envelope choice): the bit bass sits 2 to 4 dB forward of FFVI's
 place. Beacon of Lanterns' second bass voice runs sixteenths at sixteen a
 second: the bass figure tables against FFVI's second bass voices, a count
 to make. The harmony drew a lead-pool voice through the wider reach in
 Dance of the Harbor: the reach's own class should follow the word too.
+
+### Round 74: a kit piece the balance's song struck on a tonal sample (2026-10-31, from Song Check 61's Crossing of Steel: "a repetitive noise that starts at about 10 seconds and goes on for the whole song")
+
+**Found.** Not the echo or the vibrato: the second drums voice striking the
+counter's own synth lead sample (sf89f5aedfd) at the kit's one note, G#2,
+thirteen times a bar from bar 4 to the end. The song's token is The
+Phantom Forest, whose kit is one piece, `o` on that lead sample at 0.38 of
+the top: in that song a pitched voice plays the lead seven times in 95
+seconds (once every twelve, two distinct pitches, an accent) and the role
+reader labelled it drums, the kit token carried it, and round 63's
+kit-from-the-token put the sample in the rim slot. Of FFVI's 47 kit tokens,
+18 carry at least one sample the pack does not class as percussion: the
+bass sample sa692eac0a6 as a tom in three songs, leads and pads as `o` or
+`c` in the rest; some FFVI really strikes, some misreads like this one. And
+the figure: with the habit "sparse repeating" the drums table gave the lone
+`o` kit 13 hits a bar, because the kit-conditioned context has two songs
+(one a shaker at 13.5 hits a bar) and the draw's back-off drops the habit
+before the kit; FFVI's own lone-`o` kits play 0.1, 1.5 and 13.5 hits a bar.
+
+**Built.** `samples_for` takes a token kit sample into a writer's slot only
+where the pack classes it as percussion (`samples.is_percussion`, the drum
+namer's class at import); a tonal one leaves the pack's own drum in the
+slot and the plan logs "kit pieces the balance's song struck on tonal
+samples, the pack's own drums standing in". A test with a stubbed pack.
+
+**Measured, Crossing of Steel (seed 173 on FFVI's sounds, the player's
+performance), before and after.** The kit's slot plays the pack's rim
+instead of the lead at G#2; hits unchanged at 13 a bar; drums -12.3 under
+the whole (from -14.2), every other part within 0.1 dB. Melody, bass and
+accompaniment decode sample for sample identical. The counter does not:
+same notes, sample and envelope, but before the fix the kit had registered
+the lead sample first and the counter shared its slot at the kit's tuning,
+C5 speed 32834 against the counter's own 32825, half a cent; retuning the
+after stem by that ratio brings the two to 0.98 correlation. Song Check 62
+holds the two renders side by side.
+
+**Open.** The drums figure's density for a lone piece: the table's back-off
+order (part, meter, kit, tempo, habit, feel, previous) drops the habit
+before the kit, so a kit with few songs behind it inherits another song's
+density; FFVI's lone-piece kits are mostly sparse. A back-off that keeps
+the habit longer is a change to every drums draw and wants its own round
+with the FFVI measures beside it. The drums role reader: a pitched voice
+with a handful of notes a song is an accent, not a kit; a check against
+the phase 1 ground truth before any reader change. The kit token could
+carry the pitch each piece was struck at, as it carries the level. And
+the half cent: the kit's and the line's registrations of one sample tune
+it nine C5-speed units apart; one tuning path, when a round touches the
+sample table.
+
+### Round 75: the kit piece's struck note, the kit at its habit's density, the tempo inside its class (2026-10-31, from Song Check 62: "a snare is super out of place on this song")
+
+**Why round 74 came out.** Round 74's rule, a tonal kit piece leaves the
+pack's own drum in its slot, was a writer rule standing where a count
+should be: FFVI's pack has no "other"-class percussion (15 drum samples:
+6 snares, 5 hats, 2 cymbals, a kick, a tom), the import fills the rim slot
+with the snare, so every tonal "o" piece became a snare, and of FFVI's 47
+kit tokens 11 carry an "o" piece and 10 of those are tonal samples (a lead
+struck as an accent, bells, pads). Five tokens have nothing but tonal
+pieces. The question, whether the kit knows the song it is
+chosen for: it does, through one door, the balance token, which is the
+song's own kit; what did not know the song was the slot's stand-in and
+the figure's density.
+
+**Built.**
+
+1. The kit token carries the note each piece is struck at most, after its
+   level (`o=sf89f5aedfd@0.38@60`, `c=sid@@79` without a level;
+   `Song.kit_pitches`, the most struck rounded note, the lower on a tie).
+   Of the 101 pieces in FFVI's 47 kit tokens, 37 carry a note (18 snares,
+   10 "o", 6 toms, 2 kicks, a cymbal); the one tonal "o" without one is
+   Overture (part 2)'s, whose notes the reading left unpitched.
+2. Every kit sample of the token's song the pack holds takes its slot
+   again (round 63). `render.kit_note_of`: a percussion sample strikes at
+   KIT_NOTE as before (registered to sound as recorded there); a tonal one
+   at the token's note, or where none at the note that plays the
+   recording at its own rate. The Phantom Forest's lead at C4, where the
+   game plays it, not at the kit's note two octaves under.
+3. The kit at its habit's density. The drums table conditions on the kit
+   before the habit (round 58), so a kit with no song behind it in this
+   meter and tempo class took another song's bars at that song's
+   density: The Phantom Forest's one-piece kit in 3/4 wrote Johnny C. Bad's
+   13 snare hits a bar in 4/4 under "sparse repeating", The Wedding
+   Waltz's 3/4 snare (4 a bar) wrote Opening Theme's 13.
+   `writer.kit_table_reaches`: the bars the kit table would draw for this
+   kit, hits a bar over every bar with the rests as `_rhythm_habit` counts
+   a song's tier, must sit under the tier's top (DENSITIES: sparse 2,
+   medium 6, dense open); where they do not, the plan writes the kit from
+   its limbs' tables (drums-KSt, drums-h, drums-c, drums-o) at their own
+   counted group habits, the path a pack without a kit table already
+   took. The never-silent redraw (round 58) and the last resort keep to
+   the group's habit cap where any bar fits it: drawn without it, a
+   sparse "o" group whose context held rests and dense bars alone had
+   filled its rested bars with Johnny C. Bad's ten-hit bars.
+4. The tempo drawn again under the token's class (round 54) is terminal
+   at the class: without the floor the class's votes had their
+   Witten-Bell share and every class's tempos the rest, and 8 of 46
+   written songs sat in another class than their token's, their kits and
+   figures drawn under it. At the word's rounding edge (85 counted under
+   slow from 83, 130 under medium from 128) the tempo moves inside the
+   class, `rhythm.within_band`.
+
+Pack4 refit (98 tables, backup pack.json.r75), the shipped vocabulary
+regenerated. Tests: the token's note, the plan's keeping it, kit_note_of
+by sample class, the kit table's reach and the limbs' draw, the redraw's
+class.
+
+**Measured (sc-tools/kit_density.py: one written song for each FFVI kit
+token, the real plan+write path, hits a played bar against the token
+song's own from the readings; 46 of 47 tokens drawn in 3000 seeds).**
+Median absolute error 1.7 hits a bar before, 1.1 after; mean 4.2 to 3.5;
+35 of 46 unchanged. Off-class songs 8 to 0. The Phantom Forest 13.8 to
+1.3 (the game 1.0 a played bar, 0.1 a bar); Fanatics 3.7 to 16.4 (15.9),
+Under Martial Law 8.2 to 12.4 (14.1), The Day After 8.4 to 4.4 (4.0), all
+by the class alone. The limbs' path taken by three songs. Still wrong:
+The Wedding Waltz-Duel (part 1), a lone snare at "medium varied" in 3/4,
+12.0 against the game's 4.1: its limb is the kick-snare-tom group, whose
+habit sets no cap (`group_caps` caps one-letter groups), and the KSt table
+at slow in 4/4 holds no snare-only bar under six hits. Dancing Mad (part
+2), Grand Finale (part 2), Blackjack and Wild West write a third of their
+game's hits (the readings' figure merges what the game strikes
+together; untouched here).
+
+**The reader, checked (the third step; no change made).** The role
+reader's second clause, a voice on a sample the namer did not call an
+instrument, at most two pitches a sample, eight notes or more, labels 15
+FFVI voices drums. Fourteen are strikes: Johnny C. Bad's and The Phantom
+Train's snare rolls, Wild West's toms, Strago's two-note ostinato (0.21
+beats a note), the 336-frame tick in Train, Quiet Beach and The Phantom
+Train, "??"'s bell. One is not: The Phantom Forest's lead, held a median
+11.9 beats a note, where the 109 drum voices on percussion samples hold a
+median 0.45 beats, three quarters under 0.95, none over 7.9. A clause
+"and its notes shorter than any drum's" flips that one voice in FFVI and
+no other; its token then has no kit, which is the game's truth. Phase 1's
+ground truth for roles (the generator's songs with known answers) has no
+held two-pitch accent to judge it by, so it waits for its own round with
+the readings re-read and the pack refit. With round 75 the written song
+plays that accent on the lead at C4 once or twice a bar, the game's
+gesture at the counted tier.
+
+**Open.** The kick-snare-tom limb's density cap; a kit figure merged as
+the readings merge (Dancing Mad's 21 hits a bar read as 6.6); the
+never-silent rule against FFVI's 0.1 hits a bar (the texture words give
+the drums 11 of 23 bars; each played bar strikes at least once).
+
+### Round 76: a voice beside a counter that follows the tune (2026-11-06, from Song Check 63: "the drums a lot of time just seem louder than they should")
+
+**Why.** The verdict on round 75 was that the kit sits forward, so the
+kit was measured against the game's own, token by token: for each of
+the 46 FFVI balance tokens with a kit, the game's song and the written
+song that drew the token, each rendered whole, drums alone and the rest
+alone, the drums' hit level (the 95th percentile of 100 ms RMS) over the
+rest's (measured with a scratch tool; the results kept outside the
+repository). At the median the written kit sat exactly
+where the game's does (0.0 dB; quartiles -1.9/+2.7); 9 of 46 sat 3 dB or
+more forward, 7 as far back. The forward nine had three causes, and the
+widest was not the kit: in 11 of the 46 songs the counter follows the
+tune and holds two to four voices in the token (Metamorphasis, The
+Phantom Train, The Unforgiven, Gestahl, Kefka, Gogo, Strago, Troops
+March on, Returners, two Wedding Waltzes), and the writer had left every
+voice beside that counter silent since round 29 ("no word yet for a
+second counter voice beside a counter that follows the tune"). The
+game's counters there stack 2.2 to 3.6 voices in 98 % of their frames,
+block chords and parallel lines, 6 to 12 dB of band the written song
+did not have, and a kit at the game's own volume stood in front of what
+was left (part by part, written against game, relative to the kit:
+Metamorphasis's counter -15.8 dB, The Unforgiven's -25.5, Gestahl's
+-8.0). The other two causes, a tonal kit piece's hold and the pitch a
+percussion piece is struck at, are rounds 77 and 78.
+
+**Built.** The word is the one the upper parts already had. The readings
+count the counter's own voices beside its line as an upper part's
+(`arrangement._beside_lines`: part counter, kind apart or alternating by
+`harness.relation`, the line the voice with the most notes; the
+counter-line's own units beside the tune keep their kinds same and
+other, so the two never share a context), into `voice_intervals` and
+`voice_moves`, and `cells.second_figure_units` counts the voices' bar as
+a mask over the counter's bar. The plan writes every layer word of a
+counter that follows the tune (`plan.write`): a doubling as before, and
+an apart or alternating voice through `writer.counter` with the counter's
+line as the tune it is written beside, its bar a `second_figures` mask
+drawn under the counter's layer class, its pitch the voice words' under
+the layer relation, its span the line's at the word's offset within the
+range the game plays its sample over (`plan.bounds["counter:v"]`), its
+level the token's share for that voice (round 70). A third and fourth
+voice take their own words. A vocabulary without the three words leaves
+the voice silent and says so in the log. Pack4 refit (98 tables, backup
+`pack.json.r75`), the shipped vocabulary regenerated: `voice_intervals`
+gains 136 counter contexts. Test: the counter's voices beside its line
+counted and written (`test_a_voice_beside_a_counter_that_follows_the_tune`).
+
+**Measured.** The 46 tokens' written songs again (the plan+write path):
+layered counters 17, with a silent voice 11 before, 0 after; every layer
+word drawn (54 apart, 19 doubling, 4 alternating) now writes. The five
+songs of Song Check 64's first step, before and after, each part under
+the whole (K-weighted, the first minute): the counter +4.5 dB in Plateau
+of Stars (The Phantom Train's token, four voices), +3.5 in Still Pavilion
+(Metamorphasis), +6.4 in The Crossing of Thorns (Troops March on), +2.3
+in The Endless Citadel, +0.9 in The Foundry of Rust; the kit under the
+whole -5.1, -0.8, -1.0, -0.7 and -0.5 dB in the same songs. Over all 46
+tokens the kit over the band's loud moments barely moves (median 0.0 to
+-0.3 dB, the forward nine still nine: The Phantom Train leaves the set,
+The Phantom Forest enters), because the band's loudest part, the bass or
+the tune, is not the counter; by integrated loudness the kit sits 1.6
+then 1.9 dB under the game's. The tune's margin over the loudest other
+line falls where the token's counter voices are loud (Plateau of Stars:
+the token's shares 1.0/2.2/2.1, the game's own balance, -2.5 to -10.8
+dB), which the ear will judge.
+
+**Open.** A counter without a tune in the band (the second branch) still
+writes one extra voice at most. The tune's salience against a loud
+counter stack (Song Check 50's rule: a tune 3 dB or more under did not
+belong in five songs of six) was counted from songs where the counter was
+one voice; whether it holds with the stack is the first thing to hear.
+
+### Round 77: the role reader's drum clause holds its notes like a drum, and a kit piece's hold (2026-11-06, from Song Check 63: the pad struck once a bar)
+
+**Why.** Song Check 63's measure (round 76) left two of the forward nine
+to the kit itself: the pad The Quiet Wharf and Ramparts of Salt strike
+once a bar, which the readings call a kick (Another World of Beasts and
+The Empire Gestahl play a bowed-strings sample at E-flat 1 and C1, held
+seven and eight beats, a drone the per-song drum namer heard as a low
+thud), and The Unforgiven's "o", a tonal sample the game taps for 69 ms
+and the writer held for half a beat, 9 dB out in front of the game's
+stem. Both are the same missing count: the kit token had each piece's
+sample, level and struck note, and not how long the game keys it. The
+role reader's second clause (a voice on a sample the namer did not call
+an instrument, one or two pitches, eight notes or more) also took held
+pads for drums: The Phantom Forest's lead, held twelve beats a note, had
+given a written kit one accent struck thirteen times a bar.
+
+**Built.** Two counts and a clause.
+1. The role reader's second drum clause asks a tonal voice to hold its
+   notes under `roles.DRUM_HOLD` (2 beats) at the median. FFVI's 109 drum
+   voices on percussion samples hold a median 0.45 beats, three quarters
+   under 0.95, only cymbal swells two or more; of its 31 drum voices on
+   tonal samples eight held two beats or more. Read fresh from the 82
+   SPCs the clause flips two voices and no other: The Phantom Forest's
+   lead (drums to double; its token has no kit, the game's truth) and
+   Quiet Beach's pad (drums to harmony; the song enters the vocabulary,
+   68 songs). The pads the namer calls kicks stay drums: they are caught
+   by the first clause, by what their sample is, and the hold below gives
+   them their drone. The phase 1 ground truth (`tools/known_answers.py`,
+   mended to carry the namer's piece) reads 672 of 672 drum channels as
+   drums with the clause off and on.
+2. The readings count, per drum sample, the median length the song keys
+   it for (`Song.kit_holds`), and the balance token's kit field carries it
+   after the note's slot (`o=sfd6accf98a@2.08@58@0.19`,
+   `K=s48bab384c7@1.00@r42@6.95`; `plan.kit_piece_hold`). The writer gives
+   a piece on a sustaining sample that length (`render.samples_for` marks
+   the slots whose sample the pack classes tonal), cut by the next hit on
+   its voice; a percussion sample is a one-shot whatever its hit's
+   length, so its hold is counted and not played.
+3. The token's note slot says what it carries. For a piece the namer
+   called a drum it is now the chip's rate as a note, with an r (`r48`:
+   60 as recorded, 48 an octave under; the stored note rows gain a
+   seventh field, the rate, `store.VERSION` 10, every song read again
+   and the lead pass run again); a tonal piece keeps its pitch. A tonal
+   sample the namer took for a drum plays at its own rate's note plus
+   the offset, so the pad is back at E-flat 1 through the rate. The
+   writer takes a percussion piece's rate in round 78.
+Pack4 refit (98 tables, backups `pack.json.before-r77b` and
+`readings.db.before-r77`), the shipped vocabulary regenerated (68 songs).
+Tests: the token's hold and rate slots counted, parsed and given
+(`test_the_kits_pieces_carry_the_note_they_are_struck_at`,
+`test_a_kit_pieces_hold_follows_its_note_in_the_token`); the
+translate tests' hand-packed rows seven fields wide; the vibrato test
+counts its bent notes instead of pinning a number that moves with the
+vocabulary.
+
+**Measured.** The 45 kit tokens' written songs against the game
+(`drum_forward.py`, `.../sustain/sc63-drums-r77/`): the kit over the band
+by hit level sits at the median +0.1 dB from the game's (round 76: -0.3),
+3 dB or more forward in 7 of 45 (9 of 46); by integrated loudness 1.1 dB
+under (1.9). The Unforgiven leaves the forward set: its "o" is a tap
+again. Song Check 64's second step, five pairs on the same seed, the
+token's song the same and the plan the same but for the kit (the 68th
+song shifts a seed's balance draw, so pairs were chosen among the 562 of
+3000 seeds whose plan stands): The Northern Reactor (The Unforgiven)
+drums -5.6 to -10.7 dB under the whole; Winding Citadel (Another World
+of Beasts) and The Coast of Smoke (Gestahl) hold the pad as the game
+does, seven and eight beats at the game's pitch, where a one-beat blip
+was; The Rising Valley (Edgar and Sabin) plays its tonal tom at the
+game's -20 semitones; Sleeping Overpass (Kefka) holds its bell 0.45
+beats. The pad's songs still count the pad the loudest part (the token's
+level is the count), so those two stay in the forward set.
+
+**Open.** The drum namer calls a looping bowed-strings sample a kick when
+a song plays it low and alone; a sample with a sustain loop is no kick,
+and that is the namer's round. A counter without a tune in the band
+writes one extra voice at most (round 76).
+
+### Round 78: a percussion piece at the rate the game struck it (2026-11-06, from Song Check 63's measure: the crash twice as bright)
+
+**Why.** The third cause behind Song Check 63's forward kits was timbre,
+not level. The writer played every percussion sample as recorded (a kit
+voice is registered to sound as recorded at KIT_NOTE), and FFVI plays
+its crash an octave down in all 22 songs that use it: of the game's 118
+drum pieces across the 46 kit tokens, 24 sit at exactly -12 semitones
+and 42 six or more off the recording (`drum_why.py`). A crash an octave
+up is twice as bright (spectral centroid 3.0 against 1.5 kHz) and half as
+long, so it cuts across the band where the game's sits back in it; in
+RMS the two are within a decibel. 23 of the 46 written kits carry a
+crash, and 6 of the 9 forward tokens did.
+
+**Built.** Round 77 had put the count in the token: for a piece the namer
+called a drum, the note slot carries the chip's rate as a note, with an
+r (`c=s3bfa4539ca@0.96@r48@2.23`; the readings' seventh row field). The
+writer now takes it: `render.kit_note_of` strikes a percussion piece the
+token song filled the slot with at KIT_NOTE plus the rate's offset (a kit
+voice's C5 speed is twice its rate, so a note an octave under KIT_NOTE
+halves it), as recorded where the token carries none; `samples_for` logs
+the pieces struck off the recording's rate. The pack's own kit, standing
+in for a sample the pack does not hold, plays as before. The writer's
+part of the word only: no refit (round 77 counted the rates).
+
+**Measured.** The 45 kit tokens' written songs against the game
+(`.../sustain/sc63-drums-r78/`): by integrated loudness the kit sits 1.1
+dB under the game's at the median (round 77: 1.1), 3 dB or more forward
+in 6 of 45 (7); by hit level +0.1 dB (+0.1), 3 dB or more forward in 11
+of 45 (7): a crash an octave down holds a loud 100 ms window twice as
+long, so the hit measure rises on the crash-only kits while the loudness
+measure falls, and the game's own crash does the same. Song Check 64's
+third step, five pairs on the same seed, the kit under the whole within
+a decibel in every pair: The Last Tower (Dancing Mad part 1) and The
+Second Ridge (New Continent), a lone crash an octave down and twice as
+long; Journey of the Quarry (Battle Theme), the snare three semitones up
+and the crash an octave down, the kick and hat as recorded; Cistern of
+Salt (Locke) and Last Vault (Cyan), the crash an octave down and Cyan's
+hat two semitones under.
+
+**Open.** The loudness a drum plays at is still pinned on its sample's
+strike measured at the recording's rate (round 63); struck an octave down
+the first 150 ms are the recording's first 75, which the crash reads 0.6
+dB louder. A hat struck high (The Phantom Train's, +12 semitones) is
+shorter and brighter than the pack's, as the game's is.
+
+### Round 79: the struck note as a degree of the key (2026-11-06, from Song Check 64's Last Vault: "the hat almost sounds like a chain rustling and clashes with everything else")
+
+**Why.** Round 75 stored a tonal kit piece's struck note as an absolute
+pitch and round 78 a percussion piece's rate the same way, while the plan
+draws the written key apart from the balance token: 40 of the 45 kit
+tokens' written songs sat in another key than the token's song, 14 of the
+15 with a tonal piece. So Cyan's sizzle, a ringing cymbal with a tone near
+1.9 kHz struck two semitones under its recording, which lands on the minor
+sixth of Cyan's C minor, landed on the leading tone of Last Vault's A
+minor. FFVI strikes its tonal kit pieces in the song's scale in 10 of 12
+(the two off it are Strago's F sharp in G minor, the harmonic seventh),
+so the note is the song's business, not the sample's. The percussion
+samples' spectral tones land in the scale at chance (69 of 113, 7 in 12
+by chance), and a hat's ring at 2.2 kHz sits 16 dB over its band while the
+sizzle's sits 12: a tone in the sample says nothing; what the game does
+with it does. Five of FFVI's kit samples are struck at different rates in
+different songs (the pitch-bent "snare" at +3, -4, +2, +3 and -17, the
+tonal tom at -20, -17 and -22, the sizzle at -2, +12 and -5, the pad at
+-21 and -18, the open hat at 0, -1, 0 and -3); the crash sits at -12 in 21
+of 22 songs and the main hat at 0 in 11 of 12.
+
+**Built.** The balance token carries its song's key (`key=9:minor`,
+before the top). A tonal piece's note slot is a degree of it
+(`arrangement.kit_degree`: scale steps from the tonic's fourth-octave
+note where the note is on the song's scale, `d-7`; semitones where it is
+off it, `c+11`; the voice words' own convention since round 66), and the
+writer realizes it in the written key from the written tonic nearest the
+song's (`render.kit_note_of`: within a tritone, so the register stays
+where the game struck it). A percussion sample the game tunes
+(`arrangement.tuned_samples`: struck in two songs or more with no one
+rate in more than half of them, TUNED_SHARE) carries a t on its rate
+(`r63t`) and the writer moves that rate by the same tonic distance; an
+untuned one keeps its absolute rate, as a sound. The plan keeps the key,
+the degrees and the tuned marks (`kit_token_key`, `kit_piece_degree`,
+`kit_piece_tuned`); the absolute form is read still. Pack4 refit (backup
+`pack.json.r78`), the shipped vocabulary regenerated; the song count
+stands at 68, so the seeds draw as before. Tests: the degree counted and
+realized in three keys, the tuned mark counted and moved
+(`test_the_kits_pieces_carry_the_note_they_are_struck_at`,
+`test_a_kit_pieces_degree_is_realized_in_the_written_key`).
+
+**Measured.** The 45 kit tokens' written songs (`measure_r79.py`): the
+seven tonal kit pieces that carry a degree sat in the written scale 4 of 7
+times before, 6 of 7 after (the seventh is Strago's harmonic seventh,
+off the scale in the game too and written off it, `c+11`); nine tuned
+percussion pieces move with the key in nine songs. Levels do not move:
+Song Check 65's first step, five pairs on the same seed, has every part
+within 0.3 dB of its before. What moves is the note: Overpass of Bells'
+bell from A sharp to A, Last Terminal's from B to E (the fifth of both
+keys), The Endless Valley's from B to G, Last Vault's sizzle three
+semitones lower, The Rising Valley's tom four lower.
+
+**Open.** A tuned sample's rate moves by the tonic distance in semitones,
+not by scale degree: a major token song's third carried into a minor
+written key stays a major third. The sample's own tone is not read, so a
+tuned percussion piece cannot be put on a degree the way a tonal piece
+is. The drums' echo still comes from another song's echo word than the
+kit's (Cyan sends its sizzle to echo; the written song plays it dry).
+
+### Round 80: the kit slot's sample is the one the kit leans on (2026-11-06, from Song Check 64's Journey of the Quarry: "the snare sounds almost like a closed hi-hat with a strange electronic noise attached")
+
+**Why.** Round 63 gave the kit token one sample per piece letter: the
+sample the song strikes the letter on most. Where the drum namer puts two
+of a song's samples on one letter (20 letters in the 68 songs, mostly a
+hat letter shared by the main closed hat and a second hat sample, or a
+snare letter shared by the backbeat snare and a rattle), the most struck
+is the busiest sample, not the one the kit leans on. Battle Theme's snare
+letter holds its backbeat snare (82 hits at 0.31 of the loudest part) and
+a pitch-bent rattle in sixteenths (269 hits at 0.12); the token took the
+rattle, and Journey of the Quarry wrote its backbeats on it, dry, at one
+pitch: a bright 190 ms buzz on every backbeat, which the ear calls a
+closed hat with an electronic tail. Of the 20 split letters, 9 have the
+most struck sitting 3.7 to 11.4 dB under the loudest; in 1 the most struck
+is the loudest; 4 are two hat samples at the same level to the third
+decimal (Fanfare, Mog, Searching for Friends, The Decisive Battle); in 6
+the other sample has under a fifth of the letter's hits.
+
+**Built.** `arrangement.kit_slot_samples`: of the samples a song strikes
+a letter on, those with a fifth of the letter's hits or more (SLOT_SHARE)
+are in the running; the loudest by its median hit level takes the slot;
+samples within a decibel of the loudest (SLOT_TIE_DB, the ear's step) are
+as loud and the most struck of them takes it; with no level read, the most
+struck. `kit_token` takes its slots from it, so the level, note and hold
+slots are the pick's (Battle Theme's snare slot: 0.27 of the loudest part
+at the rattle's tuned rate, now 0.69 at the snare's). Pack4 refit (backup
+`pack.json.r79`), the shipped vocabulary regenerated; 68 songs, the seeds
+draw as before. Test: the pick, the fifth, the tie both ways, the no-level
+fallback and the token's slots
+(`test_the_kits_slot_takes_the_sample_the_kit_leans_on`).
+
+**Measured.** The pick changes in 9 of the 20 split letters (Battle
+Theme's and The Decisive Battle's snares from the rattle to the snare,
+Shadow's from a soft low-tuned sample to the snare, Devil's Lab's to its
+loudest snare, Under Martial Law's and "??"'s hats, Strago's hat and rim,
+Dancing Mad (part 5)'s tom from the rattle to the tom), in 8 tokens and 7
+of the 45 written songs with a kit. The written pattern is unchanged; the
+sample and its level are the game's for that sample, so the drums move
+with the pick. Song Check 65's five pairs, the drums' part level in the
+whole: Journey of the Quarry +0.7 dB, Restless Tides +1.2, Sleeping
+Aqueduct +2.1, The Shore of Mirrors +2.1, The Endless Bridge -0.9. Over
+the 45 kit tokens against the games' own renders (`drum_forward.py`),
+the written kit over the band by integrated loudness sits 0.9 dB under
+the game's at the median (1.1 after round 78), 3 dB or more forward in 7
+of 45 (6), 3 dB or more back in 15 (15); by hit level (the 95th
+percentile of 100 ms RMS) the median is +0.8 (+0.1) and the forward count
+12 (11). Of the seven songs whose kit changed, three moved toward the
+game's balance (Journey of the Quarry -1.2 to 0.0 dB, The Shore of
+Mirrors -3.1 to -0.9, Restless Tides -2.7 to -1.1) and four away (Far
+River -0.5 to +5.3, the one new forward song: Devil's Lab strikes the
+snare the slot now takes at 1.29 of its loudest part, and the written
+song plays every snare hit on it; Sleeping Aqueduct +0.5 to +2.6; The
+Quiet Wharf -1.0 to -3.4; The Endless Bridge -6.9 to -7.9). The pick is a
+question of which sample; its level is the game's for that sample.
+
+**Open.** One sample per letter: a letter the game splits between two
+samples at like levels (Techno de Chocobo's two hats, 561 and 535 hits)
+is written on one, and the rattle beside Battle Theme's backbeat snare is
+a second snare voice the game has and the written song does not; a second
+sample per letter, or the rattle as a piece of its own, is a counted word
+for later. Strago's hat (17 hits at 0.24 beside 18 at 0.06) now plays
+every hat hit on the louder sample.
+
+### Round 81: the slot's figure (2026-11-06, from Song Check 65: Last Terminal's "beeping in the drum kit" and The Endless Bridge's hat "turned into almost a smacking noise")
+
+**Why.** The kit slot carried its sample, level, note, hold and pick, and
+the figure a letter played came from the pool at the kit's habit tier
+whatever the slot's sample did in its own song. Wild West strikes its
+pitched blip twice a bar, on fifteen pitches, two bars in three rested;
+Last Terminal played it five times a bar on one pitch. Strago strikes its
+click on beat two, seventeen times in twenty bars; The Endless Bridge
+played it on the hat's eighths. Over the 45 written songs' 95 kit letters
+the written density sat within half to double of the game's for that
+sample in 62 (65 %), over double in 10, under half in 23; the snare was
+outside in 11 of 25, the hat in 8 of 16. Where a letter had two samples
+(20 letters), the figure counted both samples' hits while the written
+kit played one: Battle Theme's rattle in sixteenths beside its backbeat
+snare had made the written snare a sixteenth-note part.
+
+**Built.** (1) A letter's figure is its slot's sample's hits
+(`readings.drum_figure` with `kit_slots`): the rattle's hits beside the
+backbeat are not the snare's figure; a letter without a slot keeps every
+hit. The slot's pick (round 80) lives in `readings.kit_slot_samples`.
+(2) Each slot carries its strike class after the hold
+(`readings.kit_classes`, SLOT_CLASSES: the sample's hits a bar of the
+song's meter, rests counted, rare under half a hit a bar, an accent under
+one, sparse to two, medium to six, dense over; `@m`); the drum units and
+the limbs' units carry the kit's classes as values (`classes_value`,
+`class_values`, `habit_class`). (3) A kit whose token carries classes is
+written from its limbs' tables (`plan.write`: the kit table's bar is one
+song's, hat and all, and under a rare kit the draw smoothed that song's
+bars with every kit's); the single-letter limbs condition on the slot's
+class (`drums-h/c/o`: part, meter, classes, tempo, feel, previous), the
+kick-snare-tom limb on a field a letter in the order of the slots'
+density, the densest first (`drums-KSt`: limb1, limb2, limb3;
+`readings.limb_order`), so a draw lets the sparser letters' classes go
+and keeps the backbone's. The class says the density: the habit left the
+limb shapes (a one-song habit level under the class had rested in 0.87
+of its bars and silenced Mog's hat) and drives the recall urn and a kit
+written without classes; the class's bars are their own cap
+(`writer.drums`: no group caps under a class). (4) The group habit is
+drawn under the group's backbone class on its own stream and terminal at
+the class level (`drum_group_habits`: part, classes, habit;
+GROUP_HABIT_FLOOR; `_draw_values`): the Witten-Bell share had let one
+draw in twelve fall to the part's root, where a dense hat took a sparse
+habit whose cap refused every bar of its class, and the hat rested
+through the song. (5) Under a class, a limb's chain floor needs one
+figure besides the rest (LIMB_FLOOR_OUTCOMES: a rare crash's vocabulary
+is the downbeat crash and its rests; FLOOR_OUTCOMES asks two elsewhere),
+the urn's new draw may be a rest again (`Cache.draw_new(rest_new)`: the
+rest is one outcome, and "new to the song" had let a limb rest only from
+the urn's same and earlier shares after its first rest, so Wild West's
+blip bars, two in three rested in the game, rested in one of five), and a
+limb the token strikes that drew only rests over the drum bars draws
+again (LIMB_REDRAWS 3). Pack4 refit (backup `pack.json.r80`), the shipped
+vocabulary regenerated; 68 songs. Tests: the slot's figure and classes,
+the limb's fields and order, the class-conditioned habit and limb draw,
+the plan's reading of the class.
+
+**Measured.** Over the 45 written songs (`survey_kits.py`, the kit
+letters with a game match): the written density within half to double of
+the game's for the slot's sample in 58 of 82 letters (71 %, from 65 %),
+over double in 6 (from 10), under half in 18 (from 23), none silent; the
+kick outside in 0 of 13 (from 2 of 16), the snare in 8 of 22 (from 11 of
+25), the hat in 4 of 13 (from 8 of 16), the other sounds in 2 of 6 (from
+4 of 9); the crash in 7 of 22 (from 6 of 23), written at a median 1.4 of
+the game's density (from 1.2): the urn's earlier share brings a crash bar
+back more often than a rare crash's table would. Last Terminal's blip:
+2.0 a bar (game 2.2; 5.3 before), two bars in three rested; Journey of
+the Quarry's snare 2.0 (game 2.0; 4.2 before). The written drum habit
+tiers moved for the songs whose letters lost a second sample's hits, and
+the texture and entrance tables counted on those tiers moved with them,
+so 329 of 3000 seeds plan again (`scan_pairs.py`: 2671 stand but for the
+kit). Song Check 66's step 1, the drums' part level in the whole, before
+to after: Last Terminal -3.4 to -3.7 dB (the blip 5.3 to 1.9 a bar, two
+bars in three rested), Journey of the Quarry -3.6 to -4.1 (the snare 4.2
+to 2.0), Sleeping Aqueduct -7.4 to -10.2 (Shadow is in 3/4, so its kit's
+bars come from other songs' accent-snare, medium-kick limbs), Far River
+-0.7 to -3.3 (the snare 6.4 to 1.5, the game's 1.8; the song that had
+gone five decibels forward in round 80); The Endless Bridge, whose seed
+plans again, against Glacier Passage on Strago's token: the hat at the
+click's accent class, once in four bars. Over the 45 kit tokens against
+the games' own renders (`drum_forward.py`): the written kit over the band
+by integrated loudness sits 1.0 dB under the game's at the median (0.9
+after round 80), 3 dB or more forward in 5 of 45 (7), 3 dB or more back
+in 12 (15); by hit level the median is +0.2 (+0.8) and the forward count
+12 (12). Far River, the song round 80 had sent five decibels forward,
+sits at the game's balance (-0.1); the forward five are the two
+pad-as-kick songs, Metamorphasis, Kefka and Dancing Mad (Full).
+
+**Open.** The class says how often a piece is struck, not in how many
+bars: a piece struck once in most bars and one struck four times in one
+bar of five share a class, and the written presence is the pool's. A
+song in another meter lends no bars (Shadow in 3/4 to a 4/4 song: its
+accent snare and medium kick come from other songs' bars). The urn's
+earlier share recycles a crash bar; the crash still sits over the game's
+density. The melodic kit pieces (Wild West's blip on fifteen pitches, the
+tom lines, Kefka's and Dancing Mad's "other" pieces) are round 83's.
+
+### Round 82: the kit's echo rides the token (2026-11-06, from Song Check 64's Last Vault and Song Check 65's Last Terminal: Cyan's sizzle and Wild West's blip are wet in the game and were dry in the written songs)
+
+**Why.** The written song's echo came from the `echo` word, drawn once a
+song from the pool: its volume, delay and feedback another song's, and
+the drums wet or dry by that song's say for the whole part. The kit's
+samples came from the balance token's song, which sends some of its kit
+to echo and keeps the rest dry, note by note on a shared channel: Wild
+West's channel 4 holds its hat dry and its pitched blip wet (the blip's
+notes send, 57 of the channel's 250), Cyan sends its sizzle and crash,
+Battle Theme its rattle and nothing else of the kit. The readings kept
+each voice's share of notes that send (round 70), which cannot tell the
+blip from the hat on one channel. In the 42 written songs with a kit and
+a game match, the written kit's send agreed with the game's for the slot's
+sample in 68 of 82 slots; 5 written songs had a wet kit piece, the game 8;
+and the drawn word's feedback was another song's in a third.
+
+**Built.** The reader keeps each sample's share of notes that send
+(`reading.echo_of_notes`: features `sample_N` of source echo, beside the
+voices'; translator version 11, every song read again, the lead pass run
+again). Each kit slot carries an echo mark after its class where the
+slot's sample sends in ECHO_SEND of its hits or more
+(`arrangement.kit_echo`, `@e`: the sample's own share where read, else
+the voices' it sits on), and the balance token carries its song's echo
+word before the key (`echo=0.20:80:0.78:melody:bass+drums`,
+`arrangement.echo_outcome`, the echo table's own outcome). The plan keeps
+both (`extras.echo.word`, `extras.drums.kit_echo`); `render.echo_word`
+takes the token's word in place of a draw (the echo table stands for a
+token without one), and `render.piece_sends` sends a marked kit piece's
+notes and keeps an unmarked piece's dry while a pitched part follows the
+word's say (the score carries echo per note, so the kick beside the blip
+stays dry as on the game's channel). Pack4 refit (backup
+`pack.json.before-r82`), the shipped vocabulary regenerated; 68 songs.
+Tests: the per-sample share read, the mark and the word on the token, the
+plan's reading, the word in place of a draw, a marked piece's send.
+
+**Measured.** Over the 42 written songs with a kit and a game match
+(`measure_r82.py`, `compare_r82.py`, the game side by the samples' own
+sends): the kit slots whose written send agrees with the game's for the
+slot's sample, 82 of 82 (63 of 82 before); written songs with a wet kit
+piece 14, the game's 14 (5 before); the written song's echo word the
+token song's own in 41 of 42 (the drawn word had another song's feedback
+in a third). Of the 68 songs' 100 kit slots, 18 are marked wet. Song
+Check 66's step 2 pairs keep their plans and their levels within 0.7 dB
+(the echo adds no part): Last Vault's sizzle rings into Cyan's room and
+its crash stays dry, Last Terminal's blip echoes while the kit around it
+stays dry, Sleeping Aqueduct's kit steps out of a room the drawn word had
+put it in. Over the 45 kit tokens (`drum_forward.py`) the kit's balance
+is where round 81 left it: 1.1 dB under the game's by loudness at the
+median (1.0), forward in 5 of 45, back in 12, +0.4 by hit level (+0.2);
+Kefka's forward song eases from 7.5 to 5.8 dB with its pieces in the
+game's room.
+
+**Open.** The echo's parameters are the token song's for the whole song
+now; a written song whose token song is dry plays dry whatever its sound
+set's habit says, as the game's song did. A piece marked wet in a song
+whose word sends nothing else still plays wet (the marks decide the kit's
+notes). The performance layer's echo-by-tempo rule stands only where a
+vocabulary has no echo word and the token none.
+
+### Round 83: a tune on the drum channel is a part (2026-11-06, from Song Check 65's Last Terminal: Wild West's pitched blip on fifteen pitches, written on one)
+
+**Why.** The kit token keeps one note a piece (round 75's most struck,
+round 79's degree), which fits a bell struck on one note and not a tonal
+sample the game plays as a tune on the drum channel: Wild West's blip on
+fifteen pitches (the most common one in five of its 57 hits), Dancing Mad
+(part 5)'s rim on sixteen, The Decisive Battle's on nine, Kefka's on
+eight, The Mines of Narshe's on four. Twelve of the 95 written kit letters
+sat on a sample the game plays on three pitches or more, written on one:
+a monotone where the game has an ornament. The role reader had read the
+channel whole: a channel mostly hat is a drum voice, and the blip's notes
+on it were drums.
+
+**Built.** The reader splits a tune from its drum channel
+(`roles.split_melodic_pieces`, before the beat and the roles are read):
+on a voice that would be a drum voice (`roles.is_drum_voice`, the two
+drum clauses), the notes on a sample the namer called "other" (a tonal
+sample, no drum) struck on MELODIC_PITCHES (3) pitches or more with no
+pitch holding MELODIC_SHARE (half) of them, MELODIC_NOTES (8) notes or
+more, move to a voice of their own (SPLIT_BASE 100 + the channel), their
+chip notes with them, so the echo and vibrato readers see the voice; the
+channel keeps its drums. `roles.assign` reads a split voice as a
+counter-line, or a bass under TUNE_FLOOR (midi 55), never the lead: a
+tune on the drum channel is an ornament beside the song's tune. The lead
+pass renders no stem for a split voice (its notes are the channel's in
+the chip's score), so it keeps its role. Translator version 12, every
+song read again, the lead pass run again; pack4 refit (backup
+`pack.json.before-r83`), the shipped vocabulary regenerated. The kit
+loses the piece; the balance token gains the part with its level,
+register and sample, and the written song writes it through the counter
+writer beside the tune (or the bass writer), on the sample, with the
+echo the game gives it. Test: the split, its idempotence, the roles, a
+bell on one note left a drum, a pitch holding half the notes left a
+drum, a low tune a bass.
+
+**Measured.** The readings (`measure_r83.py`): five voices split, all
+counter-lines, all on channels the game sends to echo (Wild West's blip,
+57 notes on 15 pitches; Dancing Mad (part 5)'s rim, 48 on 16; The
+Decisive Battle's, 39 on 9; Kefka's, 16 on 8; The Mines of Narshe's bell,
+12 on 4); one melodic "other" piece stays a drum by the rule (The
+Unforgiven's bell, 10 of its 16 hits on one note). Over the 45 written
+songs the kit letters on a sample the game plays on three pitches or more,
+written on one, fall from 12 to 3, the three the tom lines. Song Check
+66's step 3 pairs (token-matched where the seed planned again): Last
+Terminal's blip is a counter-line of 156 notes on 13 pitches beside the
+tune, written at the blip's own level, 1.21 of the kit's top in Wild
+West, so it is the loudest line and the tune's margin moves from -2.2 to
+-6.9 LU, as Wild West's blip sits over its tune; Restless Tides' counter
+140 notes on 12 pitches; The Endless Valley keeps a snare alone in the
+kit (its drums -12.6 to -22.6 dB under the whole) and Kefka's token a
+crash alone (-43.9). The forwardness measure over the 45 tokens: the
+written kit over the band 1.4 dB under the game's by loudness at the
+median (1.1), forward in 4 (5), back in 12 (12), +0.1 by hit level,
+forward 9 (12); the game's drum stem there is a channel's, the split
+piece on it included, so the five songs' kits read further back than
+their samples are. Every song on the five tokens plans again (the band
+gains a part), and 921 of 3000 seeds keep their plan.
+
+**Open.** A tom the game plays as a line (Wild West's five rates, Dancing
+Mad (part 5)'s three, Edgar and Sabin's four) is still a drum at one
+rate: the namer calls the sample a tom, and a tom fill at three pitches
+is a drum; what tells a tom line from a fill is whether its pitches
+follow the chords, which the role reader does not know. A split voice
+takes the counter's figures and intervals, counted over FFVI's counters;
+its own figure (the blip's two a bar) is the drum limb's no longer.
+
+### Round 84: the pans ride the balance token (2026-11-06, the second rules audit's first candidate)
+
+**Why.** Every written song sat in one stereo picture: the tune at centre,
+the counter at 0.6, the harmony's voices at 0.35, 0.65 and 0.5, the
+accompaniment's at 0.6 and 0.4, the arp at 0.4, the bass and the kit at
+centre (plan.PANS, the first audit's rule #2, standing since the whole
+writer began). FFVI pans half its voices 0.1 or more off centre (the
+melody in 37 of 76 voices, the counter 63 of 111, the accompaniment 72 of
+153, the harmony 22 of 40, the drums 37 of 115) and sets a part's voices
+apart: the accompaniment's 0.15 at the median (0.2 or more in 17 of 45
+pairs), the counter's 0.18 (12 of 27), the harmony's 0.16, the drums'
+0.11. The store had kept a pan with every note since phase 1 (the right
+side's share of the two voice volumes, `spc.convert._loudness`), unread.
+
+**Built.** The readings keep each voice's median pan (`Song.voice_pans`)
+and each drum sample's (`Song.kit_pans`), from the stored rows; no song
+was read again. The balance token carries them: a pitched part's voices'
+pans as a tenth field (`rhythm.pan_field`: the line voice first, then the
+voices beyond the line in the sixth field's rank order, each kept to
+twentieths, `PAN_BIN`, and joined by "/"; the line's alone where a voice
+beyond it has no pan, so the ranks line up), a kit slot's pan after its
+echo mark (`kit_token`: `K=sid@1.70@r48@0.50@m@@0.45`). The plan reads
+both (`Plan.pans`, `extras.drums.kit_pans`; the log line "pans from the
+balance: accompaniment=0.35/0.65 melody=0.50 kit K=0.50 h=0.60") and
+`render.pan_of` pans each note there: a kit piece at its slot's pan, a
+voice at the token's for its rank, the fixed pans for a token without the
+field or a voice past its list. Pack4 refit on the same readings (backup
+`pack.json.before-r84`), the shipped vocabulary regenerated. Tests: the
+field and the slot forms, a song without pans keeping the old forms, the
+plan's reading and `pan_of`'s fallbacks.
+
+**Measured.** All 68 balance tokens carry their pitched parts' pans and
+all 47 kit tokens their slots'. Thirty seeds composed before and after:
+every song's notes are the same (the pans feed no draw; the one log line
+that moved is the kit's extras listing its pans). Written voices 0.1 or
+more off centre: accompaniment 20 of 60, counter 21 of 41, harmony 9 of
+18, melody 9 of 30, bass 7 of 30 (FFVI 47 %, 57 %, 55 %, 49 %, 32 %); a
+part's voices apart, median: accompaniment 0.20, counter 0.15, harmony
+0.15 (FFVI 0.15, 0.18, 0.16); kit slots 0.1 or more off centre 7 of 36
+(FFVI's drum voices 37 of 115). Song Check 67 pairs five seeds before and
+after: Winding Canopy's tune at 0.25 with its bass at 0.80, Restless
+Causeway Journey's bass at 0.30 under a harmony at 0.75, Coast of Tides'
+four counter voices fanned 0.25 to 0.65, Dusk of the Lagoon's tune at
+0.30 against a counter pair at 0.70, and a kit whose hat sits hard to one
+side.
+
+**Open.** A pan is a voice's median: a game voice that moves across the
+field inside a song (a sweep, a ping-pong echo) is one place here. A
+written voice past the token's count keeps the fixed pan (none in the
+thirty seeds: the voices are the token's). The chip's surround (the two
+sides inverted) reads as no pan; no FFVI kit voice has it.
+
+### Round 85: a voice in two places (2026-11-06, from listening to Song Check 67: a voice on one side all song "seems kinda off" on headphones)
+
+**Why.** Round 84 placed each voice at its token song's median pan, and
+a voice held on one side the whole song was heard as off on
+headphones. Measured, that is FFVI's own habit: 428 of its 498 voices
+hold one pan within 0.05 all song, 55 of them 0.2 or more off centre,
+and no voice or echo of its 82 songs is ever phase-inverted (the chip's
+surround), so surround and a moving stereo life are not FFVI words; they
+are parked in `docs/ROADMAP.md` for a game that has them, and the
+headphone question goes to the player (a stereo width setting, there
+too). What FFVI does do is sit a voice in two places: 44 of its 406
+pitched voices (accompaniment 15 of 130, counter 12 of 100, melody 8 of
+66, bass 7 of 78, harmony 2 of 26, in 26 of 68 songs) stay a bar or more
+at each of exactly two pans a tenth or more apart, 21 of them moving once
+(Awakening's tune at 0.35 for four bars, then 0.65 for the rest) and 23
+back and forth (Kefka's accompaniment at 0.60 for five bars and 0.45 for
+thirteen, again and again; Cyan's tune 0.50 for twelve and 0.70 for
+seven), a stay lasting ten bars at the median (quartiles 6 to 21); the
+two places sit across the centre in 20, one at centre in 14, both on one
+side in 10. The median had flattened every one of them to one place.
+
+**Built.** `readings.pan_moves` reads a voice's two places from its
+stored notes: pans kept to twentieths make runs, a run of a bar or more
+is a stay, and where the stays visit exactly two places `PAN_APART`
+(0.1) or more apart the voice carries (A, bars at A, B, bars at B), A the
+first place and each count the median stay there, or (A, bars at A, B,
+None) where it moved once (`Song.voice_pan_moves`). The balance token's
+tenth field carries them as the voice's word (`rhythm.pan_word`:
+`0.60x5|0.45x13` back and forth, `0.35x4>0.65` once; a voice in one place
+keeps its number), the plan keeps the word as written, and
+`render.pan_at` places each note by its bar: A for the first stay's bars,
+then B, cycling where the voice goes back and forth, from the song's
+first bar. Pack4 refit on the same readings (backup
+`pack.json.before-r85`), the shipped vocabulary regenerated. Tests: the
+reading (both shapes, one place, per-note jitter, three places, a
+twentieth apart), the words, the plan's keeping them, the pan at a bar.
+
+**Measured.** Thirty seeds composed before and after write the same notes
+and plans. 24 of their 185 written voices sit in two places (FFVI 44 of
+406), in 15 of 30 songs: The Starlit Foundry's accompaniment second,
+bass and counter all move right at bar 16; a tune at 0.60 for fourteen
+bars and 0.45 for six, again; a bass at 0.25 for three bars, then 0.75.
+Song Check 68 pairs five such seeds before (round 84) and after.
+
+**Open.** The ten sweeping voices and per-note jitter stay at the median.
+A first stay longer than the written song never moves (a 24-bar stay in a
+22-bar song). The change lands on the written bar line where FFVI's came
+in mid-bar in three of four (a pickup, a rest). A kit voice's places are
+not read: its slots' pans are per sample (round 84).
+
+### Round 86: the token song's own range for its own sample (2026-11-06, the second rules audit's second candidate)
+
+**Why.** Round 34 chooses a voice's sample before the writing and binds
+the voice to the range the game plays that sample over, drawn from the
+`ranges` word by sample and part, pooled over every song that plays the
+sample. FFVI shares 13 of its 17 bass samples, their per-song centres 15
+semitones apart, and another song's range overlaps this song's by under
+8 semitones in 88 % of the cross-song pairs; so the draw usually handed
+the bass another song's range, and `bound_of` wrote the voice in the
+overlap, a sliver widened to 8 semitones or the other song's range alone.
+Over thirty seeds 11 of 27 written basses came out narrower than their
+planned register (by 12 semitones at the median) and 9 shifted 4 or more
+semitones from it: Old Catacombs' bass at 28-36 under a planned 32-48, The
+Still Gorge's at 28-36 under 36-56, The Inner Grotto's at 56-76. The token
+already names the sample as its own song's; the draw did not know which
+song. The audit also found the register word itself spanning two
+instruments where a line voice changes sample (Return of the Outpost's
+token bass 28-80, its bass sample played 24-40 there).
+
+**Built.** The balance token's sample field carries the range the song
+plays that sample over in the part's line voice, after the id
+(`rhythm.part_sample_field`: `s1d296a2572@32-52`, `sample_range_in`, the
+ambitus at the registers word's grain, nothing under eight notes), and
+each voice beyond the line carries its own sample's range as a fourth
+slot of its layer entry (`1.3@s5a1fa4d5d3@0.33@52-60`). The plan keeps
+them (`Plan.sample_ranges`, `Plan.layer_ranges`) and `samples_for` binds
+a voice on the token's sample to that range: the line (`bound_of` with the
+planned register, so a register inside the sample's range comes out
+whole), the second voice's sample, and each apart voice's own sample in
+`voice_bounds`; the pooled draw is still made on the stream and left
+unused, so no later draw moves. A tune keeps round 43's wall, the whole
+range the game ever took its sample over: FFVI's tunes change sample
+mid-song, and the main sample's own range had cut 9 of 30 written tunes
+under their token's ambitus in the first cut. Pack4 refit on the same
+readings (backup `pack.json.before-r86`), the shipped vocabulary
+regenerated. Tests: the field and the layer slot, a part under eight
+notes keeping the bare id, the plan's reading, and the bound with and
+without the field against a ranges table that says another song's range.
+
+**Measured.** Thirty seeds, plans identical (registers, band, voices).
+Voices bound narrower than their planned register: bass 11 of 27 to 8,
+accompaniment 10 of 27 to 4, harmony 1 of 11 to 0, counter 0, melody 2 of
+30 unchanged; shifted 4 semitones or more: bass 9 to 8, accompaniment 8
+to 5, harmony 6 to 1. The basses still "narrower" are those whose
+register word spans two instruments: the bound is now that song's own
+use of the sample (28-40 under a 28-80 word). The written bass line spans
+12 semitones at the median (13 before; FFVI's bass register 12). The
+notes change in 28 of 30 songs (the bass in 19, the accompaniment in 17,
+the counter in 9, the harmony in 7, the melody in 4, the last through the
+clash filter against a moved accompaniment). Song Check 69 pairs five:
+Old Catacombs' bass up an octave into 32-48, The Still Gorge's up an
+octave into 36-48, Return of the Outpost's down to 28-40, The Starlit
+Foundry's down to 28-36 with its accompaniment's voices at 52-60, The
+Inner Grotto's 56-76 to 48-76.
+
+**Open.** The register word where a line voice plays two instruments
+(28-80): a register a sample would be the honest word. The role reader's
+bass in The Inner Grotto's token is a tenor-range voice (48-80 on its
+sample); the writer follows it. A tune on the token's sample keeps the
+pooled wall, so it is still written over notes its sample never played in
+that song.
+
+### Round 87: the kit's channels ride the balance token (2026-11-06, the second rules audit's third candidate)
+
+**Why.** The writer put every kit on two voices by a fixed split, the kick,
+snare and toms on one and the hat, cymbals and the rest on the other
+(plan.DRUM_VOICES, the first audit's rule #3's last standing part). FFVI
+does not: 19 of its 47 kits sit on one channel, 20 on two, 8 on three or
+more, and 73 of its 90 kit channels carry one piece, the commonest pair a
+snare channel and a cymbal channel (8 songs). The fixed two cost the band
+a pitched voice wherever the token's eight voices then overflowed, 14 of
+FFVI's 48 kit songs, every one a one-channel kit, and 9 of 40 written
+songs (an accompaniment's fourth voice, a counter's third, a harmony's
+third); and they dropped 120 of 4,903 written kit hits where a kick struck
+under a snare or tom the game had on its own channel (FFVI's own kits
+would lose 2.7 % of their hits to the split).
+
+**Built.** `rhythm.kit_channels` reads the pieces each game channel plays,
+a slot's channel the one its sample is struck on most, the channels in
+the song's order and the letters in LETTERS' order ("KS|h", "S|c", "K"),
+and the drums token carries it as its fourth field, the voices field a
+pitched part fills with a count. The plan reads it (`extras.drums.channels`;
+the log line "kit channels from the balance: 3 (t|K|h)"), `allot` gives the
+kit as many voices as channels (two without the field), `drum_voice_of`
+puts each piece on the channel the game put it on (the fixed split for a
+token without channels or a letter on none, never past the kit's voices),
+and the band's locks see the kit's channels as the plan has them. Pack4
+refit on the same readings (backup `pack.json.before-r87`), the shipped
+vocabulary regenerated. Tests: the field (one channel, three channels, no
+kit), the allotment with one drum voice against two, the voice a letter
+takes, the plan's reading.
+
+**Measured.** Forty seeds, 25 with a kit: drum voices 1 in 12 songs, 2 in
+11, 3 in 2 (every kit on two before); songs with a pitched part trimmed 9
+to 0; kit hits lost to a collision 120 of 4,903 to 25 of 4,925, in 3 songs
+where the two pieces share a channel in the game as well. Return of the
+Outpost, on Wild West's kit (tom | kick | hat), had dropped 72 of 406 hits
+and drops none; Northern Bells (snare | hat | kick) 23 of 127 and none.
+The voices or the band changed in 14 of 40 songs: the nine that regain a
+voice draw one more voice word, so the part's extra voice is new and the
+draws after it can shift; the key, tempo, form, chords and kit stand.
+Song Check 70 pairs the two collision songs and three that regain a voice
+(The Second Ridge's counter, The Endless Valley's accompaniment, The
+Ancient Harbor's harmony).
+
+**Open.** Two pieces that share a channel in the game still collide where
+a limb figure strikes both at once (25 hits in 3 songs): the figure came
+from a table pooling songs that had them apart. A letter struck on two
+samples on two channels (Battle Theme's two snares) folds to one slot and
+one channel, round 80's one-sample-a-letter limit.
+
+### Round 88: a tuned slot's rate stays inside the game's rates (2026-11-06, from Song Check 70's Northern Bells: a snare "that almost sounds like a guitar")
+
+**Why.** Northern Bells' kit is Fanfare's: snare, hat and kick on three
+channels. The snare is the Battle Theme's pitched rattle, 191 ms with a
+clear tone at 220 Hz, struck 4 semitones below its recording in Fanfare.
+Round 79 marks the sample as tuned to the key (FFVI strikes it at
+different rates in different songs) and moves its rate by the distance
+between the token's key and the written one; Fanfare is G major, Northern
+Bells C# minor, a tritone, so the rattle fell to -10, its tone to B2 and
+its ring to 340 ms. FFVI strikes the sample as a snare at -4 to +3 only.
+Over FFVI's five tuned slots and the twelve keys a written song can land
+in, the moved rate fell outside the rates the game ever struck the
+sample at as that piece in 77 of 132 cases; the other octave of the same
+degree would have rescued 8. The tuning verdict is loose too: a hat
+struck at 0, 0, -1 and -3 counts as tuned (TUNED_SHARE's half), and its
+rate had moved by up to six semitones (Return of the Outpost's hat at +3).
+
+**Built.** The `kit_rates` word (`rhythm.kit_rate_units`): each percussion
+kit sample a song strikes, as a unit, its outcome the rate as a note, its
+values the sample's id and the piece the namer called it. `samples_for`
+reads the word's lowest and highest for each tuned slot's sample as its
+piece (`render.kit_rate_wall`) into `extras.drums.kit_rate_walls`, and
+`kit_note_of` holds the moved rate inside them (`render.walled`), for a
+percussion slot and for a tonal sample the namer took for a drum alike;
+without the word, round 79's move stands. The verdict itself is left as
+it was: with the wall a loose "tuned" costs at most the game's own
+spread. Pack4 refit on the same readings (backup `pack.json.before-r88`),
+the shipped vocabulary regenerated. Tests: the word's units, the wall
+from a table and its absence, the note held at Fanfare's own -4 for C#
+minor and moved to -2 for A minor, an untuned slot untouched.
+
+**Measured.** By construction no tuned slot's rate leaves the game's
+rates for its sample as its piece. Over seeds 1 to 80 two written kits
+had: Northern Bells' snare at -10 (now -4, the token's own) and Return
+of the Outpost's hat at +3 (now 0, the game's highest for it); Upper
+Monorail's and The Second Ridge's snares at 0 and +1 were inside and
+stand. Song Check 71 pairs the two.
+
+**Open.** The tuning verdict (TUNED_SHARE, two of four at one rate) is
+coarse; the wall bounds its cost, and a verdict that asks the rate to
+follow the key across songs would be the honest word. Fanfare's -4 sits
+on the flat seventh of G where the Battle Theme's +3 sits on the minor
+third of A: the composer tunes the rattle to a degree, and the wall keeps
+the degree only where the game's own spread allows.
+
+
+### Round 89: a channel's second instrument is a voice of its own, and a pad is no kit (2026-11-06, the reader round from Song Check 70's limits)
+
+**Why.** Two reader faults stood in `docs/LIMITS.md` after round 88. A
+game channel that changes instrument was one voice to the role reader,
+and its register word spanned both instruments: Wild West's bass channel
+plays its bass sample at 28-36 and, for a stretch, chords two octaves up
+on another sample, and its token said `bass 28-80`; Kefka's 32-72,
+Overture (part 3)'s 32-64, New Continent's 32-76. FFVI changes
+instrument on 108 of its 381 pitched channels, and in 61 the second
+instrument plays in a register of its own. Worse than the register: where
+a channel's second instrument was a drum, the drum hid inside the part.
+Kefka's, Dancing Mad (part 1)'s and Overture (part 3)'s snare (the sample
+the other songs' kits call S, s1279e119a1) shared a channel with a
+pitched part, so the channel read as an accompaniment with 143, 224 and
+159 snare hits among its notes on one pitch; the kit token had no snare,
+and the accompaniment's line, level and density were the snare's. And the
+drum namer took a looping bowed-strings pad played low and alone for a
+kick (The Empire Gestahl, Another World of Beasts), so two kits were a
+seven-beat drone struck once a bar, and Another World of Beasts had no
+bass part.
+
+**Built.** Translator version 13, every song read again, the lead pass
+run again. (1) On a channel under the tune (`roles.UNDER_THE_TUNE`: a
+bass or a chord part by assign's first reading of the whole channels),
+the notes on a sample other than the one most of its pitched notes are
+on, carrying a tenth of them (SECOND_SHARE) and sixteen notes or more
+(SECOND_NOTES, the echo reader's floor for a voice), whose register is
+its own (median pitches SECOND_APART, 12 semitones, apart, or 10th-to-
+90th-percentile registers that do not overlap), move to a voice of their
+own (`roles.split_second_instruments`: SECOND_BASE 200 + the channel, +
+10 for a third, so the channel stays readable in the id), their chip
+notes with them; assign reads the parts again, a second instrument never
+setting the song's floor (in the first cut an eight-note pedal split from
+a chord channel took the bass role from Devil's Lab's 137-note line) nor
+taking the lead. A tune's or counter's second instrument is the line
+changing colour (47 of 56 take the line over for stretches, a third of
+the notes, 19 an octave apart) and stays on its voice. The readings keep
+the second voice beside the counts, not in them
+(`readings.Song.second_voices`): the band a token describes is the
+channels' main instruments, and the second instrument's stretches await
+a word of their own (a voice's instrument by stretch, the next round),
+since a voice of its own asks the writer for a ninth chip voice in the
+eight-channel songs that time-share one (the first cut counted them, and
+Kefka's token asked twelve). (2) The by-sound drum clause
+(`roles.drum_clause`, the two clauses in one place now) refuses a voice
+whose notes are pitched and held DRUM_HOLD (two beats) or more at the
+median: a pad the namer took for a kick. FFVI's thirteen cymbal voices
+held two beats or more are unpitched and stay drums. (3) A voice with no
+note at a level once through is no voice to the counts (Quiet Beach's
+silent pad had counted as a kit channel, then as a harmony voice). Pack4
+refit (backups `pack.json.before-r89`, `readings.db.before-r89`), the
+shipped vocabulary regenerated; the round-88 vocabulary stood beside it
+as `before89` for the comparison and was removed (the player lists every
+shipped vocabulary). Tests: the split and its idempotence, the tune's
+second instrument left whole, a second sample in the same register left
+on its channel, the parts after; the pad no kit and the cymbal still
+one, an instrument held as before; the loader keeping a second voice
+beside the counts and dropping a silent one.
+
+**Measured.** The readings (`measure_r89.py`): 42 second voices split
+from 25 songs (read as accompaniment 25, counter 8, bass 6, double 2,
+arp 1), 12 other roles changed, 26 of 68 balance tokens. Ten bass
+registers come down to their bass: Wild West 28-80 to 28-36, Kefka 32-72
+to 28-36, Overture (part 3) 32-64 to 32-36, New Continent 32-76 to
+32-36, Gau 28-60 to 24-36, Dancing Mad (part 2) 24-60 to 24-44, The
+Phantom Train 24-52 to 24-32, Last Dungeon 32-56 to 32-40, Returners and
+Coin Song 36-56 to 36-44; accompaniments too (Another World of Beasts
+52-76 to 52-64, The Unforgiven 32-52 to 32-48, Blackjack 56-72 to
+56-60). Three snares come out of the accompaniment into the kit (Kefka
+143 hits, Dancing Mad (part 1) 224, Overture (part 3) 159, each S by the
+namer, Overture's kit from none), and the accompaniment's level with
+them: Kefka's and Dancing Mad's loudest part is now the real
+accompaniment (a one-pitch pedal at 60; sparse stabs at 72), the kit at
+0.4 and 0.2 of it. Wild West's two-pitch pump (169 strikes of a tonal
+sample at E2 and C3, 0.23 beats each), unmasked, is a drum voice by
+round 77's play clause (one sample at one or two pitches) and a kit
+piece `o`; its accompaniment part is gone (see LIMITS.md). The pads:
+Gestahl's is a double of its harmony voice (the song has no kit),
+Another World of Beasts' is the bass (14 notes at 28 held seven beats,
+the song's lowest voice; it had no bass part). Techno de Chocobo's third
+accompaniment voice is a counter of its own (44-52) once its stabs are
+split off, Searching for Friends' accompaniment the counter's second
+voice. The lead pass relabels the same nine songs. The reader's edges
+seen and left: Returners' pad voice doubling the bass is a second bass
+voice now (its notes no longer within 1.2 of the thinner line's),
+Dancing Mad (part 2)'s second low channel (32-36) an accompaniment, three
+semitones over the bass channel's new median; The Prelude's low channel
+is an accompaniment (48-76) and the song has no bass part in the counts
+(its eight low notes once through are a second voice). Over seeds 1-160
+the token song holds for 129; every plan is drawn again past its band
+line, every table being refit on the re-read readings. Song Check 72's
+five pairs (the same seed on the same token, the plan re-drawn past the
+band line, said in each description): The Expanse of Rust (Another World
+of Beasts: the pad kit gone, a drone bass), First Quarry (The Empire
+Gestahl: no kit), The Still Wharf (Overture (part 3): a snare kit from
+none, the accompaniment and the bass their own), The Sleeping
+Observatory (Kefka: the snare into the kit, the pedal the loudest part,
+the bass 28-36), Endless Observatory (Wild West: the bass 28-36, the pump
+a kit piece).
+
+**Open.** The second voices await their word: a voice's instrument by
+stretch (sample, register relation, share, stay), realized on the same
+chip voice, for the tune and the counter (the line changing colour) and
+the bass and chord parts alike. The play clause's two-pitch drum (Wild
+West's pump) wants a pitch word: FFVI's percussion plays at the driver's
+own pitch, a pump at musical ones.
+
+### Round 90: a voice's stretches (2026-11-07, from Song Check 72's Sleeping Observatory)
+
+**Why.** On Song Check 72 the counter of The Sleeping Observatory
+(seed 255, Kefka's token) was heard as odd. Asked: whether it was a
+bug or the next round's business. Measured: not a pitch fault (written
+counter notes a semitone from the sounding tune 6.7 %, FFVI 4.3 %; a
+first measure that took the written notes' end for a length had said
+81 %), but a reading. Kefka's three "counter" channels double its tune
+in octaves and thirds for whole stretches and the bass for another:
+channel 1 harmonizes the tune, then doubles it an octave under for
+fourteen bars on another sample; channel 2 doubles it an octave under
+for six bars, then doubles the bass in unison for seventeen; channel 3
+runs parallel an octave over for ten bars, then harmonizes the pedal.
+The role reader asks each channel one question for the whole song
+(`_doubles`: 0.8 of another voice's notes at the same pitch class), which
+no stretch answers, and parallel thirds are another pitch class, so the
+three read as a counter-line with two layers, their relation words drawn
+from the pooled `layers` table ("doubling -5", "apart +16"), and the
+written song put a three-voice parallel block at the song's loudest level
+over a one-voice tune (the counter stem 8.6 LU over the melody's; the
+game's own Kefka through the converter has its tune channel 5.5 LU under
+the group, but there the loud voices are the tune in octaves). FFVI
+counted (stretches2.py): 375 pitched voices, 126 beside a line, 54 of
+them with a stretch that doubles or runs parallel with another part; 75
+line voices change sample (the next round's word); and 18 voices spend
+half their notes or more doubling the tune or running parallel with it
+while read as counter-lines or chord voices (Edgar and Sabin's and
+Dancing Mad's thirds, The Decisive Battle's and Metamorphasis's octaves,
+Johnny C. Bad, Devil's Lab, Mt. Koltz, Overture, Troops March on).
+
+**Built.** A voice is read in stretches: runs of notes on one sample
+(`roles.stretches_of`, blips under eight notes and eight beats folded
+into the run before), each asked what it does beside every other voice
+(`roles.stretch_relation`): a double where 0.8 of its notes start with
+that voice's at the same pitch class, parallel where 0.8 start with that
+voice's at one generic interval over half the pairs (`roles.generic`:
+thirds alternate 3 and 4 semitones, key-free), its own line else, and
+either way only where it strikes with half that voice's notes within its
+span (`STRETCH_COVER`: a pad holding the root under a tune that lands on
+the root at its eight onsets follows nothing). The reader's rule
+(`TUNE_LAYER`): a voice of sixteen notes or more from the counter or the
+chord parts whose stretches double the tune or run parallel with it for
+half its notes or more is the tune's, role melody, `of` the tune's
+voice, its old part in the evidence; the bass stays the song's floor
+whatever it doubles. Translator VERSION 14. The readings keep
+`Song.voice_of`; the melody's line is the heard tune where it has
+layers (`cells.line_voice(voices, role, song)`), every tune table counts
+that line (`tune_line` in place of `_line(s.notes[melody])` at seven
+sites), and a layered melody's or counter's figures, habit and speed
+count the line too (`cells.line_notes`, which had covered the chord
+parts and the bass). The balance token's layer entries carry a fifth
+sub-field, the relation stretches (`rhythm.relation_words`:
+`dm-12x6>o`, `pc+4`; the kind, the part letter, the semitones, the bars
+from the song's first bar as the pan word counts them, the last stretch
+open; stretches alike run together; a voice of one own stretch, or
+under sixteen notes, has no word). The plan parses it
+(`Plan.layer_relations`, `relation_stretches`, `stretch_spans`) and a
+layer voice with a word is written stretch by stretch after every line
+is in place (`stretched_notes`, the `pending` pass in `write`): the
+followed part's line again at the semitones in the scale (`diatonic`)
+over a double's or parallel's bars, the voice's own notes (its layer
+word's realization) over its own bars; a part the song lacks leaves the
+stretch its own. The lead pass never takes a layer for the lead and, on
+a relabel, sends the old tune's layers back to the parts they read as
+(their `of` cleared). The `layers` table stands as the draw for a voice
+without a word and for a voice's own stretches. Three cuts on the way:
+the cover rule (the pad test), the sixteen-note floor (Good Night's
+three-note chord voices had become its tune's, and a three-note voice's
+word would have the writer play a whole parallel line), and the line
+count (a tune doubled in octaves had its figures counted over both
+voices). Tests: the stretch functions, the rule on a voice doubling the
+tune for twelve bars of sixteen (its layer), four (its own part), thirds
+throughout (its layer), the bass two octaves under for half the song
+(the bass); `voice_of` loaded; the token's word, the heard-tune line, the
+parsing, `stretched_notes`; a written voice following `dm-12x4>o` (the
+tune an octave under in bars 1-4, its apart voice after). Suite 424 OK.
+
+**Measured** (FFVI re-read at translator 14, the lead pass, pack4 refit,
+the vocabulary shipped; measure_r90.py): 18 voices in 17 songs read as
+the tune's layers (12 were counter-lines, 6 chord voices), one other role
+moved (Under Martial Law's accompaniment to counter); the lead pass
+relabels the same nine songs as before and sends their layers back
+(Shadow's two, The Serpent Trench's two, Under Martial Law's, Aria's);
+55 voices beyond a line carry a word in 38 songs (counter 21,
+accompaniment 16, melody 14, bass 2, arp 2; stretches: 47 parallel, 15
+double, 26 own); 19 of 68 balance tokens changed. Kefka's counter is
+three voices at half weight, its melody two (the layer at 1.1 of the
+tune, `pc+21x6>ox4>dm-12x13>o`), its channel 2 a counter layer that
+doubles the tune an octave under for six bars (`dm-12x6>o`); Edgar and
+Sabin, Johnny C. Bad and Dancing Mad (part 2) lose their counter part,
+their tune gaining its parallel third; Metamorphasis's tune has three
+voices (octaves above and below), its counter two instead of four; The
+Decisive Battle's and Mt. Koltz's parallel voices are the tune's; the
+melody weight turns main in four songs. Two keys moved with the layers'
+weight in the key reader (a melody voice weighs 0.5, a chord voice 1.5):
+The Mines of Narshe C major to E minor, "??" B major to its relative
+G# minor. Written side, seeds 1-400: every plan is drawn again past its
+band line (every table refit), so the Song Check pairs are the same seed
+on the same token where the token holds both sides, and each
+description says so.
+
+**Song Check 73**: six pairs, the same seed on the same
+token. Step 1, the two from Song Check 72: seed 255 The Sleeping
+Observatory (Kefka; the melody two voices, its layer at 1.1 following
+`pc+21x6>ox4>dm-12x13>o`; the counter half weight, two voices written,
+its layer `dm-12x6>o`; the counter stem 3.7 LU over the melody's where
+it sat 8.6) and seed 78 The Still Wharf (Overture (part 3); the melody
+main weight with its parallel third `pm+3x32>o`, the counter minor with
+two voices; 1.1 LU over the melody where it sat 4.9). Step 2, a parallel
+third and an octave read as a counter-line or a chord voice: seed 156
+Waking Caldera (Edgar and Sabin; no counter part, the melody's layer a
+third under at 0.8) and seed 57 Restless Tides (The Decisive Battle; the
+accompaniment one voice, the melody main weight with its octave above at
+0.4). Step 3, a block of voices: seed 100 Waking Market Passage
+(Metamorphasis; the counter four voices at main weight in 76-92 before,
+two at half weight in 60-72 after, the melody three voices in octaves)
+and seed 55 Passage of the Meridian (Dancing Mad (part 2); no counter
+part, the melody's third below at the tune's level). Before is round 89
+(the dev checkout's own code and vocabulary), after round 90.
+
+**Open.** A voice that struck with only some of the followed line's
+notes is written striking them all (the cover rule asks for half); a
+voice's own stretches are its layer word's draw, not what its song's
+voice did there; the samples a voice changes between stretches are the
+next round's word (75 line voices change sample; round 89's second
+voices wait for it too); and a single-stretch word has no extent, so a
+voice that plays four bars of the song plays the whole song's. The
+Sleeping Observatory's counter is still Kefka's organ at the game's own
+level over the tune; the stretch word thickens the tune as Kefka does
+and takes the parallel block apart, it does not re-balance the game.
+
+### Round 91: the line's instrument by stretch (2026-11-07, the word promised since round 86)
+
+**Why.** Round 86 found the register word spanning two instruments where
+a game line changes sample; round 89 split a bass or chord channel's
+second instrument into a voice of its own and left the tune's and the
+counter's as "the line changing colour", on the voice, until a word for
+a voice's instrument by stretch; round 90 read every voice in stretches
+for its relations. FFVI counted (stretches91.py): 249 line voices of
+sixteen notes or more, 63 of them changing instrument (25 tunes, 19
+counter-lines, 12 chord lines, 6 basses, 1 arp), 65 with two stretches,
+11 with three, 19 with four or more; the main sample holds 0.62 of a
+line's notes at the median; of 159 changes between consecutive
+stretches 67 move to a disjoint register, the centres 7 semitones apart
+at the median (quartiles 2 to 14.5, one of 42); a stretch spans ten bars
+at the median (5 to 16); the token's sample field named the main
+stretch's sample in 61 of the 63; 32 of 129 voices beyond a line change
+sample too. The written line had played one instrument over the whole
+union of those registers (Kefka's tune over 52-84 on the reed alone,
+Umaro's over 48-92).
+
+**Built.** The balance token's eleventh field a pitched part
+(`rhythm.line_stretches`): the line voice's stretches (`roles.stretches_of`,
+blips folded, consecutive stretches on one sample run together), each
+as its sample's pack id, the range the line plays it over there
+(`part_register`'s ambitus grain) and its bars from the song's first bar
+as the pan word counts them, the last stretch open
+(`s77ca10e2568@52-64x6>sf89f5aedfd@60-80`); "" for a line on one
+instrument, and a line under sixteen notes. The eighth field's sample
+stays the line's default. The plan parses it (`Plan.stretches`,
+`line_stretch_list`, `stretch_bars`); `render.samples_for` registers each
+stretch's sample where the pack holds it (`samples["part:stretch:i"]`)
+and its bound (`bound_of` of the stretch's range within the part's
+register), writes the line over the union of the stretches' ranges
+(`plan.bounds`; a tune without the field keeps round 43's ambitus
+wall), and `plan.fold_line` moves the written line into each stretch's
+bound right after each line writer (the bass, the upper parts, the tune
+and the counter), bar by bar by one octave count each, the count that
+puts most of the bar's notes inside (a tie keeps the bar before's
+count), then the leftovers one by one with the house fold
+(`writer.in_register`); `render.sample_of` plays the line's note on its
+stretch's sample (`plan.stretch_at` by bar). Voices beside a line keep
+the token's one sample; a voice's own stretches of another part (round
+89's second voices) stay unwritten. Two cuts on the fold on the way: one
+octave count a stretch had left Setzer's tune 62 notes to single folds
+(its stretches 56-64, 68-80 and 60-72 under a line written over 56-80),
+a count a bar leaves it six; a note that could not be folded into a
+bound narrower than an octave is no longer counted. No re-read: the
+readings are unchanged, pack4 refit, the vocabulary shipped. Test: the
+field, its parse, samples_for's stretch samples and bounds and the
+union, fold_line, stretch_at, sample_of by stretch. Suite 425 OK.
+
+**Measured** (measure_r91.py): 37 of 68 tokens carry the field (melody
+22, counter 17, accompaniment 11, bass 6, arp 1; 38 lines with two
+stretches, 6 with three, 13 with four or more). Written, seeds 1-120:
+71 songs have a part written by stretch; in 89 of 102 parts whose
+stretches name two pack samples the rendered line changes instrument
+between them. Every one of 400 seeds keeps its token song and its draws
+(178 plan logs identical, 198 note sets): the pairs below are the same
+seed, the same token and the same plan, the line's instrument and
+register the difference, and the parts written after it. Kefka's seed
+255: the tune on s77ca10e256 an octave down for six bars, then the reed;
+the counter's first ten bars on s5d5fe2fd48; the bass's last nine on its
+second sample. Umaro's seed 254, the hardest fold: the tune moved up two
+octaves into 76-92 and 80-88 around a middle stretch left low in 48-64,
+18 notes folded singly.
+
+**Song Check 74**: six pairs. Step 1, the two from Song Check
+73: seed 255 The Sleeping Observatory (Kefka) and seed 78 The Still
+Wharf (Overture (part 3): the tune on three instruments, the chord
+parts changing at the close). Step 2, a tune that changes colour and
+register: seed 157 Last Vault (Cyan: twelve bars high on s1bb6264698,
+then the reed over 52-84) and seed 41 Arcade of Rain (Setzer: three
+stretches). Step 3: seed 150 The Terminal of Glass (Battle Theme: 26
+bars on one instrument, then another an octave up) and seed 254 First
+Meridian Return (Umaro). Before is round 90 (the dev checkout's own code
+and vocabulary), after round 91.
+
+**Open.** The line is written over the union of its stretches' ranges
+and moved into each afterwards, so a phrase across a stretch line may
+break where the registers differ; writing each stretch in its own
+register (a register a bar for the writers) is the fuller word. A
+stretch in another part's register (Ending Theme's tune plays bass for
+fifteen bars on b34cb55c14) is written there, which is what that channel
+does. Voices beside a line keep one instrument (32 of 129 change). A
+channel shared by two parts in turn (round 89's second voices) still
+waits for a time-shared chip voice. The echo a sample sends is the
+part's, not the stretch's.
+
+### Round 92: a register a bar, and a voice beside a line's instrument by stretch (2026-11-07, the first of the open items in the order set)
+
+**Why.** Round 91 wrote a line that changes instrument over the union of
+its stretches' ranges and moved it into each stretch afterwards, bar by
+bar by octaves, which could break a phrase at a stretch line (Setzer's
+tune under 56-80 with stretches of 56-64, 68-80 and 60-72; Umaro's two
+octaves up and back); the fuller word, written as round 91's open item,
+was a register a bar inside the writers. Round 91 also left the voices
+beside a line on one instrument (32 of FFVI's 129 change sample). The
+order for the open items (2026-11-07): this first, then off-scale
+and clash as counted words, the doubling voice's intervals, time-shared
+channels (with a count first), a batch of small words, a kit round.
+
+**Built.** Each line writer takes a register a bar: `writer.melody`
+(`bounds_at`: bar -> bound) draws every move, recalled cell and ending in
+the bar's register (`reg_of`), the line entering a new stretch's register
+by octaves from its last note (the arc's phrase ceilings stand for a song
+without stretches); `writer.counter` (`spans_at`) keeps each bar's notes
+in that bar's span; `writer.bass` (`bounds_at`) places each bar's figure
+in that bar's floor and ceiling; `writer.upper` (`bounds_at`) stacks and
+folds the line voice in the bar's register. `plan.line_bounds_at` hands
+each writer the stretch bounds `samples_for` set in round 91;
+`plan.fold_line` stays as the safety net for what the form's repeats copy
+across a stretch line. And a voice beside a line's instrument by stretch:
+`rhythm.stretch_word` (the stretch builder shared with the line's
+eleventh field) writes it as the layer entry's sixth sub-field with "~"
+between a sample and its range (`s605f200105~56-72x14>sf89f5aedfd~60-68`;
+"@" and ":" are the token's own separators), the plan parses it
+(`Plan.layer_stretches`), `samples_for` registers each stretch's sample
+(`samples["part:v:stretch:i"]`, `extras[part]["voice_stretch_spans"]`),
+`plan.stretch_at` takes the voice, and `render.sample_of` plays the
+voice's note on its stretch's sample; the voice's register stays its
+relation's (a doubling voice the line's at the interval, an apart voice
+its span). No re-read; pack4 refit (the layer entries changed), the
+vocabulary shipped. Tests: a line written under stretch bounds sits
+inside them with nothing left to fold; the sixth sub-field built, parsed,
+registered and played. Suite green.
+
+**Measured** (measure_r92.py, seeds 1-120): 36 of 37 written tunes
+sit wholly inside their stretch bounds after writing (one note of 4854
+outside), the counter's, bass's and chord lines' far fewer (5 of 31, 3 of
+15, 1 of 24): their stretch bounds are often narrower than an octave
+(bound_of's floor is two register bins, 8 semitones) and cannot hold
+every pitch class, so the writers leave such notes where the nearest
+octave puts them, as those parts' own narrow registers always had; the
+fold still moved 46 melody notes over 120 songs, all copies the form's repeats and the theme band made after the writers, and 85, 228 and 390 notes of counters, basses and chord lines that an under-octave stretch bound cannot hold; 32 voices beside a line in 22 FFVI songs carry their
+instrument by stretch, and in the written songs 42 of 48 such voices with two
+pack samples change instrument in the rendered score. Every one of 400
+seeds keeps its token song and its draws, so the pairs are the same seed,
+token and plan before and after; the lines differ where they are now
+written in their stretches' registers.
+
+**Song Check 75**: six pairs, the same six seeds as Song Check 74 so each after can be set against its after there: seed 255 The Sleeping Observatory (Kefka: the tune, the counter and the bass written in their stretches' registers, the counter's layer voice on s77ca10e256 for six bars then sb34cb55c14), seed 78 The Still Wharf (Overture part 3), seed 157 Last Vault (Cyan: the tune twelve bars high then low, the second chord voice sf89f5aedfd then sb498c05828), seed 41 Arcade of Rain (Setzer), seed 150 The Terminal of Glass (Battle Theme), seed 254 First Meridian Return (Umaro: the climbs composed, not folded). Before is round 91 (the dev
+checkout's own code and vocabulary), after round 92.
+
+**Open.** A voice beside a line keeps its relation's register across its
+stretches where the game's voice may move with its instrument. The
+arc's phrase ceilings (climax, arc, summit) are set aside for a line with
+stretches: the token song's own registers stand in for them there. The
+form's repeats copy a phrase as written and the fold moves it after. The
+echo a sample sends is still the part's.
+
+### Round 93: off the scale and clashes as counted words (2026-11-07, the second of the open items in the order set)
+
+**Why.** The second audit's rule 5: the tune's two hard filters,
+`STRONG_SCALE` (no off-scale note on a beat; it removed a move in 52 % of
+the tune's draws) and `CLASH` (no move onto a semitone against a sounding
+chord part; 83 %). Counted first (count_r93.py, count_r93b.py; FFVI's 68
+readings against 60 written songs). FFVI's tune, its line: off the
+natural scale on 0.09 of its strong-beat notes in major and 0.18 in
+minor, 0.10 and 0.24 off the beat; the counter's line 0.14 and 0.22, the
+bass 0.20 and 0.15, the accompaniment 0.07 and 0.13, the arp 0.13 and
+0.42 (harmonic-minor arpeggios). The written minor tune sat at 0.07 on
+the beat under the ban and 0.25 off it; the written major at 0.11 and
+0.29 (FFVI 0.09 and 0.10). A minor tune's off-scale notes spread over the
+flat second, the raised seventh and sixth, the raised fourth and the
+major third in near-equal shares in the game and in the written songs
+alike, so no degree word is needed: the moves table carries it. Clashes:
+FFVI's tune starts a semitone from a sounding part on 0.11 of its strong
+onsets under one and 0.13 of its weak ones (every other part together; a
+song's share from none to 0.38 on the beat, Mt. Koltz 0.33 on 116 onsets,
+Searching for Friends, Dark World: the tail is real, not small songs' noise),
+by pair 0.04 to 0.08; the written tune under the ban at 0.09 to 0.15 by
+pair, and every written pair at about twice FFVI's rate (the
+accompaniment against the counter 0.12 against 0.04, the bass against the
+counter 0.14 against 0.07): the excess is not the tune's drawn moves but
+the recalled cells, re-rooted on the chord with no eye on the band, and
+the parts written in turn without a clash word of their own. The counter
+is far more diatonic than FFVI's (0.03 to 0.06 off the scale against
+0.11 to 0.25): its notes come from the voice words as scale steps from
+the tune's note.
+
+**Built.** Two counted words. `off_scale` (`rhythm.off_scale_units`): a
+part's share of notes off the song's natural scale, by part, mode and
+beat, to a twentieth, for the melody's and the counter's lines, the bass,
+the chord parts and the arp (sixteen notes and more; 440 FFVI units).
+`clashes` (`rhythm.clash_units`): a line's share of onsets under another
+part's sounding note that sit a semitone from it, by beat, to a fiftieth,
+for the melody's line and the counter's, every other pitched part
+together (208 units). The plan draws both once a song for the melody and
+once for the counter, one share a beat class, on their own streams
+(`whole:{seed}:off_scale:{role}:{place}`, `...:clashes:...`), so every
+other draw stands and every seed keeps its plan (400 of 400 tokens and
+draws unchanged against round 92). The melody writer
+(`writer.melody(off_scale=, clash_rates=)`) keeps running shares by the
+beat, as it does for the chord-tone rate, and holds them in three
+places. In `draw_move`, without the words the bans stand; with them an
+off-scale move takes the drawn share of the fitting moves' mass while the
+line is under the share and none while over, on and off the beat, a
+clashing move the same under the clashes share, and the shares are
+fitted together with the chord-tone rate by iterative proportional
+fitting (`hold_shares`): fitted before it, in the first cut, the chord
+weighting had thinned the off-scale moves again and a tune drawn at 0.30
+off the scale on the beat reached 0.10. In `again` and the half-bar
+recall, a cell that comes back is moved within a third, after the chord's
+snap, to the place that adds least to a share the line is already over
+(the first cut had left the recalls alone, and a tune drawn at none off
+the scale sat at 0.21 from its returns). And the bass is among the
+sounding parts the tune is written against (the ban had looked at the
+chord parts alone). The running shares ride the phrase snapshot the copy
+check restores, and the log says what the line held ("off the scale:
+strong 17/60 (0.28; the song's rate 0.30) ..."). The counter draws its
+own shares (the first cut had handed it the melody's). No re-read; pack4
+refit (101 tables), the vocabulary shipped, the map regenerated. Tests:
+the units on a synthetic song, the two lines' draws on their own streams
+(every other draw unchanged), draw_move with and without the words, over
+the share, and together with the chord share; the bans intact without the
+words.
+
+**Measured** (sixty seeds against FFVI, the line). Off the scale on the
+beat: the minor tune 0.15 (FFVI 0.18; 0.07 before), the major 0.11 (0.09;
+0.11); off the beat the minor 0.21 (0.24; 0.25), the major 0.17 (0.10;
+0.29: nine major songs' shares drawn by the song, their mean 0.18). The
+whole melody part, its voices beside the line included, sits lower (0.11
+on the beat in minor) because a parallel voice is written in the scale
+where FFVI's doublings leave it: a LIMITS entry. The counter's line stays
+at 0.06 to 0.08: a counter by the voice words holds no draw. Clashes: the
+tune's line against the parts it is written over at the drawn share
+(0.10 of strong onsets over twenty-four seeds' logs; the song's rate
+tracked within a few hundredths where the tune has draws to make, a
+recall-heavy tune under it); against every other part together 0.17 and
+0.20 (FFVI 0.11 and 0.13), the parts written after the tune holding no
+clash word; the pairs between parts written apart unchanged at about twice
+FFVI's rates (the tune against the accompaniment 0.10 and 0.13 against
+0.06 and 0.08, the counter against the accompaniment 0.13 against 0.05).
+Suite 427 (1 skip); the vocabulary checks pass.
+
+**Song Check 76**: six pairs, the same six seeds as Song Checks 74
+and 75 (255, 78, 157, 41, 150, 254), the same plan both sides; the tune's
+pitches differ where the words let an off-scale or clashing move through
+or move a returning cell, and the parts written after it follow. Before
+is round 92 (the frozen checkout of its branch and the vocabulary before
+this round), after round 93. The songs are heard once they settle; the
+gate is the count above.
+
+**Open.** Round 94: the clashes word for every part pair, held by the
+bass, the chord parts, the arp and the voice-word counter as they are
+written in turn, and the voices beside a line. The counter's own
+off-scale share wants a semitone form of the interval word against a
+tune note on the scale; a voice beside the tune wants an exact-interval
+form of the relation word. The arp's harmonic-minor arpeggios (the raised
+seventh 0.80 of its off-scale notes) come from the chord reader's shapes,
+not from a word here.
+
+### Round 94: the clashes word by the write order (2026-11-07, the second half of the open items' second entry)
+
+**Why.** Round 93 left the pairs between parts written apart at about
+twice FFVI's clash rates, the counter worst of all: the tune held a drawn
+share against the parts under it, and no other writer held anything.
+Counted first (count_r94.py): the parts are written in a fixed order
+(the bass, then the harmony, the accompaniment and the arp, then the
+tune, then the counter), so each part's clashes can be counted against
+the parts before it, the ones its writer sees. FFVI, by that measure: the
+accompaniment a semitone from the bass or the harmony on 0.04 of its
+strong onsets under one and 0.04 of its weak ones (52 songs, a song's
+share from none to 0.26), the tune 0.08 and 0.11 against the bass and the
+chord parts (62 songs, to 0.38), the counter 0.11 and 0.20 against all of
+them (51 songs, to 0.62), the harmony 0.04 on twelve songs, the arp 0.32
+on three. The written songs (sixty seeds, round 93): the accompaniment
+0.10 and 0.10, the tune 0.12 and 0.16, the counter 0.23 and 0.24.
+
+**Built.** The `clashes` word redefined (`rhythm.clash_units`, with
+`rhythm.CLASH_ORDER` and `clash_under`): every pitched part but the bass,
+by the beat, against the parts written before it; the melody and the
+counter as their lines, the chord parts every note (322 FFVI units,
+shape (part, place) as before). The plan draws the chord parts' shares
+too, once a song each on their own streams
+(`whole:{seed}:clashes:{role}:{place}`), so every other draw stands and
+every seed keeps its plan (400 of 400 tokens and draws unchanged against
+round 93). Three writers hold it. The melody writer as in round 93 (its
+sounding set, the bass and the chord parts, is now what its word counts).
+The counter writer (`writer.counter(clash_rates=)`, the voice words'
+path): an interval drawn a semitone from a part under the line while the
+line is over its share for the beat is drawn again, up to VOICE_TRIES
+times, the last kept, with the tune and alone alike; its log says what it
+held. The upper writer (`writer.upper(clash_rates=)`, the line, the
+voices beside it and the arp): a voicing tone a semitone from a part
+under it, while the part is over its share, gives way to the nearest tone
+of the voicing clear of them, where one is. And a voice that doubles a
+line at a unison or octaves (`plan.diatonic`, the relation words'
+realization) copies it exactly: put back on the scale, a double had sat a
+semitone from the tune's altered notes once round 93 let the tune off the
+scale (First Meridian Return's counter voice, two octaves under Umaro's
+chromatic tune, on 22 of 55 strong onsets). No re-read; pack4 refit (101
+tables), the vocabulary shipped, the map regenerated. Tests: the units by
+the order on a synthetic song, the counter writer and the upper writer
+with and without the word and over the share, the chord parts' draws, the
+exact double.
+
+**Measured** (sixty seeds against FFVI, by the order). The counter: 0.23
+of its strong onsets a semitone from a part under it before, 0.15 after
+(FFVI 0.11); 0.24 and 0.13 off the beat (0.20). Its pairs halved: against
+the tune 0.09 to 0.06 (FFVI 0.05), against the bass 0.11 to 0.07 (0.05),
+against the accompaniment 0.13 to 0.09 (0.05). The accompaniment 0.10 to
+0.08 against the bass and the harmony (0.04). The tune 0.12 to 0.13
+(0.08): its draws hold the drawn share, its returning cells and endings
+sit under no hold, and the voices written after the lines add to what it
+is counted against. By voice (diag_r94.py): a counter's line at its drawn
+share within a few hundredths; a voice beside a line, written as its own
+in a band of four or five sounding parts, at twice it (VOICE_TRIES draws
+find no clear tone); a parallel third of the tune on 0.40 of its beats
+against the band where the tune sits on 0.12 (no word of its own). The
+arp's word rests on three FFVI songs and holds little. Suite 428 (1
+skip); the vocabulary checks pass.
+
+**Song Check 77**: the same six seeds as Song Checks 74 to 76,
+before round 93 (its branch frozen with the vocabulary before this
+round), after round 94. Arcade of Rain's counter drew none (14 of 38
+strong onsets clashed before, 3 of 40 after); First Meridian Return's
+double copies the tune (23 of 55 before, 6 after), and its counter holds
+its drawn 0.10. The songs are heard once they settle.
+
+**Open.** The voices beside the lines: a word for how FFVI's parallels
+bend where a third would land on a semitone, and a hold for an apart
+voice that looks past VOICE_TRIES draws. The tune's own floor: its
+returning cells re-rooted with an eye on the band, its endings. The
+counter's own off-scale share (a semitone form of the interval word), the
+arp's thin word. Then the open items' third entry, the doubling voice's
+intervals.
+
+### Round 95: a voice beside a line written where the game plays its sample, and a line's note lengths its song's own (2026-11-07)
+
+**Why.** By ear: First Meridian Return's (seed 254, Umaro's token)
+accompaniment is "a single beeping noise that ruins the song", and that
+keeps the stacked rounds from merging. Measured (acc254.py, umaro_acc.py,
+layers_range.py): three things. The accompaniment's second voice carries
+the relation word `ox12>pm+24`, read from Umaro, where that voice parallels
+the tune two octaves up in bars 13 to 17 while the tune is low (bars 18 and
+19 are the voice's own chromatic run on the same sample, read into the
+stretch); the written tune is high from bar 18, and the voice was written
+at the word's semitones wherever the tune sat: midi 104 to 112, where the
+game plays that sample at 72 to 88. Over sixty seeds 45 % of relation-voice
+notes (3,191 of 7,067) sat outside their sample's played range: round 92
+had left "their registers what their relation gives them". Second, the
+line's note lengths came from the pooled `gap_sounds` draw for a layered
+part's line (1.0, held to the next onset) where Umaro's line pecks 0.2-beat
+ticks, 0.4 of its gap; and the balance token's own sounded field said 0.8
+because it was measured on the part's merged voices, the gap to the other
+voice's note under each note's length. Third, Umaro's accompaniment is
+itself a one- or two-note staccato ostinato (D5 D5 G5; G5 with chromatic
+neighbors and a falling fill) whose neighbor tones the chord reader drops.
+
+**Built.** (A) `plan.fold_voice` and `voice_bound_at`: a voice written by
+its relation word is folded by octaves into where the token song plays
+its sample in each stretch (the layer entry's stretch ranges, else the
+token's range for the voice's sample, else the voice's span), bar by bar
+as `fold_line` folds a line (a whole bar first, then the leftovers), after
+`stretched_notes` in the post-pass; the word's semitones give the interval
+class and the sample's range the octave. (B) The balance token's sounded
+field is the line voice's share (`cells.tune_line`), and for the chord
+parts and the bass it carries the line's share by gap class
+(`cells.gap_shares`, the median per class to a tenth, `-` under two notes:
+`0.4@0.8/0.4/0.2/-/-`); the plan parses it (`Plan.token_gap_shares`) and
+keeps the song's own for the part's only and line voices over the
+`gap_sounds` draws, in `_plan_once` and after the speed's redraw, the draws
+still made so every other draw stands; the second voices keep the pooled
+word. (C) The gap classes split under a beat (`cells.GAP_CLASSES`: under
+half a beat, half to one): FFVI's accompaniment sounds 0.76 of a gap under
+half a beat, a run, and 0.63 of one at half to one, a peck; the arp 0.67
+and 0.40; the bass 0.83 and 0.72. No re-read; pack4 refit (101 tables), the
+vocabulary shipped. The token text changed for every pitched part, so 24
+of 263 part entries move their sounded share (all in layered parts) and
+48 of 400 seeds draw another token song (the table's outcomes sort by
+text); the six Song Check seeds keep theirs. Tests: the field on a
+two-voice part, the plan keeping the song's own over the draws, the fold
+on a voice two octaves over its range; the round-90 test says where its
+voice's sample is played.
+
+**Measured** (sixty seeds). Relation-voice notes outside the range they
+are folded into: 45 % before (against their sample's range), 10 % after
+(730 of 7,625; the leftovers where a sample's range is narrower than the
+line, the arp's parallels on four-semitone ranges worst). The written line
+notes' sounded shares against FFVI's only and line voices, by class: the
+accompaniment 0.81 against 0.76 under half a beat, 0.67 against 0.62 at
+half to one, 0.78 against 0.72 at one to two (before the round 0.77
+against 0.69 under a beat); the bass within 0.02 under two beats; the arp
+0.80 against 0.66 and 0.36 against 0.40. First Meridian Return: the
+accompaniment's second voice at midi 69 to 88 (before 83 to 112), the
+line's notes 0.2 beats at half-beat gaps (before 0.5, held to the next),
+the bass unchanged; the counter's double of the tune two octaves down at
+45 to 64 (before 36 to 69). Suite 429 (1 skip); the vocabulary checks pass.
+
+**Song Check 78**: the same six seeds, before round 94 (its
+branch frozen with the vocabulary before this round), after round 95.
+First Meridian Return is the case asked for: the beep two
+octaves above the song is gone, the line pecks as Umaro's does, and what
+is left of the single note is Umaro's own ostinato without its neighbor
+tones.
+
+**Open.** A figure word for the chord parts (the tone's neighbors and
+fills) would give Umaro's accompaniment its decoration back; the reader's
+relation runs could break where the relation changes inside a sample run;
+the narrow-range leftovers. Then the open items' third entry.
+
+### Round 96: a chord part's line leaves the chord as the game's does, the counter's chord tones, a mark's nearest tone, a stretch's own edge (2026-11-07, after the open-items discussion)
+
+**Why.** The standing complaint, First Meridian Return's
+accompaniment (seed 254, Umaro's token), had one cause left after round
+95: Umaro's accompaniment decorates its pecked chord tone with neighbors
+and fills, and the written line held the voicing's tones alone. Measured
+first (nonchord.py, nonchord_line.py, offchord60b.py, nct_kinds.py: FFVI's
+68 readings against 60 written songs, the exact chord spans): FFVI's
+accompaniment line plays a note off the chord sounding on a quarter of
+its notes (the songs' median 0.25, quartiles 0.12 to 0.38; pooled 0.27),
+in 768 of its 1,447 bars; the written line on 0.07. Not neighbors,
+mostly: of FFVI's off-chord accompaniment notes a leap to the tone is
+0.39, a repeat of the note before 0.22 (ostinato tones through a chord
+change), a step in or out 0.38 (passing 0.06, a returning neighbor 0.05);
+0.81 diatonic; the degrees over the root the ninth 0.17, the fourth
+0.12, the sixth 0.11, the flat sixth 0.11, the flat seventh 0.09. By
+song the share spreads from none to 0.72 (10 songs under a tenth, 29 to
+0.3, 19 over), and an off-chord onset keeps the previous one's degree
+within the bar 0.52 of the time. The harmony line sits at 0.14 (FFVI)
+against 0.13 (written), the arp at 0.14 (three songs; the minor key's
+raised seventh 0.74 of them). Two more gaps fell out of the same
+measure. The written counter's line left the chord on 0.65 of its notes
+against FFVI's 0.44 (on the beat 0.63 against 0.40): its notes are the
+voice words' intervals from the tune with no chord word, where the tune
+holds its `chord_tones` draw. And the written bass on 0.26 against 0.15:
+by mark, its 7 marks played a note off the chord 81 % of the time, its 3
+marks 41 %, its s marks 91 %, because `writer.tone` realized a mark the
+chord lacked as the tone meant (a 7 over a triad, an s over a plain
+triad: a figure counted over another chord, or a voicing recalled onto
+this one), where the chord reader marks a 7 only where the chord has
+one. The upper parts' voicings share `tone`, so the written
+accompaniment's 0.07 was those marks too. Last, round 95 had left the
+reader's relation runs a sample run long: Umaro's voice doubles the tune
+two octaves up for five bars and then plays a run of its own on the same
+sample, and the whole run read as the double (relsplit.py: 9 of FFVI's
+166 double or parallel stretches end or begin with two or more bars that
+follow nothing, 138 notes).
+
+**Built.** Three counted words and a wall. `tone_figures`
+(`rhythm.tone_figure_units`): each bar of a chord part's line as its
+onsets' tone classes against the chord sounding at each, `c` a tone of
+the chord and `x` a tone off it (`c c c x`), by the part, the song's
+tier, the onset count and the line's own pattern (1,782 FFVI units).
+`tone_tiers` (`tone_tier_units`): how much of the line leaves the chord
+over the song, rare under a tenth of its onsets, some under 0.3, many
+(`TONE_TIERS`; 71 units), drawn once a song a part on an own stream
+(`whole:{seed}:tone_tier:{part}`), the tier the figures are drawn
+under. `tone_degrees` (`tone_degree_units`): the degree an off-chord onset
+plays as semitones over the chord's root, by the part, the chord's shape
+(which decides which degrees are off it) and the bar's previous
+off-chord degree, START at the first (2,901 units). The upper writer
+(`writer.upper`, `tone_figure_for`, `tone_degree_for`, `off_tone`) draws
+the figure under the line's bar as a second voice's mask is drawn (never
+below the part, the tier and the onset count; read around the onsets
+where the drawn count differs) and, at each `x` onset of the line voice,
+the degree chained on the bar's previous, and plays the note at that
+degree nearest the voicing tone it replaces; the voices beside the line
+see the note played; all on an own stream (`{seed}:{part}:tones`), so
+every other draw stands. Two cuts: the first drew the figure from the
+pooled bars and one degree a bar, and every written song sat at the
+pooled 0.28 (FFVI's spread from none to 0.72) with 'repeat' 0.42 of its
+off-chord notes (FFVI 0.22); the tier and the chain are the second. The
+clashes word stands over a tone the figure asks for (`held`: a part over
+its share for the beat gives the tone to the voicing). The `chord_tones`
+word is counted for the counter-line too (`chord_tone_habit_units`,
+`CHORD_TONE_PARTS`; FFVI's counters 0.6 of their strong beats on the
+chord at the median, as its tunes), drawn for it on an own stream
+(`whole:{seed}:chord_tones:counter`, the melody's draw as it was) and
+held by `writer.counter` through `beside_pitch`: on a beat, while the
+line is not over the share, the interval entries, and the moves it takes
+alone, landing on the chord take the share of the draw's mass
+(`hold_shares`), as the tune's draw_move holds a table that knows nothing
+of the landing. `writer.tone` plays a mark the chord lacks as the chord's
+own tone nearest the one meant, the lower at a tie (a 7 over a triad the
+root, a 3 over a bare fifth the fifth, an s over a plain triad the
+third). And `rhythm.relation_words` splits a double or parallel stretch's
+edge bars that follow nothing bar by bar, two bars and eight notes or
+more, into a stretch of their own (`_split_own_edges`,
+`RELATION_EDGE_BARS`): Umaro's voice reads `ox12>pm+24x5>o`; 7 of FFVI's
+128 relation words changed (Umaro, Kefka, Mog, Returners, Another World
+of Beasts, Ending Theme part 1, The Wedding Waltz-Duel part 1). No
+re-read; pack4 refit (104 tables; `pack.json.before-r96`), the vocabulary
+shipped, the map regenerated. Tests (four): the units and the writer on a
+synthetic song (the figure, the tier, the chained degree, the voices
+beside the line, the log, the words absent), the nearest tone (and a
+triad voicing's 7 stacked as the root an octave up), the counter's hold
+(a table of halves held to everything) and the plan's own draw, the edge
+split (and a whole stretch, and a one-bar edge, left whole). Suite 433
+(1 skip).
+
+**Measured** (sixty seeds against FFVI, the line voice, the exact chord
+spans). The accompaniment line's off-chord share 0.07 to a median 0.35
+(FFVI 0.25; the figure's own onsets 0.25 of the line's, the rest the
+theme the part carries: Restless Causeway Journey's accompaniment plays
+the tune's cells for 186 of its 214 notes), by tier 0.44, 0.33 and 0.07
+over 22, 25 and 8 songs against FFVI's 0.45, 0.23 and 0.04 over 19, 29
+and 10; its off-chord notes' kinds a leap 0.36 (FFVI 0.39), a repeat 0.18
+(0.22), a step out 0.18 (0.17), a step in 0.14 (0.10), a neighbor 0.09
+(0.05), passing 0.04 (0.06); bars with any 832 of 1,453 (FFVI 768 of
+1,447). The harmony 0.13 (0.14), the arp 0.03 (0.14: its sevenths, a
+semitone from the root, given to the voicing by its clashes share, 27 of
+76 onsets). The counter's strong-beat chord tones 0.37 to 0.51 (FFVI
+0.6), its line off the chord on 0.54 (0.44); the hold is a floor, so a
+low draw is met part way (The Sleeping Observatory at a draw of 0.10
+plays 0.44). The bass's 7 marks off the chord 187 of 232 to 6 of 235,
+its 3 marks 134 of 324 to 31, its s marks 68 of 75 to 3; its line 0.26 to
+0.24 (on the beat 0.21 to 0.18), its marks at FFVI's shares (the passing
+mark 0.19 of tokens against 0.17, the root 0.56 against 0.57), its
+off-chord share pooled 0.18 against 0.16, by song a median 0.24 against
+0.15: FFVI's basses are mostly near pure with a few walking ones, the
+written ones all near the pooled rate (a LIMITS entry; a tier as the
+chord parts' is the fuller word). The melody unchanged (0.50 on the
+beat). Plans: 400 of 400 seeds keep their token song and every draw but
+the new words' own (compare89: the plan logs differ in the new fields
+alone). Vocabulary checks pass.
+
+**Song Check 79**: six pairs, the same six seeds as Song Checks
+74 to 78 (255, 78, 157, 41, 150, 254), the same plan both sides; before
+is round 95 (the dev checkout at 078f18a and the vocabulary before this
+round), after round 96. The accompaniment lines leave the chord by their
+tiers: The Sleeping Observatory rare (one onset; its voicings' sevenths
+over triads gone, 0.28 to 0.09), The Still Wharf, Last Vault and Arcade
+of Rain many (0.16 to 0.40, 0.12 to 0.46, 0.01 to 0.29), The Terminal of
+Glass and First Meridian Return some (0.01 to 0.20, 0.08 to 0.37); First
+Meridian Return's accompaniment voice follows the tune two octaves up for
+five bars and then plays its own run; the counters hold their draws
+(Arcade of Rain 0.86 at 0.9, The Still Wharf 0.42 at 0.5, First Meridian
+Return 0.56 at 0.7); The Still Wharf's bass comes down from 0.46 to 0.27
+off the chord with its marks. The songs are heard; the gate is the count
+above.
+
+**Open.** A neighbor's return and a passing tone's direction as a word
+(the chained degree gives steps only where it happens to sit a step from
+the chord tones around it); the arp's sevenths against its clashes
+share; the bass's per-song spread (a tier); the counter's chord tones
+off the beat; a relation changing in the middle of a sample run. Then the
+open items' third entry, the doubling voice's intervals by the chord.
+
+### Round 97: a parallel voice lands where the game's does (2026-11-07, the open items' third entry)
+
+**Why.** The second audit's rule 9, the doubling voice: FFVI's second
+voices that strike with their line sit two semitones or more off their
+modal interval on 45 % of shared onsets, and the writer's parallel voice
+was the line again at a fixed number of scale steps (`plan.diatonic`:
+round 94 had made a double at octaves exact, a third stayed in the
+scale), so it rode the key where the game's rides the chord. Measured
+first (par_ffvi.py, par_class.py: the relation words' parallel stretches
+over the voices that follow a part's line voice, each pair once from the
+follower; 60 stretches, 4,764 shared onsets in 37 songs): FFVI's parallel
+voice sits at its nominal semitones on 0.58 of its shared onsets and on a
+chord tone on 0.65, 0.82 where the line's note is on the chord (0.95 over
+the chord's third, 0.76 over the root, 0.79 over the fifth) and 0.40 where
+it is off it; the line again in the scale, as the writer had it, would
+match the game's note on 0.31 of those onsets and land on the chord on
+0.48. The semitones depend on the line note's tone class and the chord's
+quality: a third over the chord's third is its fifth (+3 over a major
+third, +4 over a minor one) or the root above (+8), a third over the
+fifth is the root above (+5, 0.47) or the seventh (+3). The written
+parallel voices over sixty seeds (5,205 onsets) sat on the chord on 0.33
+of their onsets, 0.42 over a line note on the chord, 0.22 off it.
+
+**Built.** One counted word. `parallel_intervals`
+(`rhythm.parallel_interval_units`): at each onset a parallel voice shares
+with the line it follows, where its note sits against the chord
+sounding, the chord tone it lands on (root, third, fifth, seventh, sus)
+or, off the chord, its semitones from the line's note (`+4`, `-8`), by
+the stretch's nominal interval in scale steps (`roles.generic` of the
+relation word's semitones), the tone class of the line's note against
+the chord, the voice's part and the landing before it in the stretch
+(START at the first); the voice followed is a part's line voice (a line
+that reads as parallel to its own harmony voice is no unit, and two lines
+parallel to each other count once, the one further from the lead
+following: `LEAD_ORDER`, the tune, the counter, the chord parts, the
+bass). The writer (`plan.parallel`, in `stretched_notes` for a relation
+word's parallel stretch and in place of `diatonic` for a layer word's
+doubling) draws the landing an onset on an own stream
+(`{seed}:{part}:voice {v}:stretch parallel`, `...:layer parallel`) and
+places a drawn chord tone as that tone of the written chord nearest the
+line's note at the nominal interval, so the voice rides the chord's
+quality; a chord part's voice with the part's clashes draw holds the
+share as the part's other voices do (an interval a semitone from a part
+written before the part while over the share is drawn again, VOICE_TRIES
+times, the last kept); a double at a unison or octaves stays exact, and a
+note no chord fits, or a pack without the word, takes the scale's
+interval as before. Two cuts: the first drew absolute semitones, which
+pooled major and minor chords (a voice over a line on the third landed on
+the chord 0.51 against FFVI's 0.95); the landing by name is the second.
+No re-read; pack4 refit (105 tables; `pack.json.before-r97`), the
+vocabulary shipped, the map regenerated. Tests: the units on a synthetic
+song (the landings, the chain, an off-chord semitone outcome), the writer
+over a major and a minor chord (E G C G, the chord's own fifth either
+way), the scale's interval without the word and at an octave, a stretch
+by the word, the clash hold. Suite 434 (1 skip).
+
+**Measured** (sixty seeds against FFVI, the parallel voices' shared
+onsets). On the chord 0.33 to 0.62 (FFVI 0.65); over a line note on the
+chord 0.42 to 0.77 (0.82), by the line's tone 0.78 over the root (0.76),
+0.92 over the third (0.95), 0.76 over the fifth (0.79); over a line note
+off the chord 0.22 to 0.41 (0.40). The written lines under these voices
+are on the chord on 0.58 of the onsets, as FFVI's (0.58). A chord part's
+parallel voice a semitone from a part under it: 0.08 of its onsets
+(0.11 before). Plans: 400 of 400 seeds keep their token song and every
+plan draw; 114 of 400 songs are note for note what they were (the
+songs with no parallel or doubling voice). Vocabulary checks pass.
+
+**Song Check 80**: as asked, five NEW seeds and the
+after side alone, no pairs: 14 Winding Gate Song (Overture part 3's
+token: the tune's second voice a third up for 32 bars, on the chord 0.45
+to 0.61), 39 The Wharf of Shadows (Edgar and Sabin: a third down
+throughout, 0.42 to 0.61), 43 The Quiet Wharf (The Wedding Waltz-Duel part
+1: the accompaniment's two voices a sixth under and over its line, 0.19
+and 0.56 to 0.66 and 0.91), 31 Eastern Sanctum (Ending Theme part 1:
+three parallel voices across the accompaniment, the counter and the
+melody, 0.14, 0.36 and 0.26 to 0.53, 0.71 and 0.62), 6 The Still Gorge
+(Returners: the counter's second voice in three parallel stretches). The
+six standing seeds resume with the next Song Check unless decided
+otherwise.
+
+**Open.** The word knows the line note's tone class, not which off-chord
+tone the line took, so over a line off the chord the voice is on it as
+often as FFVI's but not in the same places; a class for the line's
+off-chord tones would carry it. The relation word's nominal still comes
+from the token song, so the written voice's commonest semitones need not
+be the word's (its "at the nominal" share is a third against FFVI's 0.58
+by construction). The apart voices' holds (`VOICE_TRIES`), the tune's
+recall placement with an eye on the band, the bass's per-song spread,
+the counter's chord tones off the beat stand from rounds 94 to 96. Then
+the open items' fifth entry, the small words batch.
+
+### Round 98: the small words (2026-11-07, the open items' fifth entry)
+
+**Why.** The second audit's small standing items: the loop's bar, the
+tune's note lengths, the stack's width, and from rounds 90 to 92 the
+relation word's extent and the echo a stretch sends; the pan word's
+sweeps left at the median since round 85. Measured first (small_ffvi.py,
+small_written.py). The loop: `plan.loop_bar_of` sends every loop to the
+second part after an intro (a first part the form never comes back to)
+and to the first bar without one, right for 40 of FFVI's 61 loops; FFVI
+returns to the intro itself in 15 of its 53 intro songs, to the second
+part in 33, further on in 5, and to the first part in 7 of its 8 songs
+without an intro; every written loop took the rule's bar. The tune's note
+lengths: the writers sounded every held note 0.95 of its gap and every
+detached one 0.5 (`writer.HELD`, `DETACHED`), where FFVI's tunes hold 0.91
+and detach 0.40 at the median over songs, its counter-lines 0.92 and 0.41
+(the values word says which a note is; readings.SHORT at 0.75 splits
+them). The stack's width: a written part's line is one voice, so its
+spread per chord span comes from the voices beside it at the token's own
+offsets; over sixty seeds the accompaniment spans 10 semitones at the
+median against FFVI's 11, the arp 9 against 8, the harmony 8 against 5
+(ten FFVI songs): the token carries the first two, the harmony's is the
+gap, and the `widths` word (the upper parts' width as a whole) has no
+lever in a line written one voice at a time. The relation word's extent:
+FFVI's layer voices play in 0.90 of their line's bars at the median
+(quartiles 0.67 to 1.00), 19 of 129 in under half, where a written voice
+plays wherever its line does. The echo a stretch sends: 11 of FFVI's 89
+voices that change sample send one sample to the echo and keep another
+dry (Kefka's tune and counter, Gau's accompaniment), where the echo word
+names parts. The pan sweeps stand.
+
+**Built.** Two counted words. `loop_parts` (`rhythm.loop_part_units`):
+each sure song's loop as the index of the form's part it returns to, by
+whether the form opens with an intro; `plan.plan_loop` draws it once a
+song on an own stream (`whole:{seed}:loop part`) and takes that part's
+first bar, the rule's bar without the word or for a part the form lacks;
+the `loops` word's chord stands at the loop bar as before. `tune_sounds`
+(`rhythm.tune_sound_units`): each tune's and counter-line's held notes,
+and its detached ones, as the median share of its gap such a note sounds,
+by the part and the kind (`TUNE_KINDS`); drawn once a song for each line
+on its own streams (`whole:{seed}:tune_sounds:{part}:{kind}`), and the
+melody and counter writers sound a note by them (`writer.sounded_share`:
+the constants without the word). The three measured items are LIMITS
+entries (the echo by stretch, the layer voices' extent, the chord parts'
+spread); the pan sweeps are left. No re-read; pack4 refit (107 tables;
+`pack.json.before-r98`), the vocabulary shipped, the map regenerated.
+Tests: the loop units on a synthetic form (an intro, a return to it, no
+intro, no loop), `plan_loop` with the word, without it and for a part the
+form lacks; the tune units on a line of held and detached notes by turns,
+`sounded_share`, the counter writer at the song's share and at the
+constant, the plan's draws for both lines. Suite 436 (1 skip).
+
+**Measured** (sixty seeds). The loop went back to the intro in 19 intro
+songs and to the second part in 37 (FFVI 15 and 33 of 53), moving from
+the rule's bar in 23 of 60. The tune's held notes sound 0.9 of their
+gap at the median over songs and its detached ones 0.4 (FFVI 0.91 and
+0.40; 0.95 and 0.5 before), the counter's 0.9 and 0.4 (0.92 and 0.41).
+Plans: 400 of 400 seeds keep their token song; 229 of 400 songs are note
+for note what they were, the rest moved by the loop bar (the chord at the
+loop and the render's loop point) or by a note's length.
+
+**Song Check 81**: six pairs, the six standing seeds, the same
+plan both sides but the loop bar where the word moved it; before is
+round 97 (dev after #120 and the vocabulary before this round), after
+round 98. The songs are heard; the gate is the count above.
+
+**Open.** A rest kind in the relation word for a layer voice's extent; an
+echo mark per stretch; the harmony's spread; the pan sweeps. Then the open
+items' sixth entry, the kit round, or whatever the ear puts first.
+
+### Round 99: a kit slot's second sample (2026-11-07, the kit round, after the discussion)
+
+**Why.** The open items' sixth entry was the kit round, three leftovers
+from rounds 83 to 89: the tuning verdict, the play clause's pitch word and
+the kit-character count. Measured first (kit_facts.py, kit_facts2.py,
+kit_second_ffvi.py): the tuning verdict is closed by the count (the 9 kit
+samples struck at two rates or more across songs land on no one degree
+against the song's tonic; the main snare at rates 59 and 60 over 23
+songs sits on nine degrees: FFVI's percussion rates are sounds, and the
+round-88 wall is as far as the data allows), the pump pitch is one song
+(Wild West) and the character count is for the ear. What the counts did
+show was the one fixed cap left in the kit: round 80's pick of one sample
+a letter. FFVI strikes 19 letters in 15 of its 46 kits on a second sample
+with eight hits or more: the hat in 12 of the 16 kits that have one, a
+short closed hat beside a longer open one at the same level, the open one
+off the beat in most (0.50 of the eighth-note hits take it, 0.31 of the
+beats), the snare in 4 of 30 (the Battle Theme's sixteenth-note rattle,
+269 hits, beside its backbeat snare, 82; The Decisive Battle's two
+snares), a tom, a cymbal and an "other" once each; the second takes 0.35
+of the hat's hits at the median, 0.57 of the snare's; it shares the main's
+channel in 11 of the 19. The written kit played the slot's one sample on
+every hit, so a third of kit songs lost the open-hat lift, and a Battle
+Theme kit played its backbeat snare at the rattle's density (round 80's
+cost, recorded then).
+
+**Built.** One counted word and a token field. The kit token's slot
+carries the letter's second sample after a `+`
+(`readings.kit_second_samples`: the most struck of the letter's other
+samples with SECOND_HITS hits or more), with its level, its note or rate
+(tuned mark and all), its hold and its share of the letter's hits
+(`h=sd1c4c7ce33@0.14@r60@0.43@d@@0.50+s831784ce4b@0.14@r60@0.44@0.14`);
+the letter's figure (`readings.drum_figure`, the drum units and the
+limbs' units) and the slot's strike class (`readings.kit_classes`) count
+both samples' hits, since the written kit now gives both their hits
+(round 81 had counted the slot's alone, the kit playing one sample a
+letter; under eight hits the other sample is no second and round 81's
+figure stands). `kit_seconds`
+(`rhythm.kit_second_units`): each hit of such a letter as "second" or
+"main", by the letter and the hit's place in the beat (on the beat, an
+eighth, a sixteenth, a triplet, finer). The plan parses the field
+(`extras.drums.kit_seconds`); `samples_for` gives the second its own slot
+(`hihat2`, `plan.SECOND_SLOT`) and sample where the pack holds it; the
+writer (`plan.write`, `kit_second_pick`) draws each hit of the letter from
+the word on an own stream (`{seed}:drums:seconds`), none while the
+letter's hits are over the token's share, and plays the pick on the second
+slot; the render reads the second's own level, rate or note and hold
+(`slot_letter`, `kit_second`, the kit_piece helpers) and plays it on the
+main's channel with the main's pan and echo mark. The first cut never
+played a second: `compose` built the song's kit from the pack's drum
+slots before `samples_for` gave the second its slot, so the writer's guard
+(the slot in `song.pieces`) always failed, and the written measure caught
+it (0 of 2,000 hits on a second over 400 seeds); `compose` now adds the
+second slots to the song's kit once the samples are chosen. No re-read;
+pack4 refit (108 tables; `pack.json.before-r99`), the vocabulary shipped,
+the map regenerated. Tests: the reader (the second, the class and the
+figure over both samples, the token's field, the units by place, a second
+under eight hits), the plan's parse and the slot helpers for a second
+slot, the pick's hold to the share and its absence without the word, and a
+whole song that plays the second on its own slot (it fails on the first
+cut). Suite 438 (1 skip).
+
+**Measured** (four hundred seeds). 81 of the 270 written kits carry
+a second sample (68 hats, 21 snares, 7 others, 5 toms, 5 cymbals); the
+second takes 0.32 of its letter's hits at the median against the tokens'
+0.49, a mean gap of 0.09: the token's share is a ceiling the word fills,
+so a hat struck mostly on beats and sixteenths gets less of its open hat
+than the token's share (Inner Dust's 0.30 against 0.49), as the word says.
+By place the written hats put the second on 0.40 of their eighths, 0.17 of
+their beats and 0.25 of their sixteenths (FFVI's 0.50, 0.31 and 0.34), the
+written snares on 0.73 of their sixteenths, 0.61 of their eighths and 0.54
+of their beats (FFVI's 0.86, 0.64 and 0.59): the same order, a little
+under. Plans: the 15 kits' figures and habits changed, so the tables they
+share moved: 17 of 400 seeds draw another token song and 198 of
+400 songs are note for note what they were (the first cut, its second
+never played, had kept every token and 314 songs); the six standing seeds
+keep their token songs, two of them note for note.
+
+**Song Check 82**: as asked, five new seeds and the
+after side alone, five tokens with a second sample: Inner River Crossing (237, Battle Theme's token: the rattle on 0.69 of the snare hits against the token's 0.77, the open hat on 0.14 of the hat's), Restless River (73, The Decisive Battle's: 0.55 against 0.52, the open hat 0.30 against 0.32), Inner Dust (71, Techno de Chocobo's: the open hat on 0.30 against 0.49), Wandering Silk (106, Blackjack's: 0.15 against 0.15) and Ramparts of Salt (44, Searching for Friends': a hat-only kit, the open hat on 0.29 against 0.29).
+
+**Open.** The second plays on the main's channel with the main's pan and
+echo mark (8 of FFVI's 19 seconds sit on another channel, the Battle
+Theme's two snares among them); a third sample (Techno de Chocobo's third
+hat, Devil's Lab's third snare) is not carried; the pump pitch, the tom
+lines and the shared-channel collisions stand as limits.
+
+### Round 100: a recalled tune cell lands where the game's does (2026-11-08, the lines' clash floor, my pick on the go-ahead "proceed")
+
+**Why.** The tune's remaining harshness. Round 94 had left the melody's
+line at 0.13 of its strong onsets a semitone from the parts under it
+(FFVI 0.08) with a floor "from its returning cells and endings". Measured
+by the bar's origin over sixty seeds (tune_clash_origin.py): the freshly
+drawn bars sit at 0.081, FFVI's 0.080; the recalled cells at 0.15 to 0.25
+(a bar heard before 0.147, the bar before's cell again 0.167, a two-bar
+pair again 0.247, a theme return 0.114, a form repeat 0.116) against
+FFVI's 0.04 to 0.10 for the same kinds (ffvi_recall_clash.py: earlier
+0.099, same 0.043, copy 0.098); the phrase endings at 0.169 against 0.057.
+Two causes. The writer re-rooted every recall on the new chord (the
+cell's first note the same interval over the new root), so a passage
+recalled over a chord a fourth away came back a fourth away: at pitch in
+0.27 of the written recalls, where FFVI's come back at pitch in 0.70 of
+the earlier recalls and 0.53 of the immediate ones, within a third in
+0.88 and 0.95, and over another chord stay in 0.38, move with the root in
+0.27 and by a step in 0.12 (ffvi_recall_moves.py; 428 recalled bars in 62
+tunes). And the clash hold acted only once the tune was already over its
+share, so a song's first recalls clashed freely and the hold ran a bar
+behind: of 54 clashing recalled bars, 22 had a clean in-scale shift within
+a third untaken (written_recall_headroom.py). The recalls also sit over
+another chord than their source far more often than FFVI's (0.12 to 0.16
+of them over the same chord against FFVI's 0.39 to 0.53): the urn recalls
+from anywhere where FFVI's tunes recall where the harmony repeats, a
+structural difference left as it is.
+
+**Built.** One counted word and the holds' reach. `recall_moves`
+(`rhythm.recall_move_units`, shape part x recall x chord): each recalled
+bar of the tune in the form's own parts as how far it sits from its last
+occurrence, at pitch (`0`), with the chord root (`root`), or by semitones
+folded into the octave either side, by whether it is the bar before's
+cell (same) or one heard before that (earlier) and whether the chord
+under it is the one under its source. The tune writer anchors a recalled
+bar (`again`) or half bar (`new_cell_halves`) by the word's draw
+(`recall_anchor`, an own stream `{seed}:{role}:recall moves`) instead of
+re-rooting it, then moves the whole cell within a third where the tune
+wants its beats on the chord or the cell would put a share over its word,
+the chord-tone, off-scale and clash holds weighed together (the chord had
+come first, and a clean shift was passed over for one more chord tone); a
+cell keeps the chord it was realized on (`Cell.chord`). Second cut: a hold
+counts a note where the share with it in would pass the song's word
+(`would_pass`, the share as a budget), not only once over; the first cut,
+with the lagging hold, had moved the recalls' placement toward FFVI's
+(at pitch 0.40) without moving their clashes (0.142). The phrase ending's
+note takes the degree's option that adds least to a share the tune is
+over (`ending_pick`). No re-read; pack4 refit (109 tables;
+`pack.json.before-r100`), the vocabulary shipped, the map regenerated.
+Tests: the reader on a synthetic tune (at pitch, with the root, a fourth
+under; the form's repeat not counted), the move's classification, the
+anchor by octave and register. Suite 440 (1 skip).
+
+**Measured** (sixty seeds, strong beats, the tune's line against the
+parts under it). Recalled bars 0.147 to 0.101 (FFVI 0.099), the bar
+before's cell 0.167 to 0.117 (0.043), a pair again 0.247 to 0.179, a
+pair's earlier bar 0.153 to 0.123, a form repeat 0.116 to 0.090 (0.098),
+a theme return 0.114 to 0.127 (0.098); the tune's whole 0.108 to 0.099
+(FFVI 0.084), by song 0.109 to 0.100 (FFVI 0.069); the fresh bars 0.081
+to 0.086 (0.080). Recalls at pitch 0.27 to 0.38 (FFVI 0.53 to 0.70; the
+fit's shifts take the rest), within a third 0.77 to 0.84 (0.88 to 0.95).
+Clashing recalled bars 54 to 38, with a clean shift untaken 22 to 15. The
+endings 0.169 to 0.157 (FFVI 0.057): the ending degree is the key's, not
+the cadence chord's, a limit. Plans (400 seeds): the word draws on an own
+stream, so 400 of 400 keep their token song and their plans; 148 plan
+logs identical (the melody's "recalls placed" line is new), 6 songs note
+for note the same (every tune with a recall moves); the six standing seeds
+keep their tokens and plans.
+
+**Song Check 83**: the six standing seeds, before (dev as merged)
+and after. The Sleeping Observatory's tune 3 of 63 strong onsets a
+semitone from the band to 1 of 63 (its recalled bars 1 of 8 to 0 of 8),
+The Still Wharf 8 of 70 to 2 of 70 (3 of 23 to 0), The Terminal of Glass
+6 of 87 to 4 of 96; Last Vault, Arcade of Rain and First Meridian Return
+drew high clash shares of their own (Arcade of Rain the harshest tier)
+and stay where they were.
+
+**Open.** The endings (the key's degree, not the cadence chord's); the
+theme returns and the bars after them (0.12 to 0.13); the recalls' weak
+beats (0.16 to 0.24 against FFVI's 0.09 to 0.13); where the tune recalls
+from (the urn recalls over any chord, FFVI's where the harmony repeats);
+the counter's semitone interval form. Queued: the section-level step
+with its figure change (The Mines of Narshe's accompaniment doubles in
+its last section with a new figure in a new register; the written step
+is a bare level move, 99 of 400 songs).
+
+### Round 101: a section's density by the step its level makes (2026-11-08, the queued section-step round)
+
+**Why.** Song Check 82's Inner River Crossing (seed 237, Battle Theme's
+token) doubled its accompaniment for its last part on the same figure: a
+6 dB step on one part at the bar line with nothing else changing, which
+was heard as "a strange volume change" at 43 s, back at the loop,
+up again at 1:49. The step was the section_levels word's draw of a real
+FFVI unit, The Mines of Narshe's accompaniment at 2.0 in its last section;
+but Narshe's accompaniment there also goes from 2 notes a bar to nearly 8
+and up an octave. Counted over all of FFVI's 803 part-sections
+(ffvi_step_figures.py): a level step up rides a density or register change
+in 7 of the accompaniment's 8 cases but is bare in 7 of the counter's 10
+(Overture part 3's counter steps to 1.9 four times on the same figure); at
+level 1.0 the accompaniment changes density tier in a quarter of its
+sections (22 sparser, 17 denser of 176), the bass in a sixth, the melody
+and counter in a sixth; a tier up is 1.8 times the song's density at the
+median (q25 1.6, q75 2.2), a tier down 0.5. So the counted thing is the
+density tier by the level step, not a rule that a step changes the figure;
+and the written parts had kept one density all song, so every drawn step
+was a bare level move (99 of 400 songs carried one of 1.5 or more).
+
+**Built.** One counted word and the writers' habit a bar.
+`section_densities` (`rhythm.section_density_units`, shape part x step):
+each pitched part's density tier in each own section of the form against
+its song density (`d+` at DENSITY_STEP 1.5 times its song median or more,
+`d-` at the inverse or less, `d=` between) by the step the section's level
+makes (`level_step` of the section_level_units ratio: up, down, same). The
+plan draws a tier a part an own section it plays in
+(`plan_section_densities`, an own stream `whole:{seed}:section
+densities`; a repeated section copies its source's; the counter takes none,
+following the tune's figures through its masks), as `Plan.section_densities`,
+a shift a bar. The writers take a habit a bar (`habit_at_for`,
+`rhythm.shift_habit`: the song's habit with its density tier moved one
+along sparse, medium, dense, for the table's conditioning) and an envelope
+a bar (`envelope_at_for`, `rhythm.density_bounds`: a tier denser, 1.5 times
+the part's own running density in its unshifted bars or more, the tier's
+FFVI median standing in before two bars are written; a tier sparser, the
+same over 1.5 or fewer) for the chord parts' and the bass's figure draws
+(`_free_figures`) and the tune's new rhythms (`new_rhythm`, a shifted bar
+kept out of the tune's running tier). Four cuts: the habit alone had capped
+at the dense tier (a dense accompaniment drawn denser stayed as it was);
+the tier's typical alone had left a part already over it unmoved (a drawn
+tier denser landed at 1.35 times the part's other sections); the counter
+had drawn a shift it could not act on. The register is the token song's
+own by stretch (round 92) and is not drawn again (LIMITS). No re-read;
+pack4 refit (110 tables; `pack.json.before-r101`), the vocabulary shipped,
+the map regenerated. Tests: the reader on a synthetic song (a soft dense
+section, a loud sparse one), the step, shift and bounds helpers, the plan's
+draw and copy (no draw for the counter), the habit and envelope a bar.
+Suite 441 (1 skip).
+
+**Measured** (sixty seeds). 36 of 60 songs carry a level step of 1.5 or more (62 steps); 20 of the steps now carry a drawn density change (the first cut's habit alone had changed the dense parts' nothing; the counter's draw none). By part and step the drawn tiers follow the table: the accompaniment's level-1.0 sections draw a tier denser in 15 of 151 and sparser in 25, its up-steps sparser in 5 of 8 (the table's 2.0 of 7 song-shares) and the same in 3. A section drawn denser sits at 1.63 times the part's unshifted sections at the median (q25 1.17, q75 2.58; FFVI's tier up 1.8); one drawn sparser at 0.78 (q25 0.48; FFVI 0.5: the manner's figures thin less readily than they thicken, a limit). Inner River Crossing's accompaniment: 4 notes a bar through the song, 7.7 in its doubled last part (5.4 before, the same figure louder); its first part drew sparser (3.3). Before this round 17 of the 62 steps had a density change by the writer's own variance, after it 22 (the measure by the song median hides a shifted section that is the song's largest). Plans (400 seeds): the word
+draws on an own stream, so 400 of 400 keep their token song and their
+plans; 67 plan logs identical (the new line in the rest), 86 of 400 songs note for note the same (every part that drew a tier moves), 91 of 400 carry a level step with a density change.
+
+**Song Check 84**: Inner River Crossing before and after, and four
+new songs whose level steps carry a density change, before and after:
+Inner River Crossing (237, Battle Theme's: the accompaniment denser where it doubles, 7.7 against 4 notes a bar), Still Pavilion (62: the accompaniment at double level and a tier denser in its first part, 15 notes a bar against 4 in the last), Overpass of Bells (50: at double level and a tier sparser in its first part, 1 note a bar, then 10 in the second), The Quiet Wharf (43: the bass at a third of its level and a tier sparser in the intro, 2 notes a bar against 7) and Northern Bells (37: the accompaniment at double level and a tier sparser in the last part, 4 against 7, the tune denser).
+
+**Open.** A step's register change (Narshe's octave) and the textures
+where a part leads alone are the token's and the textures word's, not
+drawn with the step; the counter's density follows the tune's; a shifted
+section's figures feed the part's urn and chain, so a dense section can
+lean into the section after it. The lines' remaining clash floor (round
+100's endings and theme returns), the counter's semitone interval form.
+
+### Round 102: a looped drum-named sample struck across the chords is an instrument (2026-11-08, found by ear)
+
+**Why.** Heard beside Fanfare, the song its kit came from, Northern
+Bells (Song Check 84) had a "snare" that was not a snare: an electronic
+guitar noise, in a kit that is really a kick and an open and closed hat.
+The ear was right. The sample (a7c3eeca0d) is FFVI's distorted
+rhythm guitar: noisy (periodicity 0.27), with body (0.66 of its power
+under 1 kHz), centred at 1.3 kHz, looped, and with no fundamental the
+tuner could find cleanly. The drum namer's noise branch, which judges a
+sample by its spectrum alone and never checked for a loop, called it a
+snare (a tom at Dancing Mad (part 5)'s low rate); the reader then gave its
+notes no pitch, so the round-83 rule that moves a tune-like sample off a
+drum voice, written for samples named "other", never saw it. It was the
+snare of Fanfare and Mt. Koltz (Mt. Koltz's whole kit), the "second snare"
+of Battle Theme and The Decisive Battle (round 99's "sixteenth-note
+rattle") and a second tom in Dancing Mad (part 5), struck on 5 to 13
+distinct rates following the chords in every one of them (Fanfare: eight
+hits on one rate, nine a tone under; Battle Theme's riff on ten); round
+88's "pitched snare" wall was its notes, and Song Check 70's note that at
+-10 semitones "its rattle lasts 340 ms and is the guitar" had the answer.
+FFVI's real kicks, snares, hats and cymbals sit on one rate each; its toms
+on a few, unlooped; its only looped drum is the cymbal, which rings.
+Across the readings' 23 games, 357 more looped drum-named sample-songs
+without a fundamental are struck across five semitones or more with no
+rate holding 0.6 of their hits (Super Turrican 2, Mega Man X, Ogre
+Battle); they flip with this round, unheard.
+
+**Built.** The reader, in two cuts. `drums.instrument_by_play`: a looped
+drum-named sample struck INSTRUMENT_HITS (8) times or more across
+INSTRUMENT_SPAN (5) semitones with no rate holding INSTRUMENT_SHARE (0.6)
+of its hits is an instrument; `events.of_notes` renames it "other" and
+marks it `by_play`. Its register: `tuning.rough_fundamental`, the shortest
+lag between 40 and 1000 Hz at which the loop repeats at 0.5 or better and
+within NEARLY of its best lag, climbed to the peak as `fundamental()`
+does (the guitar's loop repeats at about 95 Hz, near G2; its sub-octave
+repeats as well, the shorter lag is the note); without one the notes keep
+the rate as their pitch, 60 at the recording's. The first cut had used the
+rate alone, and the role reader, seeing a mid-register riff, had made The
+Decisive Battle's guitar the melody; with its register it is a bass. Then
+the role reader, unchanged, gives the voice a pitched part: Fanfare's
+guitar a bass (the song's mid voice reads as a doubling of the tune
+beside it), Battle Theme's and Mt. Koltz's an accompaniment, The Decisive
+Battle's a second bass, Dancing Mad (part 5)'s two voices an
+accompaniment and a bass (the growl an octave and more under the
+recording; the song's bass reads as a counter beside it). FFVI re-read
+(`readings.db.before-r102`; the re-read also carried rounds 89 and 90's
+role reader to nine songs the round-90 re-read had missed: Aria de Mezzo
+Carattere, Epitaph, Gau, Shadow, The Magic House, The Phantom Forest, The
+Serpent Trench, Umaro, Under Martial Law, their melodies and counters
+swapping; corrected at round 152: these are the nine songs of round 64's
+lead pass, and the swap was that pass's relabels lost in the re-read),
+pack4 refit (110 tables; `pack.json.before-r102`), the
+vocabulary shipped, the map regenerated. Tests: the rule's edges (a tom on
+many rates unlooped, a hat with ornaments, under eight hits, a rate holding
+0.7, a span under five), of_notes with the namer's verdict pinned (the
+sample renamed, by_play, its notes pitched by rate; a one-shot unpitched),
+the rough fundamental on a rough 100 Hz loop and none on a one-shot. Suite
+442 (1 skip).
+
+**Measured.** FFVI: 44 kits (45), Fanfare's a kick and a hat with the
+open-hat second, Mt. Koltz's none; 17 letters in 15 kits carry a second
+sample, the hat in 13 of 17, the snare in 2 of 28 (4 of 30 with the
+guitar); the tuned pieces are three (the guitar was the fourth, and the
+only "snare"); the drum units 1223 (1259). Plans (400 seeds): a re-read
+moves every table, so 162 of 400 seeds keep their token song, 238 draw
+another, and no plan is what it was. Of the 29 seeds whose token song was
+one of the five, 11 keep it: on those the guitar leaves the kit and
+appears as the bass's sample (Fanfare's and Dancing Mad's tokens), the
+accompaniment's (Battle Theme's, Mt. Koltz's) or a second bass voice's
+(The Decisive Battle's).
+
+**Song Check 85**: five songs on the five tokens, before (dev as merged)
+and after, paired by token song: The Reactor of Wind (198, Fanfare's:
+the kit kick and hats, the bass on the guitar), The Terminal of Glass
+(150, Battle Theme's: one snare, the accompaniment on the guitar),
+Waking Lagoon (146, The Decisive Battle's: one snare, the guitar a
+second bass voice), Upper Monorail (72, Mt. Koltz's: no drums at all,
+the guitar in the accompaniment), and Dancing Mad (part 5)'s token on
+two seeds, Inner Dunes Return (24) before and The Shore of Mirrors (42)
+after (one tom, the bass on the guitar).
+
+**Open.** The drum namer still judges a sample by its spectrum alone;
+this round reads the one case the play exposes (a looped sound struck
+across pitches). The guitar's octave is a guess (95 or 190 Hz); the role
+reader's second-bass and doubling readings in Fanfare and Dancing Mad are
+its heuristics on a truer picture, unheard. The other games' 357 flips
+are unverified. The standing list: round 100's endings and theme returns,
+round 101's sparser side, the counter's semitone interval form.
+
+### Round 103: a chord part's line motion and off-chord tier ride the balance token (2026-11-08, found by ear)
+
+**Why.** On Song Check 85 The Terminal of Glass (seed 150, Battle
+Theme's token) was heard as "spastic and clashing", and the question was
+whether the guitar, the accompaniment's sample since round 102, was
+being used properly. The sample was: the accompaniment had Battle
+Theme's register, level, density, note lengths, sample and second
+voices. What it did not have was Battle Theme's motion or its tier. The
+`motions` word and the `tone_tiers` word were drawn once a part from the
+pooled tables (FFVI's accompaniment lines: 29 arpeggiated, 18 mixed, 9
+block; 31 some, 14 many, 11 rare), and seed 150 had drawn arpeggiated
+and some, where Battle Theme's riff moves on 0.37 of its strikes (mixed,
+by the `motions` thresholds of a third and two thirds) and rarely leaves
+the chord (rare). A chord part written on one song's token with another's
+motion is the pooled draw the balance token was made to replace, one
+field at a time (the sample in round 63, the level, the layers, the
+stretches, the kit); the motion and the tier were two the token did not
+carry.
+
+**Built.** Two fields on the balance token for the chord parts
+(`rhythm.line_motion`, `rhythm.line_tone_tier` in `arrangement.py`: the
+line alone, under `readings.upper_motion` and the `motions` thresholds,
+and under `tone_tier_of(_tone_share)`; a line under WORD_NOTES (16)
+pitched notes has no motion field, a part without tone bars no tier).
+The plan parses the twelfth and thirteenth fields (`token_motions`,
+`token_tone_tiers`), keeps the draws (`motion_drawn`, `tone_tier_drawn`,
+so no other draw moves) and takes the token's where it has them; the
+upper writer gets the token's motion for the line's walk along the stack
+and the drawn motion for the voices beside the line, whose own words
+were drawn with it. Pack refit (110 tables; no new table, the fields
+ride the balance), the vocabulary shipped, the map unchanged. Tests:
+TokenMotionTests (a token's fields parsed and taken, the draws kept, a
+token without the field drawing as before). Suite 443 (1 skip).
+
+**Also.** Round 102's shipped vocabulary had never been committed: the
+refit after the re-read was shipped into the worktree and the commit
+step was missed, so dev as merged (e0b0ffc) carried round 102's reader
+with round 101's tables (the guitar still a snare in the written kits;
+Song Check 85's clips were rendered from the worktree and are right).
+Found when this round's first before dump, from dev, gave Battle Theme's
+accompaniment two voices at 64-80 where Song Check 85 had three on the
+guitar at 44. The round-102 file is its own branch and PR
+(ship-r102-vocab, #126), merged into this branch so either order is
+clean; this round's vocabulary is the refit from the same readings with
+the two fields; and the before side below is round 102 with its
+vocabulary, not dev as merged. Lesson, into the round procedure: commit
+and push the shipped vocabulary before the PR, and check
+`git log -- bitcomposer/vocabularies/default.json.gz` on the branch.
+Then CI failed on both branches on one test: round 72's echo test had
+bounded the drawn echo word's wet share at 0.3 ("never the old 0.4
+slap") where FFVI's echo table runs to 0.39, and it had held because its
+seeds drew 0.20 words; the re-read renamed six words' sending parts (the
+nine songs whose roles swapped), the table re-ordered, and seed 68554
+drew the 0.38 word. The test asserts the word is one of the table's
+words now (7f44c29 on ship-r102-vocab, merged here). Second lesson: a
+test with fixed seeds against the shipped vocabulary must assert the
+table's own values, not a bound one draw met.
+
+**Measured.** FFVI: the fields as above; the line repeats its note on
+0.89 of its moves at the median in the block class, 0.50 mixed, 0.05
+arpeggiated. Written (seeds 1-60): 62 of 67 chord parts took both fields
+(5 tokens without them); the accompaniment's motions as drawn 33
+arpeggiated, 9 mixed, 5 block, as used 28, 13, 8 (FFVI 29, 18, 9); its
+tiers used 25 some, 12 rare, 12 many; the written line repeats on 0.44
+of its moves in the block class, 0.36 mixed, 0.26 arpeggiated (leaps of
+a fourth or more 0.21, 0.25, 0.37); on the chord 0.87 of its onsets in
+the rare tier, 0.73 some, 0.60 many (the tiers' own bounds 0.9 and
+0.7). Plans (400 seeds, against round 102 with its vocabulary): every
+seed keeps its token song (the fields sit last in the token, so the
+table's order held); 45 plans are unchanged (no chord part with a field)
+and 118 write the same notes (the token's motion and tier were the
+draw's, or no chord part); on the rest the chord part keeps its onsets
+and changes its pitches, the tune moves where its clash hold sees other
+tones, and the bass where it takes a hand-off cell from the tune.
+Against dev as merged, 238 of 400 seeds had drawn another token song:
+that was round 102's tables arriving, not this round.
+
+**Song Check 86**: five songs, before (round 102 with its vocabulary)
+and after, the same seed and token on every one: The Terminal of Glass
+(150, Battle Theme's: mixed and rare from arpeggiated and some), Twin
+Valley Road (258, Dark World's: a four-voice accompaniment to block,
+rare from some), Secret Tundra Dance (63, Terra's: block from
+arpeggiated, rare from some; the harmony's field arpeggiated as drawn),
+Observatory of Smoke (84, Fanatics': a one-voice accompaniment to block,
+rare from many) and Sleeping Crossing (211, Strago's: block from
+arpeggiated, the tier many on both sides, the accompaniment the only
+part that changed).
+
+**Open.** The written block line repeats 0.44 of its moves against
+FFVI's 0.89 (LIMITS: the line moves more than its motion class says;
+what the line keeps from one chord to the next is not yet a word), a
+candidate for the next round. The harmony's and the arp's fields rest on
+10 and 2 FFVI lines. The standing list: round 100's endings and theme
+returns, round 101's sparser side, the counter's semitone interval form,
+round 102's other games' flips.
+
+### Round 104: a stretch's range is its own sample's notes' ambitus (2026-11-08, from listening)
+
+**Why.** On Song Check 86 The Terminal of Glass (seed 150, Battle
+Theme's token) was heard as "all over the place", every part doing its own
+thing. Measured against Battle Theme's readings (terminal_facts*.py): the
+tempo, kit, samples, levels, echo, habit classes, motion and tier were
+Battle Theme's own, and the onsets locked a little less than its do (the
+bass on the guitar's onsets 0.69 against 0.89). The large thing was the
+tune: Battle Theme's melody role carries one synth note at midi 42 before
+bar 1, `roles.stretches_of` folds it into the lead's stretch as a blip,
+and `stretch_word` took the stretch's range as the ambitus of all its
+notes, so the lead's stretch read 40-80 where the lead plays 64-79 (p10
+65, p90 77), and the writer wrote the tune over 40-80: two thirds of its
+notes under Battle Theme's lowest lead note, the median in bars 1-26 at
+57 against the lead's 70, the line from 43 to 78 through the
+accompaniment's voices. Across FFVI, 11 of 174 two-instrument stretches
+were widened five semitones or more by folded notes of another sample
+(Battle Theme's lead by 22, Terra's accompaniment by 15 from one note,
+Cyan's melody by 19); Techno de Chocobo's tune had its register field
+(not a stretch word: its blips lie between runs of one sample) read 28-79
+from its effect notes where it plays 62-79. The other things heard:
+Battle Theme's synth is a locked pair of two-note stabs riding the riff
+(221 onsets, every one a dyad, 0.89 of them on a guitar onset), written
+as two independent "apart" lines; the riff leaps where Battle Theme's
+crawls (the LIMITS item of round 103); the form A B C D E F repeats
+nothing where Battle Theme's A B C B D brings the riff section back, and
+the section densities, drawn a part at a time, move out of step where
+Battle Theme's accompaniment, drums and bass surge and thin together.
+
+**Built.** `arrangement.own_sample_notes`: a line's notes without the
+blips of another sample folded into its stretches; `stretch_word` takes
+each stretch's range from its own sample's notes (all its notes where
+fewer than REGISTER_NOTES (8) own ones remain), and the balance token's
+register field (field 1) takes `own_sample_notes` of the line. Two cuts:
+the stretch word first, then the register field when the measure showed
+Techno de Chocobo's token unchanged. Pack refit (110 tables; no new
+table), the vocabulary shipped and committed, the map unchanged. Test: a
+leading blip two octaves under and a trailing one two octaves over leave
+the stretch word and the register field as the line's own (the old code
+read 44-72 for 68-72). Suite 444 (1 skip).
+
+**Measured.** FFVI: 16 tokens' parts in 14 of 68 songs change, the
+register field in 7 (Battle Theme's melody 40-80 to 52-80, Techno de
+Chocobo's 28-80 to 60-80, New Continent's arp 32-56 to 32-44 and melody
+48-92 to 56-92, Devil's Lab's accompaniment 36-72 to 44-68, Forever
+Rachel's melody 60-88 to 68-88, Kids Run Through the City's harmony 60-68
+to 64-68), the stretch field in 10, a voice's stretch sub-field in 4.
+Written: seed 150's tune has 2 of 113 notes under 64 (72 before), its
+bars 1-26 at a median of 68 (57; the lead's 70); over seeds 1-60 the 45
+stretched lines keep 0.94 of their notes inside their bar's stretch
+range at the median. Plans (400 seeds, against round 103): every seed
+keeps its token song, 318 plan logs and 333 note sets are unchanged, 67
+songs change notes, all on the 14 tokens.
+
+**Song Check 87**: five songs, before (round 103) and after,
+the same seed and token on every one: The Terminal of Glass (150, Battle
+Theme's: the tune's first stretch 64-80), Arcade of Rain (41, Techno de
+Chocobo's: the register 60-80 from 28-80, the tune's median from 56 to
+70), Last Vault (157, Cyan's: the second instrument's stretch 52-64 from
+52-84, the tune lower from bar 13 where Cyan's own second instrument
+plays), Winding Foundry Crossing (283, Terra's: the accompaniment's
+stretch 60-64 from 44-64) and The Waking Valley (19, Forever Rachel's:
+the first stretch 68-76 from 60-76).
+
+**Open.** New Continent's counter: its second stretch is one pitch (56)
+on a snare-like sample for 25 bars, a rhythmic pedal the role reader
+calls a counter; with the range its own, the written counter is a
+monotone there (The Restless Gorge, seed 192, left out of the Song Check
+for it). Then the other things heard on The Terminal of Glass: a voice
+parallel to a sibling voice (Battle Theme's synth pair) is not a relation
+the layer words can say; the section densities move a part at a time; the
+form carries no token field; and round 103's line motion. The standing
+list: round 100's endings and theme returns, round 101's sparser side,
+the counter's semitone interval form, round 102's other games' flips.
+
+### Round 105: each section's bar from its kit (2026-11-08, from the Battle Theme investigation)
+
+**Why.** Every song on Battle Theme's token was heard as disjointed,
+"all the parts doing their own thing", and a deep look at them was asked
+for. Measured against Battle Theme's readings and its real mix
+(bt_deep.py, bt_phase.py, bt_loudness.py in r104), the mix was right
+(the written stems within 1-3 dB of the game's parts), the sounds,
+levels, habit classes, motion and tier were Battle Theme's own, and the
+onsets locked a little less. The large thing was time: in Battle Theme's
+readings the snare sat on the reader's beats one and three in 0.88 of
+its hits and the kick on two and four, a rock groove inverted, because
+the reader's bar lines began a beat late (the kick, bass and guitar
+start at beat 1.06 and the lead enters at beat 9; the reader's bars at
+2, 10, 14). The beat reader had broken the song into twenty sections,
+each with a meter and a downbeat from a few bars' accents (seven in 3,
+one in 2), the accents' rule put each downbeat on the loud backbeat
+snare, and the phase rule's one phase for the song could not follow
+sections whose beats restart off the grid (its signs come out flat
+across the candidate beats). Every written song on the token inherited
+it: in all ten the snare fell on written beats one and three and the
+kick on two and four, under chords that change and tune phrases that
+begin on the one, and the pool mixed in correctly read bars so the
+backbeat flipped in a quarter to a third of the bars of three songs.
+Setzer, The Fierce Battle and Returners read the same way; Techno de
+Chocobo, Mog, Devil's Lab and Gogo read right.
+
+**Built.** `beat.rebar_kit`, called in `reading.beat_and_parts` after
+the bass re-bar and the phase rule, with the kit's voices' hits alone
+(a snare-named sample on a pitched part's voice, New Continent's
+one-pitch pedal or Last Dungeon's ostinato, is no backbeat). A section
+with KIT_HITS (8) on-beat kick and snare hits, KIT_KICKS (4) of them
+kicks, takes the downbeat its kit scores best under the phase model's
+two-level table a sign (KIT_SIGNS: the kick on the one at 0.50, the
+snare 0.12, a cymbal 0.55, FFVI's kit songs read right) where that beats
+the downbeat read by KIT_MARGIN (0.4); a snare alone moves nothing,
+since it cannot tell a backbeat from a march and lands a half-bar either
+way. A section read in 3 or 2 in a song mostly in 4 whose snare
+alternates every two beats (KIT_ALTERNATES 0.7 of KIT_ALTERNATING_HITS
+4 or more) is in 4. Three cuts: the rule, the lower alternation count,
+and the drum-voice restriction after the first scratch re-read moved
+the bars of eleven kit-less songs. Test: a kick on one and three under a
+louder snare on two and four with a tune that never repeats (the
+accents' bar on the snare, the kit's on the kick; barred already, a
+snare alone, too few hits: nothing). FFVI re-read into a scratch
+database first (reread_r105.sh), compared song by song
+(phase_compare.py), then promoted (readings.db.before-r105); pack refit
+(110 tables), the vocabulary shipped and committed.
+
+**Measured.** FFVI: Battle Theme's snare on two and four in 0.97 of its
+on-beat hits (0.07 before) and its kick on one and three in 0.96 (0.08),
+its bars on the real downbeats (5, 9, 13 ...), 31 four-beat bars of 41
+(28); 4 of 68 songs' bars move: Battle Theme, The Decisive Battle (two
+statements of one section now barred alike, its kick on one and three
+0.47 to 0.68), Metamorphasis (its sections barred alike on the kick) and
+two sections of Dancing Mad part 5's hundred and fourteen; every kit
+song read right before is unchanged. Written (seeds 1-100): the seven
+songs on Battle Theme's token have the snare on two and four in 0.68 to
+1.00 of its hits and the kick on one and three with none to 0.08 on two
+and four; over the 15 songs with a kit the snare sits on two and four
+0.53 and on one and three 0.12. Plans (400 seeds, against round 104):
+204 keep their token song, 196 draw another (the re-read moves the
+tables); one plan log unchanged.
+
+**Open.** The beat reader's sectioning (LIMITS: twenty sections for
+Battle Theme, a hundred and fourteen for Dancing Mad part 5; the joins
+leave bars of 1, 2, 3, 5 or 6 beats, 10 of Battle Theme's 41); one grid
+re-locked without a new section is the fix. Snare-only songs barred on
+their snare (Setzer, The Fierce Battle, Returners) stay as read. The
+Battle Theme findings that remain: the riff is not shared material and
+the harmony never sits (round 106), the synth pair, the form, the
+sections' densities.
+
+### Round 106: the riff as the token song's own (2026-11-08, from the Battle Theme investigation)
+
+**Why.** The second thing the Battle Theme investigation found (round 105
+had the first, the beat): the riff was not shared material. Battle
+Theme's bass strikes with its guitar on the same pitch class on 0.69 of
+their common onsets and keeps its main pitch class from one bar to the
+next 0.74 of the time; the written songs on its token sat at 0.29 and
+0.25, their bass walking the roots of a chord that changed at 23 of 37
+bar lines while their guitar line walked its own voicing. The relation
+words (round 90) could not say it: roles.stretch_relation asks for 0.8
+of a stretch's notes with the other voice, and over FFVI's 44 chord-part
+lines with a bass it calls three a double or a parallel of the bass
+(Dark World, The Serpent Trench, Blackjack); Battle Theme's guitar, 0.75
+with the bass and 0.70 at its pitch class, is neither. The riff's
+repetition was pooled too: the periods and period_holds words draw a
+backing part's lag and its holds by the part of the form's length, so
+Battle Theme's bass, a two-bar riff held 0.83 of the time in its riff
+section by the periods word's own reading, was written at the tables'
+lags and holds (seed 150: five bars held of 38). And the chord chain held
+a chord at its pooled rate alone, where Battle Theme's reading holds at
+0.53 of its bar lines.
+
+**Built.** Three fields on the balance token (`arrangement.py`). A
+backing pitched part's fourteenth: its period and holds
+(`part_period_field`, `p2/83`: the lag the most bars have among the
+parts of the form that have one, cells.period_of, with the share of the
+bars inside it that play the bar a lag before again). A chord part's
+fifteenth: how far its line rides the bass line (`line_rides_field`,
+`b75/70`: the share of its onsets within RIDE_NEAR (0.13 beats) of a
+bass onset and, of those, the share at the bass's pitch class; both lines
+RIDE_NOTES (32) notes or more). A song-level `holds=0.53`
+(`chord_hold_share`: the bar lines of the meter's bars after the first
+that no chord span starts within CHORD_NEAR (0.3 beats) of; eight lines
+or more). The plan (`plan.py`) parses them; where the pooled periods
+draw gives a part of the form a period, the token's lag stands (where
+the part is long enough) and the holds are drawn at the token's share
+on an own stream (the pooled draws still made); the chord chain holds a
+chord at the token's share on an own stream, and where the share says
+change and the chain repeated the chord, draws again on that stream
+(the first cut had held on top of the chain's repeats: seed 150 held 12
+of 13 bar lines); and `ride_the_bass` writes the chord part's line on
+the written bass's figure: the product of the two shares (Battle Theme
+0.52, the half of the riff that is the bass an octave up) is the share
+of the form's parts that ride, each new part where the line and the
+bass both play drawn on an own stream (the first cut drew for resting
+parts too: two of seven Battle Theme seeds rode nothing), a repeated
+part as its source, and in a riding bar the line plays the bass's notes
+in its register of the bar on the bass's lengths, its figure the bass's
+onsets, the voices beside it seeing the riding notes. FFVI: 41 of 51
+songs' tokens carry a rides field in seeds 1-60's draws. Pack refit (110
+tables; no new table), the vocabulary shipped and committed. Tests: the
+three fields read (a line six bars of twelve on the bass's riff, a bass
+repeating its bar, one chord change), the plan taking them (the rides
+field in extras, the period's lag and holds in the log, the chord holds
+in the log), and the line riding a written bass (the bass's onsets and
+pitch classes in the line's register, the figure and the shared voicing
+replaced; a share of 0 riding nothing). The first commit went out with
+four failing tests, a grep having hidden the test runner's status; the
+fix followed, and test chains now set pipefail. Suite 448 (1 skip).
+
+**Measured.** Written, the five Battle Theme token seeds with both
+parts (of seven): the line strikes with the bass on 0.76-0.94 of its
+onsets and at its pitch class on 0.72-0.88 of those where parts ride
+(18: 23 of 38 bars, 243: 28 of 35, 343: 18 of 31; the token 0.75 and
+0.70), 0.29-0.90 and 0.38-0.39 where the draws rode four bars (150,
+365); the chords hold at 0.43-0.67 of bar lines (the token 0.53; 0.47 to
+0.94 in the first cut); the bass keeps its main pitch class from bar to
+bar 0.17-0.56 (0.25 before, the game 0.74). Over seeds 1-60, the 41
+songs whose token carries a rides field write the line at a median 0.27
+of its common onsets on the bass's pitch class against the tokens' 0.26
+and 0.47 of its onsets with the bass against 0.47; the 10 without sit at
+0.20 and 0.30. Plans (400 seeds, against round 105): 346 keep their
+token song (the new fields re-sort the table), 6 plan logs unchanged.
+
+**Song Check 89**: five songs on Battle Theme's token after rounds 105
+and 106, the after side alone as asked: Journey of
+the Quarry (18), Lunar Island (243), Gate Return (343), The Terminal of
+Glass (150, its plan re-dealt by the re-read: 19 bars) and Second Cistern
+Dance (365).
+
+**Open.** The riding share by form part is coarse: a short song draws
+all or nothing (150 and 365 rode four bars). The bass's own pitch
+stasis is still the chord chain's (0.17-0.56 against 0.74): the riff's
+pedal under a changing reading is not a word. The synth pair, the form
+and the sections' densities from the investigation stand. The standing
+list: round 100's endings and theme returns, round 101's sparser side,
+round 103's line motion, round 105's sectioning.
+
+### Round 107: a voice struck with another (2026-11-08, from the Battle Theme investigation)
+
+**Why.** The third finding of the Battle Theme investigation, and the
+one heard breaking the whole song: the synth organ. Battle
+Theme's synth is two voices struck as one, two-note stabs on the riff's
+accents a fourth or a fifth apart by the chord (78 fifths, 64 fourths
+and 25 thirds of 202 onsets struck together), the lower with the guitar
+on 0.89 of its notes at chord tones an octave and more up. The relation
+words (round 90) could not say it: roles.stretch_relation asks for one
+generic interval on 0.8 of a stretch's notes, and a voice that strikes
+with the line at the chord's tones is neither a double nor a parallel,
+so each synth voice read as its own and the pooled layers table drew it
+anything a seed at a time (a double of the riff a third under, a line in
+the bass register). Nor could a word follow a sibling voice beside the
+line: the relation's target was the line alone.
+
+**Built.** A third kind of relation word, struck with (`w`).
+roles.with_relation (WITH_SHARE 0.8) names the candidate voice that 0.8
+of a stretch's notes start with (within STRETCH_NEAR), the most hits
+first, with the commonest semitones between them. In relation_words
+(`arrangement.py`) a voice beside a line whose own stretch has eight
+notes or more is tried against its lower-ranked siblings first (`w1-7`:
+with the voice ranked 1, seven semitones under) and then against the
+line (`wl+19`); a double or parallel of a sibling names the sibling's
+rank as its target too. The plan (`plan.py`) parses the targets (the
+line, or a voice by rank) and writes such a stretch in the upper loop:
+`struck_with` plays the voice on the followed voice's onsets bar by bar,
+thinned by the second_figures word's mask (drawn on an own stream),
+places each note on the chord by the parallel_intervals word at the
+word's semitones, and sounds each note the second voice's share of its
+gap (the gap_sounds word); a double or parallel of a sibling follows the
+sibling's written notes, which the loop keeps. FFVI: of the own-reading
+stretches of voices beside a line, 39 strike with the line, 9 with a
+sibling, 71 stay their own. Pack refit (110 tables; no new table), the
+vocabulary shipped and committed. Tests: the reader's words on a riff
+with a two-voice stab above it (`wl+24`, `w1-7`, and the parsed
+targets), and the writer striking on every followed onset two octaves up
+for half the gap, and on every other onset under a mask. Suite 450 (1
+skip).
+
+**Measured.** Battle Theme's synth on its token's five Song Check seeds:
+the written pair strikes with the guitar at +19, +24 and +17 semitones
+(the game +19, +31, +24), its two voices together on 1.00 of their
+onsets (the game 1.00) a fifth or a fourth apart (-7, -5, -8; the game
+-7, -5, -3), on the chord on 0.63-0.92 of their notes, its onsets on a
+guitar onset 0.94-1.00 (the game 0.89). The mask keeps 0.30-0.79 of the
+guitar's onsets (18: 121 of 172, 150: 79 of 120, 243: 76 of 250, 343:
+105 of 159, 365: 83 of 105) where the game's synth plays on 0.82; the
+stabs sound a median 0.10 and 0.20 beats (the two voices) in Journey of
+the Quarry (18) and 0.50-1.12 in the other four, where the game's sound
+0.19. Over seeds 1-60, 38 parts change and no voice goes silent; two
+voices fall hard, both to their token songs' own shares: seed 31 (Aria's
+token) from 255 notes to 23, 0.10 of the line's notes against the token
+voice's 0.10, and seed 51 (Opening Theme part 3's) from 174 to 32, 0.19
+against 0.15; seed 21's voice grows from 8 notes to 25. Battle Theme's
+guitar line is the same up to the tune cells it takes up
+(hand_off_cells), which follow the moved tune (5 of 112 notes differ in
+seed 150, 2 of 169 in seed 18). Plans (400 seeds, against round 106):
+400 keep their token song, 274 plan logs and 222 note sets unchanged.
+
+**Song Check 90**: the five Battle Theme songs of Song Check 89, round
+106 before and round 107 after: Journey of the Quarry (18), Lunar Island
+(243), Gate Return (343), The Terminal of Glass (150) and Second Cistern
+Dance (365).
+
+**Open.** The stabs' length and density are pooled: the struck voice's
+notes sound the gap_sounds word's second-voice share and the
+second_figures mask thins its onsets, neither from the token song, so
+four of the five Battle Theme songs ring their stabs half a beat to a
+beat where the game's last a fifth of a beat, and Lunar Island strikes
+on 0.30 of the guitar's onsets against 0.82 (LIMITS). The form, the
+sections' densities and the bass's pitch continuity from the
+investigation stand. The standing list: round 100's endings and theme
+returns, round 101's sparser side, round 103's line motion, round 105's
+sectioning.
+
+### Round 108: a struck voice's share, lengths and longest note are the token song's (2026-11-09, from listening to Song Check 90)
+
+**Why.** The synth organ in Journey of the Quarry (Song Check 90, seed
+18) was heard holding one long note from about fifteen seconds in.
+Round 107's struck_with had given each stab its share of the gap to the
+voice's own next stab, the line's rule (round 95's gap_sounds), and that
+gap ran to bars wherever the part rested or the second_figures mask
+thinned whole bars; the pooled second voice's share for a gap over four
+beats, 0.9, made the stab a drone. Both synth voices held one note for
+44.6 and 45.9 beats through bars 12-23, where the form has the
+accompaniment out while the bass, drums and melody play; Lunar Island's
+held 30 beats; over seeds 1-60 nine of the twenty struck voices held a
+note two bars or longer, and the median voice's longest note was 6
+beats. Battle Theme's synth never rings past 4.9 beats, its own gaps
+never pass 9.9, and its guitar never rests more than five. The density
+was pooled too (round 107's open item): the mask struck 0.30-0.79 of the
+guitar's onsets against the token voice's 0.73.
+
+**Built.** A seventh layer sub-field on the balance token for a voice
+struck with another (arrangement._struck_facts and _struck_text:
+`w0.73~0.7~0.2~0.9~-~-~4.9`): the share of the followed voice's onsets
+the voice strikes within its struck stretches, its sounded share of the
+gap to the part's line's next onset by gap class (to SOUND_BIN; "-"
+under STRUCK_NOTES, two notes), and its longest note in beats, a voice's
+struck stretches pooled. The plan reads it (struck_values_of,
+Plan.layer_struck) and struck_with takes it: the mask is held toward the
+share (under it a bar strikes every followed onset; over it a mask that
+thins nothing is drawn again, STRUCK_TRIES six times, on the voice's own
+stream), a stab's gap is to the line's next onset (gaps_ref), never to
+its own next stab, its share by gap class is the token voice's where the
+token has the class (else the pooled second voice's), and no stab rings
+past the token voice's longest. Pack refit (110 tables; no new table),
+the vocabulary shipped and committed. Tests: the sub-field read from a
+riff with a two-voice stab (w0.51 and w1.00, 0.4 of the half-beat gap,
+0.2 beats at the longest), a stab before a two-bar rest of the line
+capped at the token voice's longest and uncapped without it, the mask
+held toward the share (every onset under it, the drawn mask over it).
+Suite 452 (1 skip).
+
+**Measured.** FFVI: 44 struck-with voices in 32 songs strike 0.78 of the
+followed onsets at the median (0.12 to 1.00), sound 0.8, 0.4, 0.9, 1.0
+and 0.9 of the line's gap by class, and their longest notes run from 0.6
+to 15.9 beats (median 4.5). Written, the five Battle Theme seeds: every
+stab 0.10-0.12 beats at the median (Battle Theme 0.19; before
+0.10-1.12), the longest 1.35-2.0 beats, and in Journey of the Quarry
+4.9, the one stab before the rest ringing the token voice's longest;
+struck shares 0.68-0.79 of the guitar's onsets (the token 0.73; before
+0.30-0.79), the second voice on 0.92-0.97 of the first's (1.00); Lunar
+Island from 70 and 54 notes to 168 and 163. Seeds 1-60: 20 struck
+voices, none silent; the longest note's median 2.6 beats (6.0 before),
+its maximum 6.75 (45.9); voices holding a note two bars or more 0 (9),
+two beats or more 11 (17); the written longest 0.56 of the token voice's
+at the median, two voices over it (notes of their own stretches, which
+the cap does not reach); the struck share 0.70 against the tokens' 0.76
+at the median, 0.07 apart. Plans (400 seeds, against round 107): 400
+keep their token song, 345 plan logs and 288 note sets unchanged.
+
+**Song Check 91**: the five Battle Theme songs of Song Checks 89 and 90,
+round 107 before and round 108 after: Journey of the Quarry (18), Lunar
+Island (243), Gate Return (343), The Terminal of Glass (150) and Second
+Cistern Dance (365).
+
+**Open.** Which onsets a bar thins is still the pooled mask's shape,
+held toward the share; a gap class the token voice never played falls to
+the pooled share; a struck voice whose token voice rings long rings as
+long (Mt. Koltz's and Opening Theme part 3's hold 15.9 beats). The
+Battle Theme list: the form never returning, the sections' densities out
+of step, the bass's pitch continuity. The standing list: round 100's
+endings and theme returns, round 101's sparser side, round 103's line
+motion, round 105's sectioning.
+
+### Round 109: the struck stretches counted into the interval word; an off-chord landing from the nominal placing (2026-11-09, from listening to Song Check 91)
+
+**Why.** The synth organ on Battle Theme's token was heard dropping to a
+distorted rumble, the guitar fine. Battle Theme's synth sits two
+octaves over its guitar (midi 48-87 and 45-81 against the guitar's
+40-55, one note of 219 below 48); the written one fell to the guitar's
+register and below (midi 17-72 in the first voice, a quarter to a third
+of its stabs below 48; the second, a fifth under it, 7-67), the organ
+sample three octaves under where the game plays it. Two things together:
+the parallel_intervals word, which places every struck stab (round 107),
+had no units at Battle Theme's nominal, a twelfth, because only parallel
+stretches were counted (4,575 units in 37 songs, the thirds' nominals 2
+and -2 holding 2,740 of them), so every draw backed off to the pooled
+mix; and that mix's off-chord outcomes were semitones from the followed
+note, applied from the guitar's note literally, so the thirds' and
+sixths' -4 and +3 and the octave doubles' -12 put a stab a third or an
+octave under the guitar: 36 of 119 draws in Journey of the Quarry, 31 of
+its 115 stabs an octave or more under the nominal. Battle Theme's own
+synth off the chord sits +17 to +42 over the guitar, +25 at the median.
+
+**Built.** parallel_interval_units (arrangement.py) counts the struck-
+with stretches as it counts the parallel ones, at their own nominal
+(struck_relations: _relations' third output, each struck stretch's first
+and last beat, the voice followed and the word's semitones; the line or
+a sibling followed), and an off-chord outcome is the voice's semitones
+from the nominal placing, the followed note at the word's semitones,
+within PARALLEL_SEMITONES of it, where it had been the semitones from
+the followed note itself; so an outcome means the same thing at every
+nominal, which backing off across nominals assumes. plan.parallel places
+such a pick from the nominal placing and chains the landing before from
+it. Pack refit (110 tables; no new table), the vocabulary shipped and
+committed. Tests: the stab song's struck stretches as units at nominal
+14 (the root, the fifth, the third, D two over the nominal C) and at -4
+for the sibling (F a fifth under C at the nominal, +0), a struck voice
+at a twelfth drawn +3 landing three over the twelfth, and round 97's C#
+over C read as -2 from the nominal third. Suite 454 (1 skip).
+
+**Measured.** FFVI: 8,281 units in 50 songs (4,575 in 37); by nominal -2
+2,308, 2 1,706, -3 823, -5 684, 7 596, -7 430, -4 411, 11 193, 0 189, 3
+183, 5 166, 4 149, the rest under 100; Battle Theme 608 (its twelfth
+193: the fifth 49, at the nominal off the chord 36, the third 21, the
+root 19, an octave over the nominal 15, +8 12, sus 7, +19 6); off the
+chord 2,613 of 8,281, the nominal itself (+0) the commonest at 1,183.
+Written, the five Battle Theme seeds: the first synth voice midi 51-89
+(medians 62-66; the game 48-87, 72), none of its stabs below 48 (21-52 a
+song before) or under the guitar (20-41 before), a median +19 to +24
+over the guitar (+17 before; the game +19, +24, +31), 7-16 stabs a song
+an octave or more off the nominal (31-53 before; the game's own +12 and
++19 outcomes among them); the second voice 34-80 (the game 45-81), 3-7
+stabs a song below 48 (33-64 before), 0-2 under the guitar. Seeds 1-60,
+the 20 struck voices: stabs more than an octave off their nominal 104 of
+1,678 before, 55 of 1,616 after; the lowest note's median 40 to 44; the
+lows left are the tokens' own words (Slam Shuffle's w1-38 puts seed 7's
+voice 38 under its sibling, to midi 12; Opening Theme part 3's wl-20,
+Searching for Friends' w1-15, Awakening's wl+4 over a low line reach
+32-34). Plans (400 seeds, against round 108): 400 keep their token song,
+206 plan logs and 120 note sets unchanged, every parallel and doubling
+voice's off-chord picks re-read.
+
+**Song Check 92**: the five Battle Theme songs of Song Checks 89 to 91,
+round 108 before and round 109 after: Journey of the Quarry (18), Lunar
+Island (243), Gate Return (343), The Terminal of Glass (150) and Second
+Cistern Dance (365).
+
+**Open.** A struck voice's own stretches still take the layer draw's
+register; a token voice that sits far under its sibling by its own word
+(Slam Shuffle) plays there. The Battle Theme list: the form never
+returning, the sections' densities out of step, the bass's pitch
+continuity. The standing list: round 100's endings and theme returns,
+round 101's sparser side, round 103's line motion, round 105's
+sectioning.
+
+### Round 110: a nominal one song plays keeps that song's chain (2026-11-09, from listening to Song Check 92)
+
+**Why.** The synth organ was heard leaping from low to a quick,
+intrusive high pitch, and the question was whether Battle Theme does
+that. It does leap: 17 percent of its lower synth voice's stab-to-stab
+steps are an octave or more, nearly half its stabs sit an octave or more
+over the twelfth, and it climbs there 63 times in 219 stabs, 24 of them
+by a clean octave; 3.7 of every 100 stabs are an isolated leap up and
+straight back. What it does not do is the two-octave pop: its six two-
+octave stabs come as one phrase, since after a two-octave landing the
+next stab stays there two times in three, and after an octave-up landing
+comes the fifth four times in five. The written songs had two to six
+two-octave stabs each, all isolated and a tenth of a beat long, each
+doubled a fifth under by the second voice. The interval word carries the
+game's chain as its last conditioning, the landing before, but the draw
+uses a finer level only where PLAN_SONGS (two) songs support it, and
+Battle Theme is the only song in FFVI with a voice at a twelfth, so the
+chain never engaged and each stab's class was drawn apart.
+
+**Built.** plan.parallel draws the parallel_intervals word's finer
+levels, the part and the landing before, with a one-song minimum where
+the nominal's own level has fewer than PLAN_SONGS songs: a nominal that
+one song plays is that song's own. FFVI has nine such nominals (11,
+-16, -14, 22, -22, -12, -10, 17, 21 in scale steps). No refit: the
+tables are as they were. Test: a one-song chain alternating the root and
+the octave over the nominal alternates in the writing (the draw had
+mixed them), two songs' chain as before. Suite 455 (1 skip).
+
+**Measured.** The chain engages where the game's cells exist: in Journey
+of the Quarry 83 of the synth's 120 picks are picks the game's chain
+makes from that landing, in Second Cistern Dance 48 of 92. The two-
+octave stabs come in phrases: stabs an octave or more over the twelfth
+in runs of three or more, none before, 4 in Journey of the Quarry, 3 in
+Lunar Island, 7 in The Terminal of Glass, 3 in Second Cistern Dance (the
+game: 31 of its 89 high stabs). The isolated leaps did not fall overall:
+per 100 stabs 2.6 to 3.5 (Journey of the Quarry), 9.5 to 9.5 (Lunar
+Island), 9.1 to 5.8 (Gate Return), 7.0 to 2.3 (The Terminal of Glass),
+9.3 to 11.1 (Second Cistern Dance), against the game's 3.7; octave-or-
+more steps 0.15, 0.25, 0.28, 0.26, 0.31 to 0.17, 0.32, 0.24, 0.15, 0.40
+(the game 0.17). Seeds 1-60, the 20 struck voices: isolated leaps 2.0 to
+1.9 per 100, high stabs in runs of three or more 0 to 8. Plans (400
+seeds, against round 109): 400 keep their token song, 399 plan logs and
+381 note sets unchanged (the eight one-song nominals). Why the leaps
+stay: Battle Theme's synth is calm over the guitar's roots (the fifth 47
+of 91 stabs) and leaps over its sevenths (+0 30, +12 14, +8 12 of 65)
+and its off-chord notes (+19 6, +0 5, +14 4 of 25); the game's guitar at
+the stabs plays roots 91 times, sevenths 65, off-chord notes 25, fifths
+6, thirds 5, where Journey of the Quarry's guitar plays roots 57, fifths
+42, off-chord notes 14, and Second Cistern Dance's fifths 34, off-chord
+notes 23, thirds 18, roots 17: the written synth draws from the leaping
+cells because the written guitar plays other tones than the riff's. The
+channel question raised in round 109 is closed: Battle Theme's channel 0
+holds the pair's top note on every one of their 219 stabs, the lower
+voice's octave flips (0.45 of its steps) are the game's voicing; of
+FFVI's 56 pairs of voices that strike together on 0.8 of their notes, 43
+never trade the top note between channels and 7 do on a fifth or more of
+their steps (Returners' bass pair 0.81, Aria's accompaniment 0.54, Mt.
+Koltz's 0.50), each channel reading as a voice where the ear hears one
+line (LIMITS).
+
+**Song Check 93**: the five Battle Theme songs of Song Checks 89 to 92,
+round 109 before and round 110 after: Journey of the Quarry (18), Lunar
+Island (243), Gate Return (343), The Terminal of Glass (150) and Second
+Cistern Dance (365).
+
+**Open.** The guitar's chord-tone profile is not the token's: Battle
+Theme's riff is a third sevenths and the written lines are fifths and
+thirds, and the synth follows the guitar's tone, so the leaps stay until
+the line plays the riff's tones (a token field for the line's chord-tone
+profile, the next candidate). The second voice's own inversion flips. A
+pair split over two channels reads as two voices. The Battle Theme list:
+the form never returning, the sections' densities out of step, the
+bass's pitch continuity. The standing list: round 100's endings and
+theme returns, round 101's sparser side, round 103's line motion, round
+105's sectioning.
+
+### Round 111: a backing line's chord-tone profile is the token song's (2026-11-09, from listening to Song Check 93)
+
+**Why.** Round 110's measure found the synth's leaps upstream of the
+synth: Battle Theme's synth sits on the fifth over the guitar's roots
+and leaps over its sevenths and off-chord notes, the game's riff plays
+roots on 0.45 of its notes and sevenths on 0.30, and the written guitars
+on its token played fifths and thirds (0.37 and 0.03 in Journey of the
+Quarry, 0.31 and 0.21 in Second Cistern Dance) and never the seventh, so
+the synth drew from the game's leaping cells. The voicings word, the
+motion and the bass's figure marks say which chord tones a line walks,
+and none of them knew the token song's own: FFVI's accompaniment lines
+play the seventh on 0.01 of their notes at the median, one other song
+reaching 0.2.
+
+**Built.** A sixteenth balance field for the chord parts and the bass
+(arrangement.line_tone_profile; TONE_PROFILE_CLASSES): the share of the
+line's notes on the chord's root, third, fifth, seventh and sus and off
+the chord sounding (vocab.tone_of), in hundredths, `t46/2/8/31/2/11` for
+Battle Theme's guitar and `t33/8/17/19/3/20` for its bass; "" under
+WORD_NOTES notes. The plan reads it (tone_profile_of,
+Plan.tone_profiles) and passes it to the line's call of writer.upper and
+to the bass's call of writer.bass, which hold the line's chord tones to
+it (parts.profile_tone, PROFILE_MARGIN 0.05): a chord-tone onset whose
+class, with the note counted, runs over its share takes the chord's own
+tone whose class is most under its share, placed nearest the tone meant;
+the off-chord onsets stay the tone figure's and the passing marks'. Pack
+refit (110 tables; no new table), the vocabulary shipped and committed.
+Tests: the field read from a line of roots, fifths and sevenths over a
+seventh chord and its parse, the hold's choices (a class over its share,
+a class the song never plays, the margin, nothing written yet), the
+bass's fifths held to roots. Suite 457 (1 skip).
+
+**Measured.** FFVI: 56 accompaniments, 58 basses, 10 harmonies and 2
+arps carry the field; the accompaniments' medians root 0.26, third 0.16,
+fifth 0.23, seventh 0.01, off the chord 0.23, the basses' root 0.55,
+fifth 0.12, seventh 0.02, off 0.14. Written, seeds 1-60: 115 backing
+lines with a token profile sit a median 0.17 from it (half the absolute
+differences summed; p90 0.31), their medians root 0.37, third 0.11,
+fifth 0.20 and seventh 0.01 against the tokens' 0.34, 0.10, 0.19 and
+0.02, off the chord 0.25 against 0.16 (the off-chord share is still the
+pooled tone figure's). The five Battle Theme seeds' guitars: roots
+0.34-0.45 (the token 0.46; before 0.10-0.46), fifths 0.12-0.32 (0.08;
+before 0.14-0.38), thirds 0.06-0.10 (0.02; before 0.03-0.22), sevenths
+0.00-0.11 (0.31; before 0.00), 0.25-0.45 from the token; their basses'
+sevenths 0.00-0.07 (0.19). The sevenths do not come because the hold
+picks among the written chord's own tones and the written chords have
+few: Battle Theme's read chords carry a seventh on 0.56 of its beats
+(maj7 0.45, 7 0.08, m7 0.03; FFVI's median 0.08, 8 of 68 songs over
+0.3), the five written songs' chords on 0.13, 0.00, 0.06, 0.11 and 0.00
+of their bars. The synth's leaps follow the guitar: isolated leaps per
+100 stabs 3.5 to 0.9 (Journey of the Quarry), 9.5 to 6.5 (Lunar Island),
+5.8 to 4.1 (Gate Return), 2.3 to 10.5 (The Terminal of Glass), 11.1 to
+4.6 (Second Cistern Dance), the game 3.7; octave-or-more steps 0.17,
+0.32, 0.24, 0.15, 0.40 to 0.11, 0.24, 0.15, 0.28, 0.26 (the game 0.17);
+seeds 1-60 1.9 to 1.7 per 100, high stabs in runs of three or more 8 to
+11. Plans (400 seeds, against round 110): 400 keep their token song; 16
+plan logs and 16 note sets unchanged (every backing line with a profile
+moves).
+
+**Song Check 94**: the five Battle Theme songs of Song Checks 89 to 93,
+round 110 before and round 111 after: Journey of the Quarry (18), Lunar
+Island (243), Gate Return (343), The Terminal of Glass (150) and Second
+Cistern Dance (365).
+
+**Open.** The written harmony's chord qualities are not the token's: the
+chord chain draws its shapes from the pooled chords word, so a song on
+Battle Theme's token has a seventh chord on a tenth of its bars where
+the game has one on more than half, and the line's sevenths, the synth's
+calm cells and its conditioning on the guitar's tone all wait on it (a
+song-level chord-shape profile held in plan_chords, the next candidate).
+The off-chord share is the pooled tone figure's. The Battle Theme list:
+the form never returning, the sections' densities out of step, the
+bass's pitch continuity. The standing list: round 100's endings and
+theme returns, round 101's sparser side, round 103's line motion, round
+105's sectioning.
+
+### Round 112: the song's chord-shape profile is the token song's (2026-11-09, from round 111's measure)
+
+**Why.** Round 111 held the backing lines' chord tones to the token
+song's and the sevenths still did not come: the hold can only pick a
+tone the written chord has, and Battle Theme's reading has a seventh
+chord on 0.56 of its beats (major sevenths 0.45, dominant 0.08, minor
+0.03) where FFVI's median song has one on 0.08 and the five songs
+written on its token had one on 0.00 to 0.13 of their bars. The chord
+chain drew its qualities from the pooled chords word, held at the
+token's change rate since round 106 but in no quality of the song's own;
+so the riff's third of sevenths had nowhere to go, and the synth, whose
+landings the interval word conditions on the guitar's tone against the
+written chord, never saw the 'seventh' the game's synth sits still over.
+
+**Built.** A song-level balance field, `shapes=`
+(arrangement.chord_shape_profile; SHAPE_BARS 8): the share of the song's
+beats under each chord shape the reader heard, in hundredths, the
+largest first, shapes under a hundredth left out
+(`shapes=maj7:45/5:17/sus4:12/m:9/7:8/m7:3/maj:3/dim:3` for Battle
+Theme; the plain triad as `maj`). The plan reads it (shape_profile_of,
+Plan.chord_shapes) and plan_chords holds a changing chord's quality to
+it (reshaped_name, SHAPE_MARGIN 0.05): a quality that, with the bar
+counted, runs over its share gives way to the profile's quality most
+under its share on the same degree (with_shape: IV to IVmaj7, V7 to v,
+as vocab.numeral spells them); a bar the hold share keeps, or a chord
+the chain repeats, keeps its quality; a repeated part keeps its chords
+whole and they count toward the shares. Pack refit (110 tables; no new
+table), the vocabulary shipped and committed. Tests: the field read from
+four bars of C7 and four of C and parsed, numerals re-qualified on their
+degree and read back, the chain held to a profile (every bar the one
+quality; the first bar re-qualified and a repeated chord kept), a
+repeated part kept whole; the band-levels test skips the song-level
+field. Suite 459 (1 skip).
+
+**Measured.** FFVI: 67 of 68 tokens carry the field; the median song has
+a seventh chord on 0.08 of its beats, 7 songs over 0.3; the commonest
+quality is the plain triad in 23 songs, the bare fifth in 20, minor in
+16, a major seventh in 3. Written, the five Battle Theme seeds: bars
+with a seventh chord 0.13, 0.00, 0.06, 0.11, 0.00 to 0.61, 0.63, 0.45,
+0.53, 0.43 (the token 0.56), their shape profiles 0.14 to 0.20 from the
+token's; seeds 1-60: 58 of 60 songs with token shapes sit a median 0.11
+from them (p90 0.21), the median song's seventh-chord share 0.12. The
+lines follow: the guitars' sevenths 0.00 to 0.11 before to 0.10, 0.10,
+0.10, 0.22, 0.12 (the token 0.31), the basses' 0.00 to 0.07 to 0.18,
+0.07, 0.10, 0.20, 0.12 (0.19); seeds 1-60's 116 backing lines a median
+0.15 from their profiles (0.17 before), off the chord 0.25 against 0.15
+still (the pooled tone figure). The synth's leaps land in the game's
+range for the first time: isolated leaps per 100 stabs 3.5, 5.7, 5.2,
+2.4, 4.5 (round 111: 0.9, 6.5, 4.1, 10.5, 4.6; the game 3.7), octave-or-
+more steps 0.22, 0.21, 0.19, 0.17, 0.23 (the game 0.17); seeds 1-60 1.6
+per 100, high stabs in runs of three or more 13 (the game 31 of 89).
+Plans (400 seeds, against round 111): 345 keep their token song, 55 move
+(the new song-level token re-sorts the balance table, as rounds 95 and
+106 did); 6 plan logs and 6 note sets unchanged; the five Song Check
+seeds keep theirs.
+
+**Song Check 95**: the five Battle Theme songs of Song Checks 89 to 94,
+round 111 before and round 112 after: Journey of the Quarry (18), Lunar
+Island (243), Gate Return (343), The Terminal of Glass (150) and Second
+Cistern Dance (365).
+
+**Open.** The lines' off-chord share is the pooled tone figure's (0.25
+against the tokens' 0.15), and the guitar's sevenths sit at a third of
+the riff's where its chords allow them. The chord chain's roots are the
+pooled chords word's with the token's change rate and qualities; which
+degrees the song's harmony visits is not a word. The Battle Theme list:
+the form never returning, the sections' densities out of step, the
+bass's pitch continuity. The standing list: round 100's endings and
+theme returns, round 101's sparser side, round 103's line motion, round
+105's sectioning.
+
+### Round 113: the form is the token song's (2026-11-09, the first of the Battle Theme list's remaining items, on the go-ahead to make them all)
+
+**Why.** The Battle Theme investigation's fourth finding: the form never
+returns. Battle Theme is A B C B D, a two-bar A, eight of B, nine of C,
+the B again, fourteen of D, and the five songs written on its token had
+come out A B C C D E, A B C D, A B C C D, A B C D E F and A B B B: one
+of the five brings a part back after another, where the game's B returns
+after its C. The form was one of the game's forms whole from the pooled
+letters word, right in the aggregate (34 of FFVI's 67 songs repeat a
+part and 18 bring one back after another; 42 and 20 of sixty written
+songs) and wrong for the song.
+
+**Built.** A song-level balance field, `form=` (arrangement.form_field;
+FORM_PARTS 2): the parts' letters in order, each with its bars, a
+returning part by the letter it returns to (`form=A2B8C9B8D14` for
+Battle Theme; 67 of 68 FFVI tokens carry one). The plan reads it
+(form_of, Plan.form_letters) and, once the balance is read, rebuilds its
+form from it (plan_form with `form`): the form's own draw stands, so no
+other draw moves; the token's letters take the place of the letters
+word's and its bars the place of the lengths draws, a repeat as long as
+the part it repeats; a form past the bars asked is cut as any; the
+loop's part is drawn again for the new form on its own stream. Pack
+refit (110 tables; no new table), the vocabulary shipped and committed.
+Tests: the field read from a four-part song and parsed, the plan's form
+from the token (the letters, the bars, a repeat as long as its source,
+the bars running on), the band-levels test skipping the song-level
+fields. Suite 461 (1 skip).
+
+**Fixed, the same day.** The suite on the shipped vocabulary found the
+rebuild shortening songs: seed 11's token form is A2B12, fourteen bars,
+under the player's sixteen, and the rebuild took it whole
+(test_performance). A token form built short of the bars asked now
+leaves the plan's own draw standing, logged (4 of FFVI's 62 token forms
+are under sixteen bars). And a letter's bars had been its last
+statement's, so a song whose part returns with other bars than its
+first (15 of the 62 forms: B15 ... B2, a fragment, or B2 ... B8, a
+longer second statement) came out with every B at the return's length;
+a repeat is as long as the part it repeats, so the part plays whole at
+its first statement's bars. Tests: the first statement's bars taken,
+the short form leaving the draw. Suite 462 (1 skip), the shipped
+vocabulary in the tree.
+
+**Measured.** Written, the five Battle Theme seeds: every one A2 B8 C9
+B8 D14, 41 bars, where they had been 19 to 38 bars of A B C C D E and
+the like; each brings its B back after its C. Seeds 1-60: 57 of 60 songs
+carry a token form, 47 take its letters whole and 33 its bars too (the
+rest cut to the bars asked, a returning part played whole at its first
+statement's bars, or a form short of the sixteen asked leaving the
+draw), 23 songs bring a part back where 16 tokens do (20 before). The
+sections' densities, the investigation's other
+structural item, were measured and left: at a section boundary the
+written pitched parts step alike on 0.33 of boundaries and agree
+pairwise on 0.53 (sixty seeds), FFVI's on 0.27 and 0.53 at the median,
+Battle Theme's own on 0.00 and 0.33 of its four, so there is no deficit
+to carry (LIMITS). Plans (400 seeds, against round 112): 358 keep their
+token song, 25 plan logs and 44 note sets unchanged (the form moves
+every later draw of a song whose token form differs from its drawn one;
+a plan whose form changes may be drawn again for its theme, and its
+token with it).
+
+**Song Check 96**: the five Battle Theme songs of Song Checks 89 to 95,
+round 112 before and round 114 after, this round and the next heard
+together as asked: Journey of the Quarry (18), Lunar Island (243), Gate
+Return (343), The Terminal of Glass (150) and Second Cistern Dance
+(365).
+
+**Open.** The bass's pitch continuity (round 114). A token song longer
+than the bars asked is cut, not scaled; one shorter leaves the draw
+standing; a part read returning with other bars than its first plays
+whole at its first statement's bars (15 of 62 token forms). The
+standing list: round 100's
+endings and theme returns, round 101's sparser side, round 103's line
+motion, round 105's sectioning.
+
+### Round 114: the bass line's pitch continuity is the token song's (2026-11-09, the last of the Battle Theme list, on the go-ahead to make them all)
+
+**Why.** The Battle Theme investigation's last finding: the bass walks
+where the riff sits. Battle Theme's bass hammers one pitch under the
+changing chords (the chord reader hears its chromatic neighbours as
+changes: Imaj7, I5, Isus4, bII5), keeping the bar's main pitch class
+across 0.58 of its bar lines where FFVI's basses keep it across 0.30 at
+the median; the written basses on its token walked the chord chain's
+roots, keeping it across 0.17 to 0.41 (sixty seeds' median 0.29).
+Nothing in the vocabulary said how still a song's bass is.
+
+**Built.** The bass's balance token gains a seventeenth field
+(arrangement.bass_continuity_field, CONTINUITY_BARS 8): the share of its
+bar-to-bar transitions, consecutive bars it plays in, that keep the
+bar's main pitch class, in hundredths (`k58` for Battle Theme). The plan
+reads it (Plan.bass_continuity) and the bass holds its line to it twice.
+In the writer (parts.bass, `continuity`): while the written share, with
+the bar line counted, runs under the token's by CONTINUITY_MARGIN, the
+bar is realized on the bar before's main pitch class (realize's
+root_override: the figure's marks from the pedal as from a root, the
+chord's shape kept), and the fewest notes are moved onto the pedal until
+it is the bar's main pitch class (parts.pedal: a passing mark first,
+then the note whose tone class is most over the token song's chord-tone
+profile, the earliest first; the classes written kept counted, so the
+profile hold answers). Then on the line as finally played
+(plan.hold_bass_pitch): the theme band, the hand-offs and the form's
+repeats rewrite bars of the bass after its writer (11 of Journey of the
+Quarry's 41), each a bar line or two lost, and the writer's 0.53 had
+come out 0.28; the bars are walked again as the reader counts them, a
+rest bar breaking the chain, and where the share runs under, a bar the
+writer's own notes still stand in is pedaled the same way, a bar
+rewritten after the writer left as it is; a chord part riding the bass
+moves with it (its line's note at a moved onset on the bass's old pitch
+class takes the new, and the voices its relation words have following
+the line there, struck with it, parallel or doubling, move the same).
+One more thing the pedal uncovered: the voice struck with a chord part
+draws its landing by the line's tone class under the chord (round 97),
+and a line riding the pedal is off the chain's chord on every pedaled
+bar, so the synth drew from the cells where Battle Theme's synth leaps
+over the riff's neighbours (+19 and +14 over the twelfth: Journey of
+the Quarry's synth two octaves or more over the guitar on 0.36 of its
+stabs, 0.11 before the hold); `parallel` now draws a line note off the
+chord but on the written bass's pitch class as over the chord's root,
+the riff's root, as Battle Theme's reader hears the riff's pitch. Pack
+refit (110 tables; no new table), the vocabulary shipped and committed.
+Tests: the field read from a ten-bar bass and parsed; a bar realized on
+another pitch class with the chord's shape kept, its fifth moved onto
+the pedal in the octave nearest its own, a passing tone first and the
+classes counted true; the final pass pedaling a bar, moving a rider and
+the voice struck with it, leaving a stacked voice and rewritten bars;
+the same line note drawn high over a bass on another pitch and near the
+twelfth over the bass pedaling its own. Suite 466 (1 skip).
+
+**Measured.** Written, the five Battle Theme seeds: the bass keeps its
+pitch class across 0.53, 0.53, 0.50, 0.39 and 0.50 of its bar lines (the
+token 0.58) where it had kept 0.30, 0.35, 0.10, 0.35 and 0.34 at round
+113 (0.21, 0.41, 0.17, 0.41 and 0.30 at round 112, Song Check 96's
+before side); the one under 0.45, The Terminal of Glass, has 13 of its
+23 playing bars rewritten by the theme band and the hand-offs. Seeds
+1-60: 54 of 57 basses carry a token share; written median 0.40 against
+the tokens' median 0.35, |written - token| median 0.08 (before: 0.29, no
+hold). The bass's chord-tone profile (round 111) gives a little: the
+basses' off-chord share rises from 0.26 to 0.29 at the median (the
+tokens' 0.16; the pedal under the chain's chord is off it), the root
+from 0.37 to 0.33 (the tokens' 0.35), the lines' distance from their
+profiles 0.16 to 0.17 at the median. The struck voices' motion (round
+110) holds: sixty seeds' 22 struck voices step an octave or more on 0.12
+of their stabs (0.11 before), 1.9 isolated spikes per 100 (1.5), 14
+notes two octaves or more over the line in 10 runs, none of three or
+more (11 in 9, none); the five Battle Theme synths sit that high on 0.13
+to 0.19 of their stabs (0.08 to 0.28 before) with no run of three (0 to
+15 before). The form (round 113) unchanged: 47 of 57 token forms taken
+whole. Plans (400 seeds, against round 113): 400 keep their token song,
+56 plan logs and 181 note sets unchanged (the hold touches the bass, the
+riders and the voices struck with them).
+
+**Song Check 96**: the five Battle Theme songs of Song Checks 89 to 95,
+round 112 before and round 114 after, rounds 113 and 114 heard together
+as asked: Journey of the Quarry (18), Lunar Island (243), Gate Return
+(343), The Terminal of Glass (150) and Second Cistern Dance (365).
+
+**Open.** The pedal moves every bar or two where Battle Theme's stays
+for a part: the hold spends its share on the bar after a change, not on
+a riff's stretch; a stretch-wise hold (the pedal held through a part,
+released at its end) would be the next word. The lines' off-chord share
+is still pooled (0.25 against the tokens' 0.15), the chord chain's roots
+pooled, a long token song cut not scaled. The standing list: round 100's
+endings and theme returns, round 101's sparser side, round 103's line
+motion, round 105's sectioning.
+
+### Round 115: a struck voice's sounding share is the token song's (2026-11-09, from listening to Song Check 96: the synth "a monster", four words agreed, the first)
+
+**Why.** The synth organ took the written songs over though its level
+is Battle Theme's: the game's own song from its SNES sound CPU file,
+each SNES chip voice alone through the emulator, has the accompaniment
+(guitar and the two brass voices) as its loudest part A-weighted, the
+synth alone 1.7 dB under it and the lead 1.5, and the written stems sit
+within a decibel or two of that on every part (Journey of the Quarry's
+guitar alone 5.1 dB under the accompaniment against the game's 5.0, its
+synth 1.6 against 1.7). What differs is what the synth plays. The first
+thing: its notes' lengths. The gap-class shares are Battle Theme's, but
+its riff is dense and its stabs almost never fall in the one-to-two-beat
+class where it held 0.9 of the gap; a sparser written line put most of
+the synth's gaps there, so Journey of the Quarry's synth sounded 0.68 of
+its bars' time at 0.9 beats a note (a quarter over 1.35) on a brass
+sample whose SNES chip envelope holds at full till key-off: an organ
+where the game stabs at 0.19 beats, sounding 0.49 of its bars' time.
+
+**Built.** The struck sub-field's eighth part (arrangement._struck_facts,
+_struck_text: `w0.73~0.7~0.2~0.9~-~-~4.9~0.49`): the beats the voice
+sounds, each note to the line's next onset at most, over the beats of
+the bars it strikes in. struck_values_of reads it (`sounding`), and
+struck_with holds the stabs to it: a stab whose length by its gap class
+would put the share so far, this stab counted, over the token's by
+STRUCK_MARGIN sounds the token's shortest class share of its gap instead
+(Battle Theme's 0.2: a stab); the longest-note cap stands; `stats`
+carries the sounded and played beats and the stabs cut to the log. A
+voice under the share is not lengthened: its stabs are their gap
+classes' already. Pack refit (110 tables; no new table), the vocabulary
+shipped and committed. Tests: the part read from the test song's stabs
+(0.20: 32 stabs of 0.2 beats over eight bars) and parsed, the stabs cut
+to the share and none without it. Suite 467 (1 skip).
+
+**Measured.** Written, the five Battle Theme seeds: Journey of the
+Quarry's synth voices sound 0.55 of their bars' time (0.68 before; the
+token 0.49; a quarter of its stabs over 0.90 beats where it had been
+1.35); the other four were under the share already (0.29 to 0.49) and
+stay. Seeds 1-60: 22 struck voices, every one with a token share:
+written median 0.60 (0.68 before) against the tokens' 0.65, |written -
+token| median 0.11 (the hold cuts; it does not lengthen). The struck
+voices' motion, the bass's continuity and the lines' profiles are as at
+round 114. Plans (400 seeds, against round 114): 400 keep their token
+song, 397 plan logs and 367 note sets unchanged.
+
+**Song Check 97** will carry rounds 115 to 118 together, the five Battle
+Theme songs, round 114 before.
+
+**Open.** The cell (round 116), the guitar line's steps (round 117), the
+flourish at a section's end (round 118). The standing list as at round
+114.
+
+### Round 116: a struck voice's cell repetition is the token song's (2026-11-09, the second of the four words from Song Check 96)
+
+**Why.** Loud and always the same reads as the riff; loud and never the
+same reads as something sitting on the song. Battle Theme's synth
+hammers one cell, C D E F, in ten of its thirty-eight bars and near it
+in the rest, over a guitar on A and B-flat; the written synth's pitch
+set changed nearly every bar (the commonest covered 2 to 7 of 38),
+because each landing is drawn per note by the interval word with the
+chord's shape and the guitar's tone, and the guitar line itself varies.
+Nothing in the vocabulary said a struck voice repeats itself.
+
+**Built.** The struck sub-field's ninth part (arrangement._struck_facts,
+_struck_text: `...~4.9~0.49~0.49`): of the voice's notes with a note of
+its own at the same position of the bar before (to a sixteenth), the
+share that sound that note's pitch again; "-" under STRUCK_NOTES
+comparable notes. struck_values_of reads it (`cell`), and struck_with
+repeats the cell to it: once the landings are drawn, a stab with a stab
+at the same place of the bar before takes that stab's pitch while the
+share so far, this stab counted, runs under the token's by
+STRUCK_MARGIN, and keeps the interval word's landing otherwise; `stats`
+carries the repeats and the comparable stabs to the log. Pack refit
+(110 tables; no new table), the vocabulary shipped and committed. Tests:
+the part read from the test song's stabs (0.21) and parsed, the cell
+held bar after bar at a share of one (the budget counts a stab kept
+until one differs, so a share of one is near, not exact), free without
+it, near a share of a half. Suite 468 (1 skip).
+
+**Measured.** Battle Theme's synth repeats its cell on 0.49 of its
+comparable stabs (the second voice 0.50). Written, the five Battle Theme
+seeds: Journey of the Quarry 0.00 to 0.22 and 0.28 (18 comparable stabs
+in a sparse line), Lunar Island 0.25 to 0.45, Gate Return 0.04 to 0.37,
+The Terminal of Glass 0.18 to 0.40, Second Cistern Dance 0.12 to 0.40;
+under the token by the margin's width, as the budget's first comparable
+stab is always free. Seeds 1-60: 22 struck voices, 20 with a token cell
+share; written median 0.15 (0.11 before) against the tokens' 0.21,
+|written - token| median 0.07. The struck voices' motion holds (12
+high-register notes in 8 runs, none of three; 1.9 spikes per 100).
+Plans (400 seeds, against round 115): 400 keep their token song, 384
+plan logs and 328 note sets unchanged.
+
+**Song Check 97** will carry rounds 115 to 118 together, the five Battle
+Theme songs, round 114 before.
+
+**Open.** The guitar line's steps (round 117), the flourish at a
+section's end (round 118). The standing list as at round 114.
+
+### Round 117: a backing line's step profile is the token song's (2026-11-09, the third of the four words from Song Check 96: the guitar drives the song)
+
+**Why.** The guitar's level is Battle Theme's (rendered alone, 3.3 to
+5.1 dB under the accompaniment against the game's 5.0), and still it
+drove the song: it moved like a melodic voice. Battle Theme's guitar is
+a chug, A2 and B-flat 2 for eight bars of B, two pitches a semitone
+apart, thinning to a small figure under the lead in C: it repeats its
+pitch on 0.63 of its note-to-note moves, stays within a whole tone on
+0.87 and leaps a fourth or more on 0.07. The written guitar played
+three distinct pitches a bar, leaping between chord tones (root, fifth,
+seventh from the figures' marks, or the walking bass's notes where it
+rides) on 0.34 of its moves, five times the game's. The motion word
+(line_motion: block, mixed, arpeggiated) counts how often a line's
+pitch changes, not how far, so the chug with its neighbour read "mixed"
+like a walking chord-tone line; the tune has a steps habit, the backing
+lines had none.
+
+**Built.** A chord part's and the bass's balance token gain an
+eighteenth field (arrangement.line_step_profile, STEP_CLASSES,
+STEP_LEAP 3): the share of the line's moves, in time order, that repeat
+the pitch, step within a whole tone, or leap a minor third or more, in
+hundredths (`j63/24/13` for Battle Theme's guitar); "" under WORD_NOTES
+moves. The plan reads it (step_profile_of, Plan.step_profiles) and holds
+a chord part's line to it (plan.hold_line_steps) once the line is
+written, rides the bass and is folded into its stretches' registers, so
+every move counts as the reader counts them: each note after the
+first, its move's class with the note counted over its share by
+STEP_MARGIN gives way to the class most under its share where one has
+room, "same" playing the note before again, "step" the chord's tone
+within a whole tone of it (the scale's where the chord has none, the
+whole tone up else), "leap" keeping the note as written (a leap is never
+forced); the voices beside the line see the held note through `shared`.
+The bass carries the field and its writer does not read it yet
+(LIMITS). Pack refit (110 tables; no new table), the vocabulary shipped
+and committed. Tests: the field read from a chug (`j51/49/0`) and
+parsed, a line of leaps held to a chug within its register, the voices
+beside it told, as written without a profile. Suite 470 (1 skip).
+
+**Measured.** Battle Theme's guitar carries `j63/24/13`. Written, the five Battle Theme seeds' guitars: the same pitch again on 0.42, 0.56, 0.57, 0.58 and 0.55 of their moves (0.19, 0.27, 0.32, 0.35 and 0.32 before; the token 0.63), a leap on 0.39, 0.18, 0.22, 0.23 and 0.17 (0.58, 0.49, 0.47, 0.55 and 0.42 before; the token 0.13); Journey of the Quarry's guitar plays 21 bars, 77 moves, and the theme band's and the hand-offs' rewrites, which come after the hold, leave its leaps highest. Seeds 1-60: 50 accompaniment lines, 48 with a token profile; written medians same 0.27 (0.22 before), step 0.23 (0.21), leap 0.54 (0.56) against the tokens' 0.18, 0.11 and 0.59, |leap written - token| median 0.11: most of FFVI's accompaniment lines leap as the written ones did, and the hold tells where a song's does not (Battle Theme, a chug). The harmony lines' leaps 0.56 to 0.43 against the tokens' 0.42. The bass is not held: written leaps 0.39 against the tokens' 0.29. The struck voices move with the guitar: 2.3 isolated spikes per 100 stabs (1.9), 15 notes two octaves or more over the line in 13 runs, none of three (12 in 8); the lines' profile distance 0.18 (0.17), the bass's continuity 0.38 (0.40). Plans (400 seeds, against round 116): 400 keep their token song, 16 plan logs (the new line) and 92 note sets unchanged.
+
+**Song Check 97** will carry rounds 115 to 118 together, the five Battle
+Theme songs, round 114 before.
+
+**Open.** The flourish at a section's end (round 118). The standing list
+as at round 114.
+
+### Round 118: the flourish at a section's end, a section_fills word (2026-11-09, the last of the four words from Song Check 96)
+
+**Why.** "Battle Theme's accompaniment kinda just accompanies most of the
+time and has small parts of flourishing to compliment the song in
+transitions" (by ear). Measured: its synth plays 15 notes in the last
+bar of B against 8 a bar, the flourish into C, and 7 against 4 at the
+end of C; its guitar chugs on through the bar line and its lead does not
+fill. Across FFVI a voice ends a section at 1.5 times its median bar or
+more in 0.14 of its sections (votes by song), thinner in 0.36; the accompaniment's voices beside the line fuller in 0.12 (0.18 of first sections, 0.13 of middle, 0.09 of last), its line in 0.14. The written synths never did: their mask is drawn
+bar by bar from the pooled second_figures word, which knows no bar's
+place in its section. The thinning side existed (section_densities,
+part_entries); the flourish had no word.
+
+**Built.** A new table, section_fills (arrangement.section_fill_units,
+FILL_BARS 4): each pitched voice of each own section of four bars or
+more as a unit, its outcome what the voice does in the section's last
+bar against the section's bars before ("fuller" at DENSITY_STEP times
+the median of the other bars it plays in or more, "thinner" at the
+inverse or less, a rest among them, "same" between), its values the
+voice's part, whether it is the part's line or a voice beside it
+(cells.line_voice) and the section's place in the form (form_place_of).
+The plan draws it a section for the part's line and for its voices
+beside the line on an own stream (plan_section_fills; a repeated
+section copies its source's; Plan.section_fills), and the writers fill:
+the line's fill rides the density shift its writer already reads
+(habit_at_for, envelope_at_for: a tier denser on the section's last
+bar), and a struck voice strikes every followed onset there and one
+between each pair half a beat or more apart (struck_with, `fills`);
+"thinner" is the line a tier sparser and the struck voice on the bar's
+first onset alone. Pack refit (111 tables), the vocabulary shipped and
+committed, the vocabulary map regenerated. Tests: the units from a song
+whose stabs double in a section's last bar (the line "same", the stabs
+"fuller"), a section under four bars counting nothing, the plan's draw
+on a section's last bar and its repeat's and none for a one-voice part's
+beside, the struck voice's fill (seven stabs on a four-onset bar) and
+its thinning. Suite 472 (1 skip).
+
+**Measured.** Written, the five Battle Theme seeds, the section_fills draws in their plan logs: Journey of the Quarry's synth voices fuller in the last bar of B (7 and 13 stabs against 4 a bar) and thinner at the end of C, its bass fuller at the end of C; Lunar Island's synth fuller at the end of B (16 against 8) and thinner at D's; Gate Return's synth fuller at the end of C (5 against 3) and thinner at B's and D's, its bass thinner at B's; The Terminal of Glass's synth thinner at the end of B, its lead fuller at D's; Second Cistern Dance's bass fuller at the end of C. Seeds 1-60, every own section of four bars or more against its median bar: the lines fuller in 0.17 (0.19 before), the same 0.48, thinner 0.35; the voices beside a line fuller in 0.16 (0.17), the same 0.39, thinner 0.45 (0.38): the shares were the game's by chance already and are its by the word now, by part, voice kind and place. The other holds stand: the accompaniment lines' leaps 0.50 (tokens 0.59), the struck voices' cell 0.18 (tokens 0.21), their motion 1.7 spikes per 100 stabs and no run of three high notes, the bass's continuity 0.39 (tokens 0.35), the lines' profile distance 0.19. Plans (400 seeds, against round 117): 400 keep their token song, 1 plan log (the fills' line) and 54 note sets unchanged.
+
+**Song Check 97**: the five Battle Theme songs of Song Checks 89 to 96,
+round 114 before and round 118 after, rounds 115 to 118 heard together
+as asked: Journey of the Quarry (18), Lunar Island (243), Gate Return
+(343), The Terminal of Glass (150) and Second Cistern Dance (365).
+
+**Open.** The fill's shape is one shape (every onset and the midpoints
+for a struck voice; a tier denser for a line): Battle Theme's synth fill
+is also a run up its cell, and a word for the fill's figure would be the
+next. The bass does not read its step profile. The standing list as at
+round 114.
+
+### Round 119: a kit voice carries its tonal reading, and a pitched part is tuned by it (2026-11-09, from a question after Song Check 97)
+
+**Why.** After Song Check 97 came the question of what is going on with
+the accompaniment voices of the songs written on Battle Theme: "a deep
+investigation looking at all aspects", assuming nothing right "just
+cause its in the code". Every measure of rounds 104 to 118 had read the
+written notes; none had heard what the renderer makes of them. So the
+investigation went to the SNES chip's own registers and audio for Battle
+Theme, and then tested the written songs' rendered audio, note by note,
+against the pitch written.
+
+**Found.** The guitar was a minor third flat on every note. Battle
+Theme's riff line plays the game's distorted rhythm guitar
+(sa7c3eeca0d), an instrument in the readings since round 102. The pack
+files that recording as a kit voice (its drum namer's snare: noisy, no
+fundamental its tuner could find), with no pitch and no loop, and a part
+takes its token song's own sample whatever the pack calls it (round 60).
+A kit voice is registered to sound as recorded at KIT_NOTE, 48; the
+recording sounds 45.04 there (95.0 Hz at the chip's 32 kHz by
+the readings, the file at 37,133 Hz). So every note a pitched part
+played on it sounded 2.96 semitones under the note written, and without
+its loop. The reading itself is right: Battle Theme's own guitar on the
+SNES chip, each key-on's audio against the readings' fundamental on the
+chip's pitch register, is on pitch on 290 of 290 notes. Where the
+written guitar should double the bass it sat a major sixth over it, and
+0.8 to 0.9 of its notes were off the chord (0.2 to 0.35 as written): the
+verdicts by ear on the guitar and the synth in Song Checks 89 to 97,
+"driving the song" and "a monster", were given against that. Two more
+of the pack's kit voices are parts in the readings: The Empire Gestahl's snare
+(s1279e119a1: its accompaniment, New Continent's counter), which sounded
+8.21 semitones over the note written, and Mt. Koltz's tom (seb20f89721:
+its accompaniment), half a semitone over. Of the 400 seeds 39 give a
+kit voice to a pitched part: the guitar in 27 (the accompaniment's line
+in 7 of them, the bass's in 11), the snare in 12, the tom in 5.
+
+**Built.** The pack file: a kit voice's entry may carry `tonal`, the
+same recording read as a pitched instrument (`{"note": 45.04, "loop":
+[2720, 7104]}`: `note` or `hz`, and optionally `loop` and `release`;
+`packfile._sample`). The loader keeps the reading as a sample of its own
+under the voice's name with `_tonal` after it (`samples.TONAL_SUFFIX`; no
+other sample may take the name) and maps the kit voice to it
+(`samples.TONAL_VIEWS`, `tonal_view`). The renderer: `samples_for` gives
+a pitched voice the kit voice's tonal reading at every place a part, a
+second voice or a voice beside a line takes a sample; a kit piece still
+strikes the kit voice; `score_of` keeps the reading an instrument of its
+own, so one song may strike the recording and play it. The log names the
+kit voices played by their readings, and those with none, played as the
+kit plays them, their pitch unknown. The pack builder: `pack.tonal_reading`
+(the readings' fundamental at the file's rate as a note, the loop in the
+file's frames), written for each kit sample the game plays as a pitched
+part (`played_as_pitched`); `tools/pack_tonal.py` adds the readings to a
+pack already built. The FFVI pack took three by the tool (the guitar
+45.04 with its loop, the snare 56.21, the tom 48.5): no table was refit
+and the shipped vocabulary is the same file. The measure
+(`tuning_measure.py`, beside the Song Check tools): the song rendered,
+each pitched voice's channel alone, each note's audio from 15 ms after
+its onset tested against harmonic combs at the written pitch and at
+every semitone from 7 under to 7 over; a note is decisive where the best
+comb beats the next by 1.2, a voice has a verdict where a third of its
+notes are decisive, and is flagged under 0.80 of them on pitch.
+`chip_tuning.py` runs the same test on a game song's own voices off the
+SNES chip emulator, against the readings' fundamentals: it tells a fault
+of the render from a limit of the measure. Both join the round's
+routine: a Song Check's seeds are heard by the measure before the page
+is built. Last, what the measure found beside the guitar (below):
+`score.pitch_ceiling` names the highest note the chip can play of a
+sample, and `score_of` logs the notes written over it by part, voice and
+sample. Tests: the pack file's field (on a kit voice, refused on a tonal
+one, its loop and release, the kept name), the builder's reading (45.04
+from 95.0 Hz at 37,133 Hz), the renderer's choice and its two log lines,
+the ceiling's line (a note at the ceiling itself not counted). Suite 476
+(1 skip).
+
+**Measured.** The render, 40 seeds (1 to 12, the five Song Check seeds
+and 23 more whose songs give a kit voice to a part), 231 pitched voices.
+Round 118 on the pack as it was: 203 voices with a verdict, 26 under
+0.80 on pitch. Those are the guitar's ten lines with a verdict (seven
+accompaniments and three basses, every decisive note three under),
+eight voices beside a line on the guitar (0.00 to 0.64) and the snare's
+eight lines (0.06 to 0.32, most notes nearest seven over). Round 119:
+198 with a verdict, 2 under 0.80; the guitar's twelve lines with a
+verdict on pitch on every decisive note (three low basses without one),
+and 191 voices on pitch on every decisive note where 172 were. The
+snare's eight lines have no verdict now: at the game's rate a snare
+gives the combs near ties, as The Empire Gestahl's own does on the chip
+(0.09 of its notes decisive). The two left are not the tuning. The
+Overpass of Snow (203), its accompaniment on the tom: two semitones over
+on every decisive note, a third of its notes; Mt. Koltz's own tom on the
+chip reads the same (two over on 0.92 of its decisive notes, 0.35 of
+them decisive), so the render keeps the game's rates and the tom's
+strike sits over the readings' fundamental in the game too. The Shore
+of Mirrors (42), its second accompaniment voice on the guitar: every
+note written over 66 sounds at 66. That is the SNES chip's pitch
+register, which stops at four times a recording's rate: a sample sounds
+no higher than two octaves over the note it plays at 32 kHz, and the
+guitar's ceiling is 66.46. Counted in the score, 7 of 400 seeds hold
+notes over their sample's ceiling, 2,015 of 582,713 notes, each a voice
+beside a line: accompaniment third voices on The Wandering Bazaar (60:
+764 notes, written to 121 on a sample that stops at 87), Lower Aqueduct
+(126: all 232), The Restless Gorge (192: 319) and Northern Mist (277:
+4), second voices on the guitar on The Shore of Mirrors (42: 672) and
+Starlit Stone (153: 4), an arp's second voice on Bastion Passage (54:
+20). Round 118 had 6 seeds and 1,763 notes, and round 112 already had
+two of them (Lower Aqueduct, The Restless Gorge): older than this round,
+and now in the log. The Song Check seeds,
+both sides (round 114 with the fix, round 119): the guitar on pitch on
+every decisive note in all five songs, as is every other voice with a
+verdict (24 of 25 a side). Plans (400 seeds, against round 118): 400
+keep their token song and the written notes of all 400 are the same;
+356 plan logs unchanged (39 gain the tonal reading's line, 7 the
+ceiling's, 2 of them both).
+
+**Song Check 98**: the five Battle Theme songs of Song Checks 89 to 97
+with the guitar in tune on both sides, round 114 with this round's fix
+before and round 119 after: Song Check 97's question, whether rounds 115
+to 118 help, asked again fairly.
+
+**Open.** The verdicts first: rounds 115 to 118, and 111 and 114 where
+they touch the guitar's line, answered songs heard with a flat guitar,
+and are to be heard again on Song Check 98 before any is judged. A voice beside a line over
+its sample's ceiling (7 seeds): round 95's fold holds such a voice where
+the game plays its sample and these escape it; the writer does not read
+the ceiling. A drum as a part: the role reader makes The Empire
+Gestahl's snare (one pitch register in the game) and Mt. Koltz's tom
+(four) accompaniments and the writer writes them lines; the reading
+keeps the game's rates, and whether they are parts is the reader's
+question. Two gaps the investigation counted on Battle Theme, not yet
+words: its guitar sits an octave over the bass on 0.66 of the onsets
+they share, where the written guitar is at the bass's own pitch on 0.24
+to 0.34 and an octave over on 0.13 to 0.17 (its riding notes are folded
+into a register nine semitones wide); and its riff is a stack, the bass,
+the guitar an octave up, the lower synth two octaves up and the upper a
+twelfth over the guitar on 0.39 to 0.40 of its onsets, where the written
+upper synth holds the twelfth on 0.19 to 0.34. The standing list as at
+round 114.
+
+### Round 120: no voice over what the SNES chip can play of its sample (2026-11-09, the older bug round 119's measure found)
+
+**Why.** Round 119's measure heard, beside the guitar, a voice that
+sounded one pitch on every note written over 66. The SNES chip's pitch
+register stops at 0x3FFF, four times a recording's rate, so a sample
+sounds no higher than two octaves over the note it plays at 32 kHz, and
+a note written higher is played at that ceiling whatever its pitch
+class. Seven of 400 seeds held such notes, 2,015 of 582,713, each in a
+voice beside a line, two of the seven since before round 112. Round 119
+logged them; the go-ahead: "go ahead and fix the older bug".
+
+**Found.** The lines are written where the game plays their samples
+(round 34) and stay under the ceiling, and round 95 folds a voice
+written after the lines by its relation word into where the token song
+plays its sample (`fold_voice`). Two kinds of voice never reach that
+fold, and all seven are of them. A voice with no relation word is
+written by its layer word alone. A doubling is the line again at the
+word's interval (`parallel`), wherever that lands: The Wandering Bazaar
+(60) and The Restless Gorge (192), a third accompaniment voice
+"doubling +19" written 85 to 121 and 84 to 121 on samples the chip
+stops at 87 and 95, and Bastion Passage (54), an arp's second voice
+"doubling +4" written to 98 on a sample that stops at 95. An apart
+voice is written in its span, but a span a pedal's width wide is a
+pedal voice, and its pedal is the middle of its offset register, not of
+its span: Lower Aqueduct (126), a third voice whose span is 58 to 60
+(the token song plays its sample at 56 to 60), held 99 (the line's 74
+to 82 plus its word's 24, cut at 100) on all 104 notes. A voice struck
+with another, or following a sibling voice (round 107), is written in
+place and added as written: The Shore of Mirrors (42), a second
+accompaniment voice on the guitar, a doubling at +4 for 28 bars and
+then struck with the line, written 38 to 81 where the chip stops the
+guitar at 66 and the token song plays it at 28 to 44; Starlit Stone
+(153), a second voice on the guitar struck with the line at +4, to 68;
+Northern Mist (277), a third voice, a doubling at +19 for 16 bars and
+then struck with the second, to 111 on a sample that stops at 100. The
+token's own range for the voice was on the plan in five of the seven
+(`layer_ranges`, `layer_stretches`) and nothing read it. The hole is
+wider than the ceiling shows: over 400 seeds the voices written by
+their layer word alone (396) have 0.30 of their notes outside the range
+the token song plays their sample over, the struck ones (316) 0.21, the
+ones round 95 folds (194) 0.08; 267 songs hold such a note.
+
+**Built.** The ceiling on the plan: `samples_for` leaves each chosen
+sample's ceiling as a note (`plan.ceilings`, `score.pitch_ceiling` of
+its C-5 speed, by the slot the sample was chosen for), and
+`plan.voice_ceiling_at` reads a voice's ceiling a bar by the order the
+render picks the voice's sample in (`plan.sample_slot`, now the one
+order for `render.sample_of` too: the stretch's, the voice's own, the
+part's second, the line's). The fold: `plan.hold_under_ceilings`. A
+voice that holds a note over its ceiling is folded whole, as round 95
+folds (`fold_voice`, each bar first as a whole by the octave count that
+puts most of its notes inside, the leftovers one by one): into where
+the token song plays its sample (`voice_bound_at` without the part's
+range: the voice's stretches, its range, its writing span), cut at the
+ceiling; where the plan knows no range for the voice, into the span it
+was written over, cut at the ceiling; a range wholly over the ceiling
+gives the octave under it; a line, should one ever hold such a note,
+into its own bound. It runs twice in `write`: beside round 95's fold,
+once every line and voice is written, so the theme band and the form's
+repeats copy the voices as folded; and last, on the notes as finally
+played, for whatever a pass since has moved over a ceiling (nothing, in
+400 seeds). The song's own copy of the part moves note for note with
+it, and the plan's log says what was folded. A voice with no note over
+its ceiling is not touched, so a song without one keeps its notes
+exactly; the fold for every such voice is the same fold without the
+condition, and is left to be heard first (Open). Tests: a doubling a
+twelfth up with no range known (a bar an octave down as a whole, under
+the ceiling, its pitch classes kept), a pedal over its ceiling folded
+to the octave just under its token range's top, a voice under its
+ceiling and the line untouched, the song's copy, a second pass moving
+nothing, a plan without ceilings moving nothing, a line over its ceiling into its own bound, the slot's order,
+the ceilings `samples_for` leaves. Suite 477 (1 skip).
+
+**Measured.** The score over 400 seeds: no note at the register's top
+in any song (7 songs, 2,015 notes before). Plans (400 seeds, against
+round 119): 400 keep their token song; 393 keep their notes and their
+plan logs, and the seven that do not are the seven: in each, one voice
+of one part moved and nothing else. The Wandering Bazaar's third
+accompaniment voice, all 370 notes, from 85-121 to 49-60, where the
+token song plays its sample (56 to 60, a range a twelfth's doubling
+cannot fit: the octave under its top); Lower Aqueduct's, all 104, from
+99 to 51; The Shore of Mirrors's second voice, 478 of 527, from 38-81 to
+28-56 (the guitar's 28 to 44, then its second stretch's 44 to 56);
+Starlit Stone's, 60 of 138, from 38-68 to 38-48; Northern Mist's third,
+16 of 22, from 61-111 to 58-95; and, with no range known, The Restless
+Gorge's third, 153 of its 271 notes, from 84-121 to 84-95, and Bastion
+Passage's arp voice, the 7 of its 145 that sat over the ceiling, from
+77-98 to 77-94. The render heard (round 119's measure, the seven
+songs): before, 47 voices with a verdict and 3 under 0.80 on pitch (The
+Wandering Bazaar's voice 0.06, The Restless Gorge's 0.45, The Shore of
+Mirrors's 0.60), Bastion Passage's at 0.95 and Northern Mist's at 0.91;
+after, 46 with a verdict and every one on pitch on every decisive note.
+The Shore of Mirrors's voice has no verdict now: in the guitar's low
+range the test's combs tie, as on the guitar basses (0.23 of its notes
+decisive). The five Battle Theme seeds of the Song Checks are note for
+note and log for log as round 119 left them.
+
+**Open.** The fold for every voice it would move: 267 of 400 songs hold
+a voice round 95's fold never sees with notes outside the range the
+token song plays its sample over. It is this round's fold without its
+condition, it changes most songs, and it is left to be heard and
+decided. The pedal at its offset (5 of 400 seeds: Twin Stone, Lower
+Aqueduct, Market of Rain, Ancient Wires, Twin Glass): `write` gives an
+apart voice's pedal the middle of the line's register at the word's
+offset where the voice's span, the range the game plays its sample
+over, is elsewhere. A layer word and a token range that disagree by
+octaves: Johnny C. Bad's third accompaniment voice is "doubling +19"
+with its sample played at 56 to 60 under a line at 72 to 84, so the
+word's octave is not the range's, a question for the layer reader. The
+Shore of Mirrors now has the guitar twice in the bass's octaves: the
+readings hold Dancing Mad (part 5)'s guitar under its bass and under
+its accompaniment (159 notes each), and both are written. The standing
+list as at round 114.
+
+### Round 121: a backing voice loops where the token song's does (2026-11-09, from the verdict on Song Check 98 and the listening experiment chosen by ear)
+
+**Why.** Song Check 98, the guitar in tune: "we still have an issue ...
+where the accompaniment is doing too much and taking away from the
+rythm of the song ... I just hear the accompaniment and what its doing
+more than the tune" (by ear), and a deep look asked for. The look
+went past the measures of rounds 104 to 118, which each compare a share
+over the song, to the bars themselves, Battle Theme's beside the written
+songs', and ended in an experiment heard and chosen by ear ("the
+experiment is the way"): three of the songs with every backing voice
+playing its first bar of a section again through the section.
+
+**Found.** It is not the levels: against the tune, A-weighted, Battle
+Theme's backing sits 1.4 dB over it and the written songs' 0.1 dB (the
+median of the five; their synths 3 dB under the game's). It is what the
+backing plays. Battle Theme's rhythm section is a loop. Through its B,
+16 of its 41 bars, the guitar plays one bar eight times, the two synths
+one bar in six of eight (the other two fills, where the tune holds a
+note), the bass and the kit two bars four times, and the harmony is one
+bar, A then B flat. In the five written songs no backing voice played a
+bar twice. The rhythm did repeat: the periods word (round 30; the
+token's own lag and share since round 106) reads an upper part's bar as
+its onset pattern and the bass's as its chord-tone marks
+(`cells.block_key`), so a held bar was a bar on the same rhythm, and the
+writers drew its notes again; the holds since (the chord-tone profile,
+the bass's continuity, the steps, the struck voice's cell) each keep a
+share right over the song and none keeps a bar. Three voices each
+played new notes every bar, under a tune that moves less. It became
+plain to hear with round 113: the token's own form has parts of 8 to 14
+bars, where the pooled forms' short parts, repeated, had hidden it (a
+backing bar repeated from the eight before it in about 0.2 of the bars
+through round 112, 0.02 since). And it is the game's habit, not this
+song's alone: read note for note, FFVI's backing voices loop (a figure
+of 1, 2 or 4 bars on half the bars or more) in 0.45 of the parts of the
+form a chord part's line plays four bars or more in, 0.47 of a voice's
+beside it and of a bass's, 0.69 of a kit's, and its harmony in 0.58; 56
+of its 68 songs have a loop somewhere. The bars off a figure fall a
+little more at a part's end: 0.35 of last bars and 0.29 of a phrase's
+fourth against 0.16 to 0.24 elsewhere.
+
+**Built.** The reader: a voice's bar note for note (`voice_bar_keys`:
+each note's place in the bar with its pitch, a kit hit with its sample;
+`chord_bar_keys`: the chord at each beat), its loop inside a part of
+the form (`loop_of`: the figure at a length of 1, 2 or 4 bars is the
+bar played most at each place of it, twice or more; a longer figure only
+where it holds LOOP_GAIN 0.15 more of the bars; a loop where the figure
+holds LOOP_SHARE 0.5 of the bars the voice plays, LOOP_BARS 4 or more)
+and the bars off the figure (`loop_breaks`). The token: the loops by
+the form's letters (`loops_text`: "B1~75!3.7", in B a one-bar figure on
+0.75 of the bars, off it in the part's bars 3 and 7), a nineteenth field
+on a backing part's token for its line and on the kit's (`lB1~100`), an
+eighth sub-field on each voice beside a line, and a song-level
+`cycle=B1~88!7` for the harmony; Battle Theme's reads the guitar
+`lB1~100`, both synths `lB1~75!3.7`, the bass and the kit `lB2~100`. The
+plan: `loops_of` reads them and `Plan.loops` keeps them where the form's
+letters are the token song's (none where the form's draw stands);
+`plan_chords` draws every bar as before and then gives a bar on the
+harmony's figure the chord of the first bar at its place (a part that
+repeats one takes its chords again), so no other draw moves. The
+writing: `hold_loop` makes a bar on a voice's figure the figure again,
+the first such bar the voice plays at that place copied whole, pitch and
+place and length; a bar the token song has off its figure and a bar the
+voice rests in stay as written. It runs where each voice is finished:
+on the kit's hits before the bass reads its accents, on the bass's line
+once folded, on a chord part's line once held and folded and before the
+voices beside it are written against it, on each voice beside a line
+once written. The passes after the writing leave a figure's bars as
+they are: the theme band and the hand-offs (`_on_figure`), the bass's
+last pass and the voices riding it (`hold_bass_pitch`, `held`). The
+first version changed the chord chain's state where the harmony looped,
+which shifted the draws after it and gave 24 of 400 seeds another
+song's token; the loop is a pass after the chain for that. Tests: the
+reader's loop and its bars off the figure, the token's fields, the
+plan's taking them with the form and leaving them without, the
+harmony's loop over an unholding chain, the copy over each writer's
+note shape with a rest and a fill, the passes after it. Suite 483 (1
+skip).
+
+**Measured.** The five Battle Theme songs: in B the guitar's figure
+holds 1.00 of its bars, each synth's 0.75, the bass's and the kit's
+1.00 at two bars, the token's shares to the hundredth, where every one
+was 0.00 at round 120; the chord of B is one chord through seven bars
+and a turn in the eighth. Sixty seeds, each backing voice in each part
+of the form it plays four bars or more in, read as the reader reads the
+game: a chord part's line loops in 0.41 of them (0.09 before; FFVI
+0.45), a voice beside a line in 0.32 (0.05; 0.47), the bass in 0.42
+(0.17; 0.47), the kit in 0.70 (0.37; 0.69), the figure's share where it
+loops 0.80, 0.75, 0.67 and 1.00 (0.50, 0.50, 0.50, 0.69 before; the
+game 0.80, 0.75, 1.00, 1.00); where the token names a loop the written
+share is the token's (the median difference 0.00) and the figure's
+length the token's in 0.85 to 0.96. Plans (400 seeds, against round
+120): 400 keep their token song; 336 took loops, 14 have a token with
+loops and a form of their own draw, 50 a token with none; the harmony's
+loop changed a chord in 274; 73 note sets are unchanged. No note over a
+sample's ceiling in any of the 400 (round 120's measure).
+
+**Song Check 99** will carry rounds 121 to 123 together.
+
+**Open.** Outside its loops the backing still plays a new bar every
+bar, and Battle Theme's C and D are no loops: there its guitar, bass
+and kick strike together under the tune's main notes and its synths
+double the tune, which is the next round's (what a voice strikes with,
+read part by part of the form). The figure is the first bar the voice
+plays on it, drawn note by note as before: a riff built as one figure
+(Battle Theme's synth alternates a low note on the beat with a high one
+off it) is a word not yet counted. A bar off the figure is the bar as
+written, with no shape of its own (a run, a climb). The loops come on
+top of the song's chord-hold share (the chain holds as before, and the
+loop holds more). A loop is taken only with the token song's form, and
+a figure of eight bars is not read. The standing list as at round 114.
+
+### Round 122: what a voice beside a line does is read part by part of the form (2026-11-09, the second change from Song Check 98's investigation)
+
+**Why.** The investigation's second finding. In Battle Theme's B the
+two synths play the riff's rhythm with the guitar; in its other parts
+they do not. In C they strike with the guitar's sparse hits, the lower
+one the guitar an octave up, and in D they play the tune's own rhythm:
+every one of their 45 notes there lands on a tune onset, the upper an
+octave over the tune and the lower a third. The written synths kept the
+riff's rhythm under the tune to the song's end (in D between 0.63 and
+0.80 of their notes on a tune onset, their rhythm sharing a third of
+the tune's), so through the song's longest part a second rhythm ran
+against the tune: "I just hear the accompaniment and what its doing more
+than the tune".
+
+**Found.** The reader was right about the notes and wrong about the
+grain. What a voice does beside another (round 90: a double, parallel
+at one interval, its own; round 107: struck with) is read a stretch at
+a time, and a stretch is a run of notes on one sample
+(`roles.stretches_of`). Battle Theme's synths play one sample from
+their first note to their last: one stretch, one reading, struck with
+the riff. FFVI changes what a voice does without changing its sample
+often: of 362 voices with a stretch of eight notes or more in a song
+whose token carries its form, 183 read differently in one part of the
+form than in another. And the writer had no way to write such a voice:
+a struck-with stretch is written in place, beside its line, and a
+voice with one left its stretches on another part's line as its own
+notes ("stay its own beside the struck ones").
+
+**Built.** The reader: `_split_by_parts`, before round 96's edge split.
+Each part of the form a stretch plays `STRETCH_NOTES` (8) notes or more
+in is asked what it does there (`roles.stretch_relation`), the
+candidates in LEAD_ORDER so that of two voices it strikes with equally
+it follows the one that leads (the tune before a sibling: Battle
+Theme's lower synth in D strikes with the tune and with the upper synth
+on every note); a part of fewer notes takes the reading of the part
+before it, the first parts the part after's; parts alike run together,
+a stretch whose parts all read alike stays whole as read before, and a
+song whose token carries no form is read whole. The struck-with reading
+(round 107) and its facts (round 108) are then asked of each own run
+as before. Battle Theme's words: `wl+19x27>pm+12` and
+`w1-7x10>da+12x9>w1-7x8>pm+4` (`wl+19`, `w1-7`). The writer: a voice
+with struck stretches and stretches on another part's line is written
+both ways. Its struck stretches are written in place (and looped,
+round 121) as before; the voice then waits with the voices written
+after the lines, and `late_stretch_notes` writes its stretches on a
+line (`stretched_notes`: the line again at the interval, by the chord
+where it is parallel) and folds those bars alone into where the token
+song plays the voice's sample (`fold_voice`), the struck bars standing
+as written. Tests: a voice struck with its line through one part and
+doubling the tune through the next (read whole without a form, split
+with one, whole again where both parts read alike or the second has
+too few notes); the writer's two ways in one voice, the struck bars
+untouched and the late ones folded. Suite 485 (1 skip).
+
+**Measured.** FFVI's tokens: 157 voices beside a line; 99 carry a
+relation word (88 before) and 58 read differently. The interval word
+(`parallel_intervals`) is counted over the stretches as now read: 7,372
+onsets in 50 songs (8,281). The five Battle Theme songs, part D: every
+synth note on a tune onset in all five (0.63, 0.80 and 0.65 in the
+three whose synths played there; Battle Theme 1.00), the synths' rhythm
+the tune's on 0.93 to 1.00 of a bar (0.32 to 0.33; Battle Theme 1.00),
+the upper synth an octave over the tune on every note; in C the lower
+synth doubles the guitar an octave up. Plans (400 seeds, against round
+121): 400 keep their token song; 62 note sets unchanged (the interval
+word's table moved under every parallel and struck voice); no note over
+a sample's ceiling; the loops of round 121 as they were (a line's
+figure in 0.40 of its parts of the form, a voice's beside it 0.32, the
+bass's 0.42, the kit's 0.70).
+
+**Song Check 99** will carry rounds 121 to 123 together.
+
+**Open.** The line itself has no such word: Battle Theme's guitar
+doubles its bass an octave up through A, C and D and plays its own
+figure in B, and the written line rides the bass in parts drawn by a
+share, at whatever octave its register gives (the next round). A part
+of the form under eight of the voice's notes takes its neighbour's
+reading, and a change inside a part is not seen. A stretch on another
+part's line is written wherever that line plays, whether or not the
+texture has the voice's own part playing there. In C Battle Theme's
+synths strike on the tune's main notes because the guitar they follow
+does; the written guitar keeps its own density there (a part's density
+by section is a pooled word). The standing list as at round 114.
+
+### Round 123: a chord part's line doubles the bass where the token song's does (2026-11-09, the third change from Song Check 98's investigation)
+
+**Why.** Round 122 read the voices beside a line part by part of the
+form; the line itself has the same story and no word for it. Battle
+Theme's guitar is its bass an octave up through A, C and D (the bass's
+rhythm, its notes, twelve semitones over) and plays its own riff
+through B: read part by part its relation word is
+`db+12x2>ox8>db+12x9>ox8>pb+12`. In the parts where Battle Theme's band
+plays as one, under the tune's main notes, the written guitar and bass
+were two lines on two rhythms.
+
+**Found.** Round 106 gave the line its rides field (`b75/70`: 0.75 of
+its onsets with the bass, 0.70 of those at its pitch class) and
+`ride_the_bass`, which writes the line on the bass's figure in parts of
+the form drawn by the shares' product. Two things the field does not
+say went wrong. Which parts: the draw rode B as soon as A or C, and
+Battle Theme's B is the one part where the guitar is not the bass. And
+the octave: the riding notes were folded into the line's register,
+eight semitones wide on this token, so most of them landed at the
+bass's own pitch; the written guitar sat at the bass's pitch on 0.25 of
+the onsets they shared and an octave over it on 0.15, where Battle
+Theme's sits on 0.04 and 0.66.
+
+**Built.** The reader: `line_company_field`, the line voice's relation
+word (already read for every voice, by the form's parts since round
+122) with every stretch on anything but the bass as its own, an "r"
+before it, a chord part's twentieth field; "" for a line that never
+follows the bass. Six FFVI chord parts carry one (Battle Theme, Aria de
+Mezzo Carattere, Grand Finale part 2, Blackjack, The Fierce Battle,
+Dancing Mad part 2). The plan keeps it (`extras[part]["company"]`). The
+writer: with the word `ride_the_bass` draws nothing; the line rides in
+the bars of the word's stretches on the bass and nowhere else, and plays
+the bass's notes at the stretch's semitones, moved by octaves only where
+that leaves where the token song plays the line's sample (the stretch's
+range where the line changes instrument, else the sample's: 40 to 56
+for Battle Theme's guitar over a bass at 28 to 44). It runs once the
+line is held to its steps and folded, so nothing after it moves the
+double off the bass, and before the line's loop and the voices beside
+it, which are written against the line as it rides. A token without the
+word rides by the share as before. Tests: the field from a line that is
+its bass an octave up through one part and its own through the next,
+and none from a line that never follows the bass; the plan's keeping
+it; the ride in the word's bars alone, at the semitones, a note over
+the sample's range moved an octave, a bar the part rests in left, the
+voices beside the line seeing the double. Suite 488 (1 skip).
+
+**Measured.** The five Battle Theme songs: the line an octave over the
+bass on 0.47 of the onsets they share (0.15 before; Battle Theme 0.66)
+and at its pitch on 0.10 (0.25; 0.04). Where the line plays through C
+and D, 0.93 to 1.00 of its notes are on a bass onset, twelve semitones
+over it (Lunar Island 40 of 40 in C and 84 of 89 in D; Gate Return 46
+and 58; The Terminal of Glass 48 in C; Second Cistern Dance 46 in C);
+it doubles the bass in 5 to 25 bars a song (Journey of the Quarry's
+accompaniment plays in few bars outside B). Plans (400 seeds, against
+round 122): 400 keep their token song; 365 note sets and 364 plan logs
+unchanged (the 36 plans on the six tokens that carry the word); no note
+over a sample's ceiling; the loops as round 121 left them.
+
+**Song Check 99**: rounds 121 to 123 together on the five Battle Theme
+songs of Song Checks 89 to 98, round 120 before (the songs as Song Check
+98's after side) and round 123 after: Journey of the Quarry (18), Lunar
+Island (243), Gate Return (343), The Terminal of Glass (150) and Second
+Cistern Dance (365). The render heard before the page was built (round
+119's measure): 24 voices with a verdict before and 25 after, every one
+on pitch. Its notes say how it differs from the experiment chosen by
+ear: that looped every section, and this loops where Battle Theme
+does (B) and through C and D has the band play as one.
+
+**Open.** A part's density by section is still a pooled word: Battle
+Theme's bass and guitar thin to four notes a bar in C and D, the
+written ones keep six to eight, so the unison is busier than the
+game's. The line follows only the bass: a line that doubles the tune
+through a part is written as its own. The double is of the bars the
+bass plays; where the texture rests the bass, or the accompaniment, the
+line is as before (which parts play in which part of the form is the
+pooled textures word, not the token song's: Battle Theme's A is the
+guitar and the bass alone). The standing list as at round 114.
+
+### Round 124: the parts that sound in each part of the form are the token song's (2026-11-10, the first change from Song Check 100's investigation and the Arrangement Check)
+
+**Why.** Song Check 100 played one song for each of FFVI's 68, the theme
+asked for as the token song has it. Eleven were marked: "its all pretty
+musical at this point", and dull beside the game's; the song on Edgar
+and Sabin's token abrasive ("garbled noise, especially the beginning");
+on Locke's, "the parts drop a lot of the instruments and play a super
+basic musical system for a bit". Each written song was then read beside
+its token song by the same readers. Bar by bar they agree (notes a bar,
+rhythm repeats, the voices sounding at once). Section by section they do
+not: every part of the band sounds in 0.48 of a written song's bars
+against 0.62 of its token song's, the bass is gone four bars or more in
+28 written songs against 14, and the parts sounding change at 0.32 of
+the bar lines against 0.15. The written Edgar and Sabin plays its
+accompaniment and bass alone for fourteen bars and its tune alone for
+six; the game's four parts play every bar.
+
+**Found.** A song takes its band, sounds, levels, form and loops from
+its token song, and what sounds in each part of that form from the
+`part_textures` word, with the `part_entries` word for the entrances:
+both pooled over the game and drawn by a part's place in the form. The
+form has been the token song's since round 113, so a pooled texture
+lands on a part of the form it was never counted in.
+
+**The experiment first.** The Arrangement Check: four Song Check 100
+songs (Locke's, Gogo's, Edgar and Sabin's, Battle Theme's), each as dev
+writes it and with the token song's own arrangement by section patched
+in at run time (this round's word with those of rounds 125 and 126).
+All four were marked better after, and the changes were asked to be built.
+
+**Built.** The reader: `part_spans_field`, every part's twenty-first
+field, the kit's too: the parts of the form the part sounds in by the
+form's letters, each with the bars after its start the part enters and
+the bars before its end it leaves where it does not sound it whole
+(`eA+B2.0+D0.4`); a letter left out is a part of the form it rests
+through. A part sounds in a bar as the texture words count it
+(`sounding_bars`), and its span runs from the first bar it sounds in to
+the last, as the entrance word reads one. The plan: `spans_of` reads
+the field; where the form's letters are the token song's (`own_form`,
+the loops' condition) `token_textures` sets the textures and each
+part's bars from the spans, a part of the form too short for its
+entrance played whole, a returning part copying its first statement's
+bars. The pooled draws are made all the same (their log lines unsaid),
+so no other draw moves; the drums' entrance draw, on its own stream, is
+left out. A part that then sounds nowhere leaves the band, as before.
+Tests: the field from a song whose accompaniment enters two bars into
+A, whose tune rests A and leaves C early, the kit's, none without a
+form; the field's place in the token; the plan's textures, entrances
+and log with the token's form, and the pooled draw without it; a
+returning part and a part too short. Suite 492 (1 skip).
+
+**Measured.** 62 of FFVI's 68 tokens carry the field (the songs whose
+form the token carries). Of 1058 cases of a part in a part of the form,
+835 are whole, 120 enter late or leave early, 103 rest through it; six
+songs have every part through every part of the form. Edgar and Sabin:
+`eA+B+C` for the tune, the accompaniment and the bass, `eA+B0.1+C` for
+the kit. The Song Check 100 songs, the 59 whose form is their token
+song's: a part sounds in a bar as its token song's does in 0.97 of the
+cases (0.80 before); every part of the band sounds in 0.57 of the bars
+(0.48; FFVI 0.60); the bass is gone four bars or more in 11 songs (24;
+FFVI 14), the tune in 11 (18; 15), the tune and the counter both in 5
+(9; 6). Plans (400 seeds, against round 123): 383 keep their token
+song; 17 themed plans settle on another draw, since a tune that sounds
+in more of the form can come back where it could not; 40 note sets are
+unchanged, the songs whose form is not their token song's.
+
+**Open.** How busy each part is inside a part of the form is still
+pooled (round 125). A span is one run: a bar a part rests inside it is
+its figures' to rest. A returning part of the form sounds as its first
+statement. A song whose form is drawn keeps the pooled words. And an
+unthemed song's tune now sounds in more of the form, so its phrase
+letters bring the theme back more often: three of Song Check 100's 43
+songs picked for a theme that never returns have a return now, and one
+of its two picked for a return with the tune alone has the band back
+with it.
+
+### Round 125: how busy each part is in each part of the form is the token song's (2026-11-10, the second change from Song Check 100's investigation and the Arrangement Check)
+
+**Why.** Round 124 made the parts that sound in each part of the form
+the token song's. How busy each is there was still drawn: the written
+Locke had all five parts in every bar and still dropped to "something
+basic". Its snare ran sixteen hits a bar through A and stopped for
+seven bars of B, where the game's rolls fifteen to thirty-two a bar in
+thirteen bars of sixteen; its accompaniment played two notes a bar in
+fourteen bars of sixteen, where the game's plays five or six at the
+median. The
+written Edgar and Sabin's accompaniment played up to eighteen notes a
+bar in each of three voices at 125 beats a minute, the third voice's
+notes 24 milliseconds long, where the game's plays two to six a bar at
+90.
+
+**Found.** A part's habit rides the token (round 62): its density tier
+over the song. Where it thins and fills inside the song is the
+`section_densities` word (a tier up or down by section, round 101) and
+the `section_fills` word (round 118), both pooled and drawn by the
+section's place in the form; the kit has neither, its pieces' figures
+running on their own chains through the song. Edgar and Sabin's
+accompaniment drew a tier denser in A under a fine grain; Locke's drew
+a tier sparser in A, and its snare's chain, once it drew a rest at a
+part's end, stayed at rest.
+
+**Built.** The readers: `section_onsets_field`, a pitched part's
+twenty-second field for its line and a voice beside a line's ninth
+sub-field: its onsets a bar by the form's letters, the median over the
+bars it plays in the part of the form, and after a `!` its onsets in
+the part's last bar where that is a fill or a thinning (the fills
+word's own rule); `kit_onsets_field`, the kit's twenty-second field:
+each piece's median hits a bar and the share of the part's bars it
+plays in. The plan: `onsets_of` and `kit_onsets_of` read them; where
+the form's letters are the token song's, `token_sections` sets a
+backing line's onsets a bar (`plan.section_onsets`, the last bar its
+own), the kit's pieces' bounds a bar (`plan.kit_bounds`,
+`kit_piece_bounds`), the tune's tier against its typical onsets, and
+the fills of the tune, the counter and the first voice beside a line;
+the pooled words are not drawn then. The writers: `habit_at_for` gives
+a backing line's bar the density tier the section's onsets sit in and
+`envelope_at_for` the writers' own envelope of them (`writer.TIGHT`),
+both through the hooks round 101 built; `writer.drums` takes
+`bounds_at`, draws a group's figure with each piece within its bounds
+(`_free_figures`' new `envelope_by_bar`), rests a group none of whose
+pieces sounds in the part of the form, drops a hit of a piece the part
+never hears, and leaves a bar every group rests at rest. Tests: the
+fields from a bass with a fill at A's end and a kit whose kick plays
+half of A's bars and whose snare never sounds in B; the readers and the
+bounds; the plan's onsets, tier, bounds, envelope, habit and log lines
+with the token's form, the pooled words without; a kit piece kept to
+its bounds, the table's other piece dropped and a part of the form
+with no piece at rest. Suite 496 (1 skip).
+
+**Measured.** FFVI: 129 backing lines carry their onsets over 422
+parts of the form, 155 with a last bar of its own; of the 118 lines
+with two parts of the form or more the busiest is 1.5 times the
+sparsest at the median, and 1.5 times or more in 66. 40 kits carry
+their pieces: 210 cases of a piece played through a part of the form,
+52 in some of its bars, 13 rarely. The Song Check 100 songs, the 59
+whose form is their token song's: a backing line's onsets a bar in a
+part of the form are within the envelope of its token song's in 362 of
+384 cases (237 after round 124, 194 of 389 on dev); a kit piece the
+song plays through a part plays through it within its bounds in 173 of
+180 (109; 107 of 193); the kit sounds in 0.94 of the bars at the median
+(1.00 after round 124; FFVI 0.97). Locke's (seed 10): the snare twelve
+to sixteen hits in every bar, the accompaniment three to eight notes a
+bar. Edgar and Sabin's (193): the accompaniment one to six a bar, the
+bass two to four (eight before), no voice with a fifth of its notes
+under 40 milliseconds. Plans (400 seeds, against round 124): all keep
+their token song; 41 note sets unchanged.
+
+**Open.** The envelope is the section's median: its bars are not told
+apart but the last. The writers' grid stops at sixteenths (Locke's
+snare, read at thirty-two a bar, plays sixteen). The tune and the
+counter are not held to the section's onsets, and the counter still
+rests more than the game's. A voice beside a line takes only its last
+bar's fill. The bass's second voice is the next round's.
+
+### Round 126: the bass's second voice does what the token song's does (2026-11-10, the third change from Song Check 100's investigation and the Arrangement Check)
+
+**Why.** By ear, on the song written on Gogo's token: "not as
+coherent as Gogo actually is, sounds much more wandering". Part of that
+is its bass. Gogo's bass is two voices, a held line under a busy one
+that plays four to nine notes a bar, the bounce under the tune; the
+written bass played one note a bar for the whole song and its second
+channel never sounded.
+
+**Found.** A part's voices beside its line take what they do from the
+`layers` word, pooled by the part and the voice's rank. For a bass the
+writer writes a second voice only where the word is a line of its own
+(`apart`); FFVI's fifteen two-voice basses are that in twelve, one line
+on two samples in two (Returners, Overture part 3) and alternating in
+one (Fanfare). The pooled draw gave Gogo's bass `alternating` and
+Locke's `doubling +0`, and neither was written: seven of Song Check
+100's 68 songs had a bass channel that never played.
+
+**Built.** The reader: `layer_word`, the layers word's outcome for one
+voice (taken out of `layer_units`, which counts with it as before), and
+a bass's voice beside the line carries it as a tenth sub-field
+(`vapart_+0_denser`, `vdoubling_+0`). The plan: the `layers` draw is
+made as before and a bass's voice then takes its token's word where
+that is one the bass writer writes (`BASS_LAYER_KINDS`: a line of its
+own, the line again). The writer: `double_bass`, a second voice that
+doubles the line: the line as finally played, again on the second voice
+at the word's interval (`diatonic`), written after the theme band, the
+form's repeats and the bass's last pass so the double stays the line's.
+Tests: the word and the sub-field from a held line under a busy voice,
+and from the line again; the plan's taking it over a layers draw of
+`alternating`, and leaving the draw for an alternating bass; the double
+as the line an octave up, note for note, a stale note of the second
+voice gone. Suite 499 (1 skip).
+
+**Measured.** The Song Check 100 songs, the 59 whose form is their
+token song's: the channels that never play go from 8 to 3 (the third
+bass voice of Dancing Mad's two readings, and one tune voice). Locke's
+(seed 10): 135 bass notes where it had 26, the second voice two to
+twelve a bar. Returners' and Overture part 3's: the line on both
+voices. Plans (400 seeds, against round 125): all keep their token
+song; 352 note sets unchanged, the 48 others the songs on a two-voice
+bass's token.
+
+**Open.** A third bass voice is not written. An alternating bass keeps
+the pooled draw. The second voice's busyness is the mask word's, drawn
+under the line's figure: Gogo's busy voice plays eight a bar through
+its C and the written one follows the line's figure there. The other
+parts' voices beside the line still draw their layer word for the
+stretches the token leaves them their own.
+
+### Round 127: a chord takes the quality its degree has in the token song, and keeps it (2026-11-10, the fourth change from Song Check 100's investigation)
+
+**Why.** By ear, on the songs of Song Check 100 that were not their
+arrangement's fault: Gogo's "wandering", "random noise that makes sense
+musically"; Edgar and Sabin's, after the Arrangement Check, "still
+sounds more aimless". The arrangement rounds (124 to 126) leave the
+chords as they were, and the chords wander: the written Gogo opens G
+minor, G major, G5, G7.
+
+**Found.** The chain draws a chord a bar from the pooled chords word,
+and round 112 holds each changing chord's quality to the token song's
+shape profile, bar by bar from the shapes so far. The profile says
+which qualities the song has, not on which degrees, and the hold has no
+memory of what it gave a chord before. So one drawn chord came out in
+two or three qualities in a song, a major chord was made minor and a
+minor one major, and a quality landed on any degree: Battle Theme's
+major sevenths are all on its flat second (0.92 of that degree's
+beats), and the written song had one on its tonic and a bare fifth on
+its flat second. Counted on the plans' chords, the 68 Song Check 100
+songs beside FFVI's own bars: a chord change keeps its degree and
+changes its quality in 0.21 of the changes (FFVI 0.12), flips its third
+on its degree in 0.12 (0.06), and a degree has 1.81 qualities in a song
+(1.62). Switched off, the profile's hold left 0.84 of the chords heard
+in the key where it left 0.74 (FFVI 0.81).
+
+**Built.** The reader: `chord_degree_shapes`, a song-level `quals=`
+field: for each degree the song stays on four bars or more, by its
+semitones over the tonic, its qualities with their share of the
+degree's beats. The plan: `quals_of` reads it; `plan_chords` keeps each
+changing bar's chord as the chain drew it, and once the chain is drawn
+`hold_chord_shapes` gives each drawn chord one quality: its degree's
+own where the song gives the degree one (0.6 of its beats); else, of
+the qualities the profile's hold gave it, the one it took in the most
+bars among those the song gives the degree and those that keep the
+chord's own third (`chord_third`), the name as drawn at a tie. A held
+bar follows the bar before and a returning part its first statement.
+It runs after the chain and before the harmony's loops, so the chain's
+draws and every later draw stand. A first cut gave every chord its
+degree's most heard quality and left a song five distinct chords where
+FFVI's has nine; a second kept one quality a drawn chord with no
+degrees and left Battle Theme's flat second a fifth; this is the two
+together. Tests: a chord's third, with a minor key's dominant either;
+the quality taken most within the third, a held bar and a returning
+part; the field, its reading, a degree's own quality and the tonic's
+among the song's; the chain's own cases. Suite 503 (1 skip).
+
+**Measured.** FFVI: 67 tokens carry the field, 182 degrees; 131 have
+one quality on 0.6 of their beats or more (the major triad 43, the
+power chord 40, minor 32, the major seventh 5). The 68 Song Check 100
+songs, on the plans' chords: a change keeps its degree and changes its
+quality in 0.09 of the changes at the mean (0.21; FFVI 0.12), flips its
+third in 0.05 (0.12; 0.06); a degree has 1.35 qualities (1.81; 1.62); a
+song has 6 distinct chords at the median (8.5; 9). As the chord reader
+hears them: 0.82 of the chords in the key (0.74; 0.81), the tonic with
+the other third in 0.05 of the bars (0.07; 0.02). Battle Theme's (seed
+18): the tonic suspended, a power chord or minor, the flat second a
+major seventh through its six bars. Plans (400 seeds, against round
+126): all keep their token song; 27 note sets unchanged.
+
+**Open.** The degrees are still the pooled chain's, and a song has
+fewer distinct chords than the game's. A bar's chord is the chord two
+bars before in 0.34 of the written songs' bars against 0.50 of FFVI's
+(round 128). A chord's third still flips where the chain itself draws
+both.
+
+### Round 128: the harmony's loops are read by their roots (2026-11-10, the fifth change from Song Check 100's investigation)
+
+**Why.** Round 127 left one count open: a bar's chord, as the chord
+reader hears the written songs, is the chord two bars before in 0.34 of
+the bars against 0.50 of FFVI's. The harmony's loops ride the token
+since round 121 (`cycle=`), and a bar on a loop's figure takes the
+figure's chord.
+
+**Found.** The loop's key for a bar was each beat's chord, root and
+shape. The reader hears a quality from the notes sounding, so a harmony
+that sits on one root reads as two chords wherever a bar's voicing drops
+the third: by root and shape 114 of FFVI's 198 parts of the form of
+four bars or more are a loop, and by the roots alone 140 are, holding
+0.59 of the bars where it was 0.45.
+
+**Built.** `chord_bar_keys` keys a bar by the root at each beat. Nothing
+else moves: the loop's reading (`loop_of`: the figure's bars, the share
+on it, the bars off it), the token's word and the plan's use of it are
+round 121's. Test: a harmony on one root through a part, a triad one
+bar and its fifth the next, reads as a one-bar loop.
+
+**Measured.** FFVI: 55 tokens carry a cycle (48), over 140 parts of the
+form (114): a one-bar harmony in 110, two bars in 23, four in 7. The 68
+Song Check 100 songs: 29 take other chords; a bar's chord as heard is
+the chord two bars before in 0.39 of the bars (0.34; FFVI 0.50), four
+bars before in 0.36 (0.33; 0.37). Plans (400 seeds, against round 127):
+all keep their token song; 232 note sets unchanged.
+
+**Found on the way.** Counted on the plans' own chords the written
+songs already repeat a degree more than FFVI does (the degree two bars
+before in 0.48 of the bars against 0.44, a degree held 2.4 bars against
+1.6, four degrees a song against six). What wanders is what is heard:
+read back, a bar is on the plan's root in 0.66 of the bars and is the
+plan's chord in 0.35, and a song planned on six chords is heard on
+eleven. The bass is the first place to look: FFVI's strikes a bar's
+first beat on the root of the chord heard there in 0.73 of the bars,
+the written bass on the plan's root in 0.50 and off the chord in 0.17
+(FFVI 0.05). Round 129.
+
+**Open.** A loop is one figure a part of the form; a harmony that
+cycles through half of a part and moves on is read off its figure for
+the rest.
+
+### Round 129: the bass strikes a bar's first beat on the chord's root as often as the token song's does (2026-11-10, the sixth change from Song Check 100's investigation)
+
+**Why.** Round 128 found the wander in what is heard: the plans' own
+chords repeat a degree more than FFVI's do, and read back a written
+bar is on the plan's root in 0.66 of the bars. The bass is where a
+band says which chord it is on.
+
+**Found.** FFVI's bass strikes a bar's first beat in 0.93 of the bars
+it plays, and its note there is the root of the chord heard in 0.73 at
+the median and off the chord in 0.05. The written bass was on the
+plan's root in 0.50 and off the chord in 0.17 (0.53 and 0.20 on dev).
+Its figures' marks carry the game's own first-beat roots, and two
+holds then move them without regard to the place: the tone profile
+(round 111) gives way a chord-tone class over its share wherever the
+note falls, and the continuity (round 114) realizes a whole bar on the
+bar before's pitch class.
+
+**Built.** The reader: `bass_downbeat_field`, the bass's twenty-third
+field: of the bars its line strikes on the first beat, the share where
+its lowest note there is the root of the chord heard, after a "d"
+(`d73`); none under eight such bars. The plan keeps it
+(`bass_downbeat`). The writer: `writer.bass` takes `downbeat` and holds
+the line as it writes, bar by bar: a first-beat note off the root moves
+onto it, in the octave nearest where it was, where the share of bars on
+the root, with this bar counted off it, runs under the song's. It runs
+after the bar is realized (the profile and the pedal as before) and
+before the loop copies the bar, the line's notes go to the voice beside
+it and the chord parts read the bass. Tests: the field from a bass on
+the root in six bars of eight, none from seven bars; the plan's keeping
+it; a bass whose figures strike the fifth written at a share of 1.00
+(every first beat on the root), 0.50 (four of eight) and without one
+(the fifth). Suite 507 (1 skip).
+
+**Measured.** FFVI: 55 basses carry the field, 0.78 at the median, ten
+under a half (Battle Theme's 0.37, its riff off the reader's root) and
+seventeen at 0.9 or more. The 68 Song Check 100 songs, against the
+plan's chord: the bass on the root on a bar's first beat in 0.73 of the
+bars (0.50 after round 128; FFVI 0.73 against the chord heard), off the
+chord in 0.10 (0.17; 0.05). The chord reader hears a bar on the plan's
+root in 0.70 of the bars (0.66), a bar's chord the chord two bars
+before in 0.42 (0.39; FFVI 0.50) and 0.84 of the chords in the key
+(0.81; 0.81). Plans (400 seeds, against round 128): all keep their
+token song; 149 note sets unchanged.
+
+**Open.** A bar is still heard off the plan's root in three bars of
+ten. The plan's power chords and suspended chords leave their third to
+the other parts; the voice beside a bass line is drawn by its interval
+to the line, not by the chord (the written Locke's plays an A over a
+C-sharp fifth); a bass under eight first beats in
+its song carries no share. The standing list as at round 114.
+
+### Round 130: a tune moves as its token song's tune does (2026-11-10, the seventh change from Song Check 100's investigation)
+
+**Why.** By ear, on the Arrangement Check's Gogo and Edgar and Sabin:
+"still kinda mindless in a bad way", "still sounds more aimless like
+the gogo song". The chords were rounds 127 to 129; this is the tune.
+
+**Found.** Counted on the 68 Song Check 100 songs read back, beside
+FFVI's tunes, at the median: a written tune steps into a bar's first
+note in 0.38 of the bars (FFVI 0.59) and goes a fourth or more there in
+0.33 (0.23); onto a beat it steps in 0.48 of its moves (0.67) and goes a
+fourth or more in 0.28 (0.14). The moves table is the game's own and
+the `step_habits` word conditions it, but the draw then re-weights the
+fitting moves: on a beat the chord's tones take the song's chord-tone
+share of the mass, and a chord tone a third or a fourth away was taken
+where one lay a step off (where one lay a step off the tune stepped in
+0.50 of the cases, FFVI's in 0.74). About a quarter of a tune's notes
+are drawn moves; the rest are bars played again, which enter from
+wherever the bar before ended: by a fourth or more in 0.31 of the bars
+back at pitch and 0.49 of those moved (FFVI 0.19 and 0.19).
+
+**Built.** The reader: `tune_step_profile`, the melody's and the
+counter's eighteenth field in four classes (`tune_move_class`,
+TUNE_MOVES: the note again, a step within a whole tone, a third, a
+fourth or more from FAR_MOVE), where a backing line keeps its three
+(round 117); `step_profile_of` reads either. The writer:
+`writer.melody` takes `move_profile` and counts the tune's thirds and
+far moves as it writes; `draw_move` draws no move of a class the tune
+is over its share of (`third_over`, `far_over`) where a move of another
+class fits; the repeated note takes the song's own share; a bar played
+again (`again`) that would enter by a move of a class the tune is over
+is weighed with the chord and the over-share holds in its one move
+within a third; a phrase written again puts the counts back. A first
+cut held the far moves alone and the leaps became thirds (onto a beat
+by a third in 0.35 of the moves, FFVI 0.24), so the thirds are counted
+too. A second gave each class its share of every draw's mass, as the
+off-scale and clash shares are held: it sat nearer the songs' shares
+(0.037 from the far share at the mean against 0.050) and spent the
+thirds evenly instead of where they land on the chord, so a bar's first
+note fell on the chord in 0.48 of the bars against 0.52 (0.55 before
+the round; FFVI 0.61). Tests: a move's class; the field, none under
+sixteen moves; the plan reading a tune's four classes and a backing
+line's three; a draw with a class left out while over, a far move
+standing where no other fits; a tune written to a profile of steps.
+Suite 512 (1 skip).
+
+**Measured.** FFVI: 65 melodies carry the field (0.12 repeated, 0.56
+steps, 0.15 thirds, 0.10 far at the median; ten under 0.05 far, three
+at 0.25 or more), 50 counters. The 68 songs, at the median, before and
+after, FFVI last: into a bar's first note by step 0.38, 0.50, 0.59; by
+a fourth or more 0.33, 0.27, 0.23; onto a beat by step 0.48, 0.62,
+0.67; by a fourth or more 0.28, 0.18, 0.14; inside a bar by step 0.57,
+0.69, 0.69; the tune's steps of all its moves 0.54, 0.64, 0.65. A
+written tune's far moves are 0.12 of its moves at the median (its
+token songs' 0.10) and its thirds 0.15 (0.15). A new bar is entered by
+step in 0.49 of the cases (0.39; FFVI 0.51) and by a fourth or more in
+0.22 (0.30; 0.22). Bars back at pitch are 0.21 of the bars entered
+(0.20; FFVI 0.30), the tune's echoes 0.41 (0.39; 0.33). The tune's
+strong-beat notes on the chord: 0.46 of them (0.48; the songs' rate
+0.60). The arrangement's measures stand (cells sounding as the FFVI
+song's 0.96, backing lines within range 361 of 384, kit pieces 173 of
+180). Plans (400 seeds, against round 129): all keep their token song;
+11 note sets unchanged.
+
+**Open.** A bar played again is still entered by a fourth or more in
+0.31 of the cases at pitch and 0.40 moved (FFVI 0.19): which bar comes
+back, and where, does not know the bar before. A tune turns back on its
+last move in 0.61 of its moves (0.62; FFVI 0.53) and repeats a note
+after a repeated note in 0.35 (FFVI 0.56). Its range is 17 semitones at
+the median (18.5; FFVI 22), and its strong beats sit on the chord less
+than its song's rate asks. The counter beside a tune does not use its
+profile. The standing list as at round 114.
+
+### Round 131: a song read at half its speed is counted in double time (2026-11-10, the eighth change from Song Check 100's investigation)
+
+**Why.** By ear, on Locke's, at Song Check 100 and again after the
+Arrangement Check: "missing the pazaz", "still lacking that drive".
+The reading has FFVI's Locke at 70 beats a minute, and a song written
+on its token ran at 80.
+
+**Found.** Eleven FFVI songs have a voice past sixteen strikes a bar in
+a quarter of the song or more, and no writer strikes a piece more than
+sixteen times in a bar. For two of them it is the kit's pulse: Locke's
+snare plays in 0.88 of the song's bars and passes sixteen in 0.64 of
+those (25 strikes a bar at the median, at 70 beats a minute),
+Blackjack's hat plays in every bar and passes sixteen in 0.63 (at 72).
+Those are a march and a rock beat in sixteenths at 140 and 144, read
+at half their speed: the token says a slow song, the figure tables are
+asked a slow song's bars, and the kit's strikes are capped. The others
+are not: Dancing Mad's first part (60) rolls its snare in a quarter of
+its bars, a slow song with rolls; Gau's arpeggio, The Day After's
+accompaniment and New Continent's counter run in thirty-seconds or
+sextuplets over a slow tune; and the steady kits past sixteen at 87
+beats a minute and over would double past the fastest tempo the game
+is read at (168).
+
+**Built.** `readings.double_time`: the song as it reads at twice its
+tempo, a new Song (`beat` 2): every time in beats doubled, a bar of the
+meter two bars and a shorter bar one, the bars numbered on with the
+form's parts, sections and the loop's bar, chord spans, every voice's
+notes, the kit's holds and the pans' bars with them, the grid's
+division halved. `half_time`: a slow song one of whose kit voices plays
+in half of the song's bars or more and passes sixteen strikes in a
+quarter or more of the bars it plays. `token_song`: the one or the
+other, and `balance_units` counts every song through it, so the token
+of a half-speed song is its double-time self's, with a `beat=2` word.
+The plan reads the word and lets the token song's own form run to
+twice the bars asked. A first criterion (any kit voice past sixteen in
+a quarter of its bars) took Dancing Mad's first part and the whole of
+it too: written in double time the first part's form ran to 58 bars at
+85 beats a minute and its kit, the snare in 0.38 of the half bars,
+thinned to a strike and a half a bar; the steady share leaves both as
+read.
+Counting every table in double time, both readings' songs at the pack
+build, put the snare's march among the fast figures (the written
+Locke's kit at 6.8 strikes a second) and moved 130 of 400 seeds onto
+another token song; left for a Song Check whose seeds are picked
+again. Tests: a song in double time, its short bar, its form and loop,
+the reading untouched; which songs are at half speed; the token's
+tempo class, form, kit strikes and word; the plan's form at sixty bars
+where forty-eight were asked. Suite 516 (1 skip).
+
+**Measured.** Two tokens change (Locke's: `tempo=fast`, `form=A8A8B16`,
+the snare `S14.5@100` in A; Blackjack's: `form=A1B12C6D8E20`, the hat
+`h10.5@100`, the kick 3.5 and the snare 2 a bar). The songs on their
+own forms among seeds 1-400, before and after, the game last. Locke's
+(four songs): 50 to 84 beats a minute, 135 to 170, 140 in double time;
+16 bars, 32; 50 seconds once through, 50, 55; the kit's strikes a
+second 4.6, 6.3, 6.2; the bass's notes 3.1, 3.0, 2.6; the tune's 2.3,
+2.6, 1.9. Blackjack's (six songs): 55 to 80 beats a minute, 130 to
+170, 144; 30 bars, 47; 111 seconds once through, 74, 80; the kit's
+strikes a second 6.5, 9.9, 9.9; the bass's 4.0, 5.2, 4.9; the tune's
+0.9, 2.9, 1.4. The 68 Song Check 100 songs: 66 as they were, the two
+picks on these tokens changed; the arrangement's measures stand (cells
+sounding as the FFVI song's 0.96, backing lines within range 363 of
+386, kit pieces 175 of 179). Plans (400 seeds, against round 130): all
+keep their token song; 390 note sets unchanged.
+
+**Open.** The figure tables, the tune's cells and the tempos word hold
+the two songs as read: the snare's march is not among the fast songs'
+kit bars. A written tune on the two tokens is busier than the game's
+(Blackjack's 2.9 notes a second against 1.4). The steady kits past
+sixteen at 85 beats a minute and over stay capped, and so do the
+pitched voices in thirty-seconds over a slow tune. The standing list
+as at round 114.
+
+### Round 132: a song loops where its token song loops (2026-11-10, the ninth change from Song Check 100's investigation)
+
+**Why.** The Arrangement Check's Edgar and Sabin came back, after its
+24 bars, to its last four and played them over; the game's goes back
+to its start. Noted on the check's card as not changed.
+
+**Found.** The form is the token song's own since round 113; the part
+of it the loop returns to stayed the pooled `loop_parts` word's draw,
+by whether the form opens with an intro (round 98). Of the 54
+Song Check 100 songs on their token song's form with a loop read, 27
+loop to the part the game's does. Eleven loop to the second part where
+the game returns to the first, eight to the first where the game
+leaves it behind as an intro, two (Edgar and Sabin's one) to a late
+part where the game goes back to the start, and the rest elsewhere.
+
+**Built.** The reader: `loop_part_field`, a song-level `loop=` word
+beside `form=`: the index of the form's part that holds the loop's
+bar. The plan reads it and, where the form is the token song's own and
+has the part, sets the loop's bar to that part's first bar once the
+chords are drawn. The `loop_parts` draw is still made, on its own
+stream, and the chord chain is drawn with its bar as before, so no
+draw moves: a song's notes are what they were and its loop's bar is
+the token song's. Tests: the field for a loop at a part's first bar,
+inside a part, at the song's start, none without a loop or a form; the
+plan's loop at the token song's part, the rule's without the word or
+for a part the form has not, and no other draw moved. Suite 518 (1
+skip).
+
+**Measured.** FFVI: 58 songs carry the word; the loop returns to the
+second part in 32, the first in 20 and a later one in 6, always at the
+part's first bar. The 68 Song Check 100 songs: all 54 of the
+54 on their token song's form loop to the game's part (27
+before); the written Edgar and Sabin goes back to bar 1 (bar 21).
+Plans (400 seeds, against round 131): all keep their token song; every
+note set unchanged; 178 plans' loops moved.
+
+**Open.** The chord at the bar the loop now returns to is the chain's
+own, not the `loops` word's draw for a return. A song whose form is
+not its token song's keeps the pooled draw. The standing list as at
+round 114.
+
+### Round 133: the bass strikes a bar's first beat as often as the token song's does (2026-11-10, found while the six songs for Song Check 101 were rendered)
+
+**Why.** Counting the six songs picked for the listening check, the
+written Battle Theme's bass struck a bar's first beat in 10 of its 41
+bars, where it struck it in 29 on dev and the game's strikes it in 38.
+A band without its bass on the one has lost what was called
+punch, and the stack had done it.
+
+**Found.** A free-written part's bar asks no first beat: the habit
+conditions the table and the envelope is strikes a bar alone
+(`free_envelope`). On dev the habit's bars mostly struck it (0.91 of a
+bass's bars at the median over the 68 Song Check 100 songs; FFVI
+0.93). Since round 125 a bass's bar is drawn within its token song's
+strikes a bar for the part of the form, and the bar that fits may be
+one off the first beat; since round 121 that bar is played again
+wherever the song's bass loops. After round 132 the written bass
+struck the first beat in 0.80 of its bars at the median and fifteen
+basses in under half (seven on dev; six of FFVI's). The kit did not
+lose it: the kick strikes the first beat in every bar it plays at the
+median (FFVI 0.93).
+
+**Built.** The reader: `bass_first_beat_field`, the bass's
+twenty-fourth field: of the bars the bass plays in, any voice of it,
+the share struck on the first beat, after an "f" (`f93`); none under
+eight bars. A first cut counted the line alone, and where a bass is
+two voices the first beat may be the other's: Gogo's line holds under
+a busier voice (under eight bars: no share) and Fanfare's two voices
+play in turn (the line off the beat in every bar), so the songs on
+those tokens stayed off it. The
+plan keeps it (`bass_first`). The writer: `_free_figures` takes
+`first_beat` and counts the bars written and those on the first beat;
+a new bar is asked the first beat while the share, with this bar
+counted off it, runs under the song's: two rungs ahead of the bar's
+own ladder, the envelope with the first beat and the lock, then
+without the lock. A first cut left it there, and a shuffle's bass
+stayed off the beat (Edgar and Sabin's 2 bars of 24): the bars its
+context holds seldom strike it and forty draws found none. So where
+neither rung draws one the figure is one of the known figures that
+pass the rung, by the table's own probabilities in the bar's context
+(`among`). Tests: the field from six bars of eight, none from seven
+bars played; the plan's keeping it; a bass fitted on bars on and off
+the first beat written free (a bar off it), asked every bar (all
+eight on it) and asked half. Suite 521 (1 skip).
+
+**Measured.** FFVI: 63 basses carry the field, 0.93 at the median,
+six under a half, 37 at 0.9 or more. The 68 Song Check 100 songs: the
+bass's line on the first beat in 0.96 of its bars at the median (0.80
+after round 132; 0.91 on dev; FFVI 0.93), the mean 0.92 (0.70; 0.81;
+0.83), no bass under a half (fifteen; seven; six). The written Battle
+Theme's: 35 of 41 bars (10 of 41; the game's 38 of 41). Edgar and
+Sabin's: 22 of 24 (2 of 24; the game's 24 of 26). On the first beat
+the bass is on the plan's chord's root in 0.75 of the bars (FFVI
+0.73 against the chord heard) and the chord reader hears a bar on the
+plan's root in 0.72 of the bars at the median (0.70 after
+round 129). Plans (400 seeds, against round 132): all keep their token
+song; 163 note sets unchanged.
+
+**Open.** A chord part's line and the kit are still drawn with no
+first beat asked. The share is only raised to, never lowered to: a
+song on a token whose bass sits off the beat strikes it as its drawn
+bars do. The standing list as at round 114.
+
+### Round 134: a part back with the theme keeps within its part of the form's own onsets (2026-11-11, the first of four items after Song Check 101)
+
+**Why.** By ear at Song Check 101, six songs of six marked better:
+"Terra has some hard stops and notes on like offbeats that are kind of
+meh". Rounds 124 to 133 were merged into dev the same day.
+
+**Found.** The stops are bars 13 to 16 and 29 to 32 of the written
+Terra: after B's eight bass notes and twenty accompaniment notes a
+bar, the bass and the accompaniment strike the first beat once (0.4 of
+a beat) and rest, four bars running. The plan says "theme at bars 0-3;
+returns bar 12 with chords + bass + accompaniment". The theme is the
+first phrase of the first part the tune plays in, and since round 124
+the tune rests where its token song's does (Terra's enters in A's last
+bar), so the theme's bars are the intro's, the bass at a note a bar;
+the `return_band` word then has the band play those bars again at the
+return, in C, where the token song's bass plays 6.5 a bar and its
+accompaniment 7. On dev before the stack the theme's bars held the
+tune and a full band. Over 400 plans the theme is stated where the
+tune rests in half its bars or more in 35, the band back with it in
+33; of 337 returns that carry the bass, 48 copy bars the token song
+plays half as busy or less than the part of the form they land in.
+
+**Built.** `envelope_at_for` marks the envelope it builds from the
+token song's own onsets a bar (`own`), apart from a density tier's
+shift (round 101). `_free_figures`, copying a part's theme bars under a
+return (`song.copies`), leaves a bar as it was drawn where the theme's
+bar is not within that envelope, and says how many (the bass's and the
+chord parts' logs). The bar's own figure is drawn before the copy, as
+it always was, so no draw moves. The chords still come back with the
+return. Tests: a return's bars keeping their own under the song's own
+envelope, copied under a tier's shift and where the theme's bars are
+as busy; the plan's envelope marked. Suite 523 (1 skip).
+
+**Measured.** The 68 Song Check 100 songs: the bass's bars within its
+part of the form's own onsets 1421 of 1524 (1402), the accompaniment's
+1336 of 1426 (1317); backing lines within range by the part of the
+form 368 of 386 (363). The written Terra's bars 13 to 16: the bass
+eight notes a bar (one), the accompaniment its part of the form's.
+Plans (400 seeds, against round 133): all keep their token song; 275
+note sets unchanged.
+
+**Open.** The theme is still stated where the tune mostly rests in 35
+of 400 plans, and the chords still come back with it. The standing
+list as at round 114.
+
+### Round 135: a chord part strikes a bar's first beat as often as the token song's does (2026-11-11, the second of four items after Song Check 101)
+
+**Why.** By ear, on Song Check 101's Terra: "notes on like offbeats
+that are kind of meh". Round 133 asked the bass the first beat; the
+chord parts' bars are drawn the same way and were not asked.
+
+**Found.** The written Terra's accompaniment strikes a bar's first
+beat in 17 of its 44 bars (30 on dev before the stack); the game's
+strikes it in 0.99 of its bars. FFVI's accompaniments strike the first
+beat in 0.83 of their bars at the median, twelve of 55 in under half
+(after-beat parts: Shadow's and Devil's Lab's in none), its harmonies
+in 0.99. Over the 68 Song Check 100 songs the written accompaniment's
+line strikes it in 0.78 at the median, seventeen in under half, and
+which songs is the draw's: a written accompaniment's share is within
+0.15 of its token song's in 24 of 51 songs, under it by more in 16 and
+over it by more in 11.
+
+**Built.** The reader: `first_beat_field`, round 133's field for any
+backing part (the bass's `bass_first_beat_field` is it for the bass),
+carried in the twenty-fourth field of the harmony's, the
+accompaniment's and the arpeggio's token. The plan keeps a share a
+part (`first_beats`; `bass_first` is the bass's). The writer:
+`writer.upper` takes `first_beat` and hands it to `_free_figures`, as
+`writer.bass` does. Tests: the field for an accompaniment, the bass's
+unchanged, none for a tune; the plan's share a part; a line written
+free (a bar off the first beat) and asked every bar. Suite 526 (1
+skip).
+
+**Measured.** FFVI: 55 accompaniments carry the field, 0.83 at the
+median, twelve under a half, 25 at 0.9 or more; 14 harmonies, 0.99; 2
+arpeggios. The 68 Song Check 100 songs: the accompaniment's line on
+the first beat in 0.94 of its bars at the median (0.78), two under a
+half (seventeen); within 0.15 of its token song's share in 34 of 51
+songs (24), under it by more in none (16), over it by more in 17 (11);
+the harmony within 0.15 in 7 of 9 (4). The written Terra's
+accompaniment: 42 of 44 bars (17), its harmony 44 of 44. Plans (400
+seeds, against round 134): all keep their token song; 158 note sets
+unchanged.
+
+**Open.** The share is only raised to. A part the game plays off the
+beat is written mostly on it: seventeen accompaniments and fourteen
+basses sit over their token song's share by 0.15 or more (Devil's
+Lab's accompaniment on the first beat in every bar, the game's in
+none). Asking a bar off the beat by the whole song's share would put
+its off-beat bars anywhere; the game's sit in parts of the form, so
+the share wants carrying by the part of the form first. The standing
+list as at round 114.
+
+### Round 136: a tune's note sounds no shorter than its token song's tune's shortest usual note (2026-11-11, the second of four items after Song Check 101, its other half)
+
+**Why.** By ear, on Song Check 101's Terra: "notes on like offbeats
+that are kind of meh". Besides the accompaniment off the first beat
+(round 135), the written tune has notes of 62 ms on the half beat: a
+blip, not a note.
+
+**Found.** A tune note sounds a share of its gap, held or detached by
+the `values` word and how much by the `tune_sounds` word (round 98),
+both pooled: one share for a detached note whatever its gap. The
+written Terra drew 0.3 for a detached note; an eighth at 145 beats a
+minute is 207 ms and sounded 62. The game's Terra's tune sounds no
+note under 152 ms. FFVI's tunes do play short notes (0.121 of their
+notes under 80 ms, Battle Theme's 0.44), song by song: the note at a
+tune's fifth percentile sounds 116 ms at the median over the songs,
+under 80 ms in nineteen. Over the 68 Song Check 100 songs 24 written
+tunes have a tenth of their notes shorter than that note of their
+token song's by 10 ms or more.
+
+**Built.** The reader: `tune_shortest_field`, the melody's and the
+counter's twenty-fifth field: how long the note at the fifth
+percentile of the line's notes sounds, in milliseconds to the nearest
+ten after an "m" (`m150`); none under sixteen notes. The plan keeps it
+(`tune_shortest`) and gives the writers its length in beats at the
+song's tempo (`shortest_beats`). The writers: `tune.sounded`, a note's
+length as its gap's share or the song's shortest usual note, whichever
+is longer, the gap at most; `writer.melody` and `writer.counter` take
+`shortest`. Tests: the field (one short note in 32 is not usual, two
+are; milliseconds, not beats; none under sixteen notes); the plan's
+keeping it and its length at the plan's tempo; a note's length under
+the share alone, floored, at a gap under the floor and where the share
+is longer; a tune written with every note its gap or the floor. Suite
+530 (1 skip).
+
+**Measured.** FFVI: 65 melodies carry the field, 120 ms at the median,
+seventeen under 80 ms, 27 at 150 ms or more; 51 counters, 130 ms. The
+68 Song Check 100 songs: tunes with a tenth of their notes shorter
+than their token song's shortest usual note 8 (24), the share of a
+tune's notes under it 0.064 at the mean (0.147); tune notes under 60
+ms 0.010 of them (0.047; FFVI 0.026), under 80 ms 0.047 (0.102;
+0.121). The written Terra's tune: its shortest note 150 ms (62).
+Plans (400 seeds, against round 135): all keep their token song;
+70 note sets unchanged.
+
+**Open.** The floor says how short a note may sound, not how many
+notes are short: written tunes now have fewer short notes than FFVI's
+(under 100 ms: 0.090 against 0.210). Eight written tunes still have a
+tenth of their notes under their token song's shortest usual note, by
+a rhythm quicker than the token song's tune. The standing list as at
+round 114.
+
+### Round 137: a written song runs within a tenth of its token song's own tempo (2026-11-11, the third of four items after Song Check 101)
+
+**Why.** Song Check 101's Edgar and Sabin ran at 125 beats a minute
+where the game's runs at 90, noted on its card as not fixed. The
+token carries its song's tempo class (round 54) and the tempo is one
+of the class's.
+
+**Found.** The classes are slow under 85, medium under 130 and fast:
+each a third of the game's songs, and wide. Of the 59 Song Check 100
+songs on their token song's arrangement, 24 run within a tenth of the
+game's tempo; the median is 0.94 of it, and eleven run under 0.8 or
+over 1.25 times it. Every count by the bar the token carries (a
+part's onsets, the kit's strikes) is then played at another pace than
+the one it was counted at.
+
+**Built.** The reader: the `tempo=` word carries the song's tempo in
+beats a minute beside its class (`tempo=fast:140`; the double-time
+tempo for a half-speed song). The plan: `tempo_near`, one of the
+tempos word's tempos in the token's class within TEMPO_NEAR (a tenth)
+of the song's own, by the word's own shares under the class, the
+song's own tempo kept inside its class where none is so near; drawn
+on an own stream where the plan's tempo, after round 54's draw under
+the class, is not within a tenth. The class does not change, so no
+table's context does and no other draw moves. A first cut carried the
+tempo to the tempos word's five beats a minute; three songs then sat
+a tenth from their song's own by the rounding (The Phantom Train's 54
+read as 55), so the token carries the tempo as read. Tests: the
+word's class and tempo; a plan's tempo among the class's tempos
+within a tenth, any of the class's without the number, the one medium
+tempo near 90; the song's own where the word has none near, kept
+inside its class. Suite 533 (1 skip). The vocabulary map lists
+`tempo_near` under `tempos`.
+
+**Measured.** The 59 songs on their token song's arrangement: within
+a tenth of the game's tempo 59 (24), the median 1.00 of it (0.94),
+none under 0.8 or over 1.25 (eleven); 35 change tempo. Edgar and
+Sabin's 90 (125; the game's 90), Locke's 145 (160; 140 in double
+time), Blackjack's 135 (160; 144). The tune's notes a second against
+the token song's tune's: over one and a half times in 8 songs (10),
+under two thirds in 5 (8). Plans (400 seeds, against round 136): all
+keep their token song; 221 change tempo; the notes of 399 start where
+they did at the pitch they had, and in 176 some sound for another
+length in beats (what is counted in milliseconds: a tune's shortest
+note, round 136). One Song Check 100 song changes its title (the
+title's energy word follows the pace).
+
+**Open.** The tempo is one of the game's tempos near the song's, not
+the song's. The figures are drawn by the tempo's class. The standing
+list as at round 114.
+
+### Round 138: a tune keeps within its token song's notes a bar by the part of the form (2026-11-11, the fourth of four items after Song Check 101)
+
+**Why.** Song Check 101's Blackjack card: the tune "well over twice as
+busy as the game's". Round 125 gave the backing lines and the kit the
+token song's onsets a bar by the part of the form; the tune kept its
+own density tier (sparse to two notes a bar, medium to six) and took
+only the song's tier against it.
+
+**Found.** The 59 Song Check 100 songs on their token song's
+arrangement, as round 137 writes them: the tune's notes a bar are
+within half to one and a half times the token song's in 131 of 193
+parts of the form (47 over, 15 under; 32 songs have a part out of
+range) and within a quarter in 75; bar by bar 974 of 1,648 are within
+(439 over, 235 under), the new bars 0.62 and the bars that come back
+0.56; in the twelve parts of the form the game's tune plays a note a
+bar in, the written tune plays two. The tune's notes a second are
+within two thirds to one and a half times the game's tune's in 46
+songs, over in 8 (to 3.75 times), under in 5: Blackjack's 2.8 against
+1.4, seven notes a bar in a part of the form the game plays three in.
+
+**Built.** The plan: `token_sections` sets `plan.section_onsets` for
+the tune's line too (the melody's, or the counter's in a band without
+a melody), its last bar its own where the token says a fill or a
+thinning, so `envelope_at_for` and `habit_at_for` hand the tune's
+writer the song's own envelope (round 134's `own`) and the tier it
+sits in. The writer (`tune.melody`): `keeps(k, n)`, whether a bar of
+n notes is within bar k's own onsets, and every way a bar is made asks
+it. A new bar is drawn within the envelope and asked neither the
+tier's running mean nor the grain; where no draw fits, one of the bar
+table's bars that fit, by its own probabilities in the bar's context
+(`parts.among`, round 133), before a bar that does not. A half bar
+comes back (`half_recall`) where the bar with it still keeps; a pair
+of bars (`pair_recall`) where both keep; the bar before's cell, an
+earlier bar and a passage going on (the bar urn) where the bar keeps;
+a phrase answered takes the phrase before's rhythm bar by bar where
+it keeps, else the bar is the urn's; a phrase repeated or moved, and
+an earlier phrase again (the letters' `r`: the last such phrase every
+bar of which keeps), where every bar keeps, else the phrase is new.
+The theme (the letters' `T`) comes back as its latest statement whose
+head keeps within the phrase's first bar, bar by bar while its bars
+keep; where no statement's head does, the phrase is written new and
+stands as a statement of the theme for the phrases after it. The
+form's repeat plays its own part of the form's bars. A song without
+the token song's form is written as before: no draw of it moves.
+
+Three cuts. The first bounded the new bars' draws alone: 163 of 193
+parts of the form in range (25 over, 5 under). (1) The bars that came
+back were not asked: a busy part of the form's bar in a thin one, a
+recalled half giving a new bar notes its rhythm had not, and
+an answered phrase taking a busier phrase's rhythm (Mt. Koltz's
+answered bars of six notes where the game plays two). (2) With every
+bar the song's own no bar was left in the tier's running tally, and
+the `tune_grain` word, a share of the tune's notes off the beat held
+over the tally, was held to each bar by itself: a bar of one note is
+none or all off the beat and passed no grain between, so it fell to
+the draw's last resort, a bar that fits nothing (a bar of sixteen
+notes where the game plays one, in a song on The Phantom Forest); the
+tunes' bars of one note fell from 203 to 110 (the game's songs have
+214) and their bars of two notes all on the beat from 0.40 to 0.22
+(0.53). Held instead as a running share over every new bar, the bars
+of two to four notes came out more off the beat than the game's (two
+notes all on the beat 0.41, three or four 0.23 against 0.35); not
+held, the bar table's context gives the game's shares, so a bar with
+the song's own onsets is not asked it. (3) The theme: the first
+phrase the tune plays, which in a song on Searching for Friends is
+the intro's four bars of a note each, and the letters brought it back
+through three parts of the form the game plays three notes a bar in:
+31 bars of whole notes where round 137 wrote the theme's head and
+went on. Hence the statement that keeps.
+
+Tests: the plan takes the tune's onsets by the part of the form, the
+counter's in a band without a melody; a new bar keeps within them
+(one note a bar in the song, one written; three, two to four); a bar
+that comes back keeps (two bars of three and two of one in turn: no
+bar of three in a bar of one); the theme of four bars of one note is
+stated anew over bars of three and that statement comes back; a bar
+of one note is written under each grain. Each of the last three fails
+with its change taken out. Suite 538 (1 skip). The vocabulary map
+is unchanged.
+
+**Measured.** The same 59 songs (round 137's in brackets). The tune's
+bars within their part of the form's own onsets: 1,648 of 1,648
+(974). Its notes a bar by the part of the form within half to one and
+a half times the token song's: 193 of 193 (131); within a quarter 131
+(75); at the median what the game plays in every class of part but
+the busiest (over six notes a bar: 0.88 of it). Its notes a second
+within two thirds to one and a half times the game's tune's: 53 songs
+(46), over in 2 (8; the most 1.71 times, 3.75), under in 4 (5), the
+median 0.90 of it (1.00). Blackjack's tune 1.5 notes a second (2.8;
+the game's 1.4), Edgar and Sabin's 1.9 (1.8; 2.1), Locke's 2.2 (2.2;
+1.9), Terra's 1.2 (1.1; 0.9), and Battle Theme's 2.0 (2.7; 3.2), its
+three parts of the form at four, four and two notes a bar where the
+game plays five, six and two. Bars that come back: 885 of 1,648
+(852); the theme's bars back by the letters 85 (77), in 22 of the 23
+themed songs (23: a song on Returners, whose one return falls in a
+part of the form of nine notes a bar against the theme's four, brings
+its theme back by the form's repeat). Off the beat, bar for bar
+against the game's songs: bars of one note all on the beat 0.88
+(0.87; the game's 0.90), of two 0.57 (0.40; 0.53), of three or four
+0.34 (0.14; 0.35); the notes of bars of five to eight off the beat
+0.52 (0.49; 0.51), of nine and more 0.72 (0.72; 0.72); song by song
+the tune's share off the beat within a tenth of its token song's
+tune's in 28 (26), the median 0.05 under (0.00). Tune notes under 80
+ms 0.037 (0.048). The backing lines within their own onsets: the
+bass's bars 1,437 of 1,523 (1,420 of 1,524), the accompaniment's
+1,333 of 1,427 (1,336 of 1,426). The paired measures: cells sounding
+as the FFVI song's 0.962 (0.961), backing lines within range 372 of
+386 (369); one song more reads back with its tune gone four bars or
+more (12; 11): the song on Searching for Friends, whose tune plays in
+every one of those bars, the reader dropping the stretches on the
+tune's first sample. Plans (400 seeds, against round 137): all keep
+their token song, title, tempo and form; of the 360 on their token
+song's arrangement 355 change their tune, and with it the counter in
+292, the bass in 293 and the accompaniment in 234 (the cells they
+take up or double); no kit changes; the 40 others are as they were.
+
+**Open.** The grain is no longer held where the song's own onsets
+are: an own word for it (the token song's tune's share off the beat,
+perhaps by the part of the form) is what would bring the 28 of 59 up.
+The envelope is half to one and a half times, and the bar table's
+thinner bars are the commoner inside it: the busiest parts of the
+form run a little under the game's (Battle Theme's). A theme stated
+over a thin part of the form is two statements. The counter-line
+beside a tune still follows the tune's figures, not its own onsets.
+The standing list as at round 114.
+
+### Round 139: a part plays the tune's bar only where its own bar keeps within its own onsets (2026-11-11, found while building Song Check 102, on the go-ahead for the four items)
+
+**Why.** The first of the four items was Terra's hard stops, and
+round 134 took out the ones the theme's return made. Song Check 102's
+Terra, written at round 138, had four new ones: the bass at one note
+in bars 6, 10, 22 and 26 where it plays eight around them.
+
+**Found.** The theme band (`double_theme`: a drawn part plays the
+tune's bar at an interval; `carry_theme`: a part plays the theme
+phrase under another phrase) and the hand-offs (`hand_off_cells`: a
+part's half bar replaced by the tune's half-bar cell) put the tune's
+notes into another part's line, whatever that part's own onsets a bar
+(round 125). Since round 138 the tune's bars are as thin, or as busy,
+as its token song's: Terra's tune plays three notes and one in turn
+through a part of the form its bass plays six or seven in, and the
+bass doubled the bars of one. Gogo's bass, two notes a bar in the
+game, took the tune's five in six bars. Over the 59 Song Check 100
+songs on their token song's arrangement the bass's bars within its
+own onsets were 1,437 of 1,523 and the accompaniment's 1,333 of
+1,427.
+
+**Built.** `own_keeps(plan, role)`: a part's test of a bar against
+its own onsets for the part of the form (`envelope_at_for`'s own
+envelope, half to one and a half times; always passed by a part
+without them). `double_theme` asks it of the tune's bar's onsets,
+`carry_theme` of every bar of the phrase, `hand_off_cells` of the
+bar with the cell in its half; where it fails the part keeps what it
+wrote, and each logs how many bars it kept. The words are drawn as
+before, so no draw moves. Tests: the test itself; a bass of eight
+notes a bar does not double a tune's bar of three, and does where its
+own onsets are three; a theme phrase is carried where every bar
+keeps; a cell is taken up where the bar with it keeps. Each fails
+with the test switched off. Suite 541 (1 skip). The vocabulary map
+is unchanged.
+
+**Measured.** The same 59 songs (round 138's in brackets): the bass's
+bars within its own onsets 1,501 of 1,528 (1,437 of 1,523), the
+accompaniment's 1,367 of 1,426 (1,333 of 1,427), the harmony's 230 of
+270 (229). Terra's bass: eight notes in each of the four bars, 44 of
+44 bars within (38); Gogo's 18 of 18 (12). Over the 68 songs the bass
+is given 134 bars of the tune to double and doubles 89, the
+accompaniment 61 and 32, the harmony 7 and 5; one theme phrase of
+five is not carried; of the half-bar cells handed on the bass takes
+up 44 of 63 and the accompaniment 25 of 36; the counter's 129
+doubled bars and 78 cells are as drawn. The paired measures: cells
+sounding as the FFVI song's 0.963 (0.962), backing lines within range
+375 of 386 (372). Plans (400 seeds, against round 138): all keep
+their token song, title, key and tempo; of the 360 on their token
+song's arrangement 230 change, the bass in 181, the accompaniment in
+131, the harmony in 11; no tune, counter-line or kit changes; the 40
+others are as they were.
+
+**Open.** The doubling and hand-off words' shares now fall short for
+the bass and the chord parts: a third of the bass's doublings are not
+made. What FFVI's parts do with a tune's bar thinner or busier than
+their own is not counted. The standing list as at round 114.
+
+### Round 140: a tune's note is measured to the next note across the bar line (2026-11-11, after Song Check 102)
+
+**Why.** By ear, on Song Check 102's Terra, marked better: "I like the
+tune it just had some minor things where the tune plays some short notes
+with large gaps of nothing in between or just some short notes where it
+seems like it should have played a little longer. Tune just sounds like
+it cuts off a little more in its notes than it should in more areas than
+I would like." The question was whether it touches other songs, and the
+findings got the go-ahead.
+
+**Found.** Read back, 19 of the written Terra's 75 tune notes sound
+under half the way to a next note a beat or more away, and the tune
+is silent 0.39 of its own time; the game's Terra's tune holds 0.99 of
+its notes and is silent 0.07. Two causes. Eight of the nineteen stop
+at their bar's end before a bar that opens with a rest (a note two
+beats long, then three beats of nothing to the pickup); the game's
+tune holds that note nearly six beats, over the bar line to the
+pickup, and sounds 0.24 of its notes past their bar's end. The other
+eleven are drawn short (the next round's). The melody's writer
+measured a bar's last note to the bar's end; the counter-line's
+writer has measured it to the next bar's first onset since round 29
+and the bass's since round 26, and the words that say how long a tune
+note sounds (`values`, `tune_sounds`) count the gap to the next note
+across the bar line. Over the 62 Song Check 100 songs read back with
+a tune and paired with their token song's: a written tune sounds none
+of its notes past their bar's end at the median and the mean (FFVI
+0.01 and 0.05; over 0.03 of them in 20 of the game's tunes), and of
+the notes before a bar that opens with a rest the game's tunes carry
+0.75 over the line at the median, the written none.
+
+**Built.** `rhythm.tune_gap(bars, start, after)`: the gap a tune's
+note is sounded against, to the line's next note where that starts
+in the note's bar or the next, else to its bar's end. The melody's
+writer measures a bar's last note to the next bar's first onset where
+the tune plays on in it (the bar line stays at a rest bar), and asks
+the `values` word the gap's value across the bar line. `copy_repeats`
+keeps a repeated part's last tune note (the melody's and the
+counter-line's lines) sounding the share of its gap it sounds in the
+part it repeats, the gap measured to the note that follows the repeat
+(`_repeat_last`): the copy had kept the length the note has before
+what follows the first statement (the written Terra's B ends on a
+pickup a beat long; after its repeat the next part opens with three
+beats' rest). Tests: the gap itself; every note of a written tune
+sounds to the next note in its bar or the next where every note
+sounds its whole gap, some of them over the bar line; a repeat's last
+note against what follows it, both ways, a backing line's copy as it
+was. Each fails with its change switched off. Suite 544 (1 skip). The
+vocabulary map is unchanged; no token changes and no table is refit.
+
+**Measured.** The written Terra: 13 of 75 tune notes sound past their
+bar's end (none before; the game's 0.24 of them), every note before a
+bar's opening rest is carried (13 of 13), none stops at a bar line,
+and the tune is silent 0.03 of its time (0.39; the game's 0.07); six
+notes are still cut, all drawn. The 62 songs (round 139's in
+brackets, then FFVI's): notes past their bar's end 0.04 of a tune's
+at the median and 0.05 at the mean (0.00 and 0.00; 0.01 and 0.05);
+notes before a bar's opening rest carried 0.72 at the median over the
+23 songs with four or more (0.00; 0.75); the tune silent 0.19 of its
+time at the median (0.25; 0.21), over its token song's tune's by more
+than 0.05 in 22 songs (27) and under it in 30 (24); notes cut short
+before a beat or more 0.05 of a tune's (0.07; 0.03), over the token
+song's tune's by more than 0.03 in 21 songs (26). The paired
+measures are as they were: cells sounding as the FFVI song's 0.963,
+backing lines within range 375 of 386, kit pieces 175 of 179, the
+same note counts and chords in all 68 songs. Plans (400 seeds,
+against round 139): every seed keeps its title, token song and band.
+The tune's line keeps every onset and pitch; its lengths change in
+354 seeds, 4,937 notes longer and 1,807 shorter (the `values` draw is
+asked a carried note's value across the bar line, and the draws after
+it run on from there). The counter-line changes in 178 seeds, in
+onsets or pitches in 57: its pitch beside the tune reads the tune as
+it sounds. The bass's lengths change in 121 seeds and the
+accompaniment's in 86, the harmony's in 6: the bars of the tune they
+double or carry. A voice beside a line changes pitch in four seeds
+(the melody's second voice in one, the accompaniment's in three). No
+kit changes; 45 seeds are as they were.
+
+**Open.** A note before a rest of a bar or more is measured to its
+own bar's end, where the game's may ring on (LIMITS). A part that
+doubles or carries the tune's bar now takes notes that sound past
+the bar; the render ends them at the voice's next note. Which notes
+are held at all is still the pooled draws' (the next round). The
+standing list as at round 114.
+
+### Round 141: a tune sounds its notes as its token song's tune does (2026-11-11, after Song Check 102)
+
+**Why.** The second cause of the cut notes heard in Song Check 102's
+Terra (round 140's record): the notes drawn short. The question was
+whether it touches other songs; it does, both ways.
+
+**Found.** How long a tune note sounds was three pooled words': the
+`articulation` habit, drawn once a song (it is the token song's
+tune's own habit class in 37 of 62 songs); the `values` draw, a note
+held or detached by its value under the habit; and the `tune_sounds`
+draw, one share of its gap for a held note and one for a detached
+whatever the gap. The game's tunes differ song by song and gap by
+gap. Terra's holds 0.99 of its notes, Celes's 0.97, Kids Run Through
+the City's 0.96; Battle Theme's 0.54, Locke's 0.50, Gogo's 0.40.
+Locke's holds a quarter of its eighths, half its quarters and every
+longer note. A cut note is a stab: before a gap of a beat or more it
+sounds a fifth of the gap at the game's median (quartiles 0.19, 0.21,
+0.45), the written two fifths (0.32, 0.40, 0.50). Over the 62 Song
+Check 100 songs read back with a tune the pooled totals match (of
+the notes a beat or more from the next 0.33 are detached, FFVI's
+0.34), but not the songs: a written tune's share of held notes is
+within a tenth of its token song's tune's in 14 of them, over it in
+25 and under it in 23. The written Terra cut eleven notes by the
+draws (a note of 0.9 beat, then five beats of nothing); the written
+Celes drew a held note's share at 0.4 and cut half its notes; the
+written Locke held 0.83. The chord parts and the bass have taken
+their line's shares by the gap from the token since round 95; the
+tune had not. And the render raised a short note to its sample's
+floor (round 36: the shortest the game plays the sample at, under
+the written part's speed class), which sat at 160 to 400 ms over
+tunes whose token's shortest usual note is 60 to 140: in 18 of 58
+songs a fifth or more of the tune's notes sounded longer than
+written, so a tune written cut read back held (the written Gogo's
+eighth-note stabs of 60 ms sounded 240).
+
+**Built.** `tune_gaps(s, notes)`: a line's notes as (gap, share), the
+gap as the writers measure it (round 140). `tune_lengths_field`: the
+balance token's twenty-sixth field for the melody and the counter,
+after an "h" an entry for the whole line and one for each gap class,
+`held~share~share`: the percent of the notes held, then the median
+share of its gap a held note sounds and a detached one, to 0.05; a
+class of fewer than four notes is left out; 116 of the 118 melody and
+counter tokens carry it. The plan reads it (`lengths_of`,
+`Plan.tune_lengths`, `own_lengths`). `tune.own_length`: a note is held
+at the song's rate for its gap's class (the whole line's where the
+song has too few notes of the class), drawn on a stream of the
+lengths' own and kept within a note of the song's share of the
+class's notes so far; it sounds the song's share for its kind at the
+class, at the nearest class that has one where the song has none
+there (the longer of two as near: a held note stops a little short
+of the next whatever its gap, a cut one is a stab whatever its gap;
+the game's Terra plays eighths and long notes and no quarter, and the
+written Terra's quarters take the long notes' 0.95, not the eighths'
+0.80), the whole line's where no class has. The melody's and the
+counter-line's writers sound their line by it; the pooled `values`
+draw is made all the same and the `articulation` and `tune_sounds`
+words are drawn as before, so no draw moves. `score_of` does not
+raise such a line's notes to its sample's floor. The vocabulary is
+refit (the balance tokens alone change). Tests: the gaps and the
+field; the plan's reading; the rate held within a note at five rates,
+the class's own entry and each fallback; a tune written with every
+note held, and with every note cut, the same notes; the counter-line
+so too; the render sounding such a line as written beside a bass on
+its floor. The writers' and the render's fail with the change
+switched off. Suite 551 (1 skip). The vocabulary map is
+unchanged.
+
+**Measured.** The 62 songs read back (round 140's in brackets, then
+FFVI's). A tune's share of held notes within a tenth of its token
+song's tune's: 51 songs (15), over it in 7 and under it in 4 (28 and
+19); the mean gap 0.064 (0.250). The tune silent over its token
+song's tune's share of its time by more than 0.05 in 4 songs (22),
+under it in 22 (30). Notes cut short before a beat or more over the
+token song's by more than 0.03 in 15 songs (21), under in 10 (21).
+Held by the gap, at the median: under a beat 0.84 (0.95; 0.85), one
+to two beats 0.96 (0.85; 0.92), two beats or more 1.00 (0.76; 0.86).
+A detached note before a beat or more sounds 0.29 of its gap at the
+median (0.40; 0.21). No song has a fifth of its tune's notes longer
+in the render than written (18). The six songs of Song Check 103,
+round 139's in brackets, then the game's: Terra holds 1.00 of its
+tune's notes (0.73; 0.99) and none is cut (19 of 75); Celes 1.00
+(0.51; 0.97), none cut (0.49 of them); Kids Run Through the City 1.00
+(0.54; 0.96), none cut (0.42); Locke 0.47 (0.83; 0.50); Battle Theme
+0.61 (0.83; 0.54); Gogo 0.24 (0.76; 0.40). The paired measures hold:
+cells sounding as the FFVI song's 0.962 (0.963), backing lines within
+range 375 of 386, kit pieces 175 of 179; titles, keys, tempos and forms
+unchanged in all 68. Plans (400 seeds, against round 140):
+every seed keeps its title, token song and band, and the tune's line
+every onset and pitch; its lengths change in 394 seeds. The
+counter-line changes in 309, in onsets or pitches in 102 (beside a
+tune it reads the tune as it sounds); the bass's lengths in 260 and
+the accompaniment's in 178, the harmony's in 13 (the bars of the tune
+they double or carry); a voice beside a line changes pitch in four
+seeds (the melody's second voice in one, the accompaniment's third in
+three). No kit changes; the six seeds on Good Night, a song with no
+tune, are as they were.
+
+**Open.** Which notes of a class are cut is a draw at the song's
+rate; where the game's phrasing cuts is not counted. A class the song
+plays under four notes of takes the whole line's rate (Kids Run
+Through the City: 0.22 of the written tune's notes sound past a bar
+line, the game's 0.02). A written tune's rhythm is not its song's, so
+the whole line can sit off the song's share while each class keeps it
+(Gogo). The voices beside a line and a second counter-line are still
+on the pooled words. The sample's floor still stands for the other
+voices, unexamined. Not heard: a tune of stabs as short as the
+game's (60 ms in the written Gogo) on a hard cut is the game's by the
+count; whether it reads as the game's or as blips is for the ear
+(Song Check 103). The standing list as at round 114.
+
+### Round 142: a chord part plays an earlier bar on its chord again as often as its token song's part does (2026-11-11, on the go-ahead for the next item)
+
+**Why.** The standing item after Song Check 102: read back by the
+chord reader a written song's chords change their shape on a held
+root twice as often as FFVI's ("chords as heard"), and the plan was
+a test to find which part does it, then a fix. The go-ahead: "go ahead
+and do the next item".
+
+**Found.** The reader (`harmony.chords`) gathers each bar's pitch
+classes, weighted by loudness and part (the bass twice, the chord
+parts one and a half, the tune and the counter-line a half), starts a
+new chord where the bass's root or half the chordal voices' set
+changes, and names each span by the shape that fits best. Over the 68
+Song Check 100 songs: 1,324 changes of chord, 275 of them on a held
+root (0.21; FFVI's 1,259 and 161, 0.13): the third in or out 136
+(FFVI's 90), a sus tone 69 (31), the third's quality 35 (11), a
+seventh in or out 27 (27); 75 of the 275 are the plan's own. A bar is
+heard on the plan's root in 0.70 of the bars and as the plan's chord
+in 0.41. *No one part does it.* Read again with one of the plan's
+parts left out, the changes on a held root are 0.20 to 0.23 of the
+changes whichever upper part is gone, and 0.16 without the bass (the
+root then the plan's in 0.49 of the bars). They are the game's only
+where the whole band holds: with every part playing the bar before's
+notes again under a held chord 0.11, the backing alone 0.17, the
+backing and the counter-line 0.14. *What differs is how often a part
+plays again what it played on the chord.* Of a part's bars with an
+earlier bar on their root within eight, the share sounding one of
+those bars' pitch classes again, by two counts. On the chord
+reader's roots, the songs read back: the bass 0.64 (FFVI's 0.70), the
+accompaniment 0.36 (0.60), the harmony 0.45 (0.67), the tune 0.25
+(0.48), the counter-line 0.20 (0.44). On the bass's root, the songs
+as written: 0.71 (0.73), 0.37 (0.62), 0.49 (0.67), 0.30 (0.48), 0.25
+(0.46). The written chord parts repeat a rhythm on a chord more than
+the game's (0.62 of such bars have an earlier bar's rhythm; FFVI's
+0.52) and its notes less: the tones are drawn a bar at a time (a
+voicing at each bar's first onset, the motion's walk along it, the
+tone figure, the profile's hold). *Tried and not taken.* The voicing
+drawn a chord span, as the voicings word counts it, and not a bar:
+the same set under a held root 0.25 for 0.24, nothing else moved.
+The part's richness habit from the token (LIMITS): the tune
+re-written in 208 of 400 seeds, no measure moved. Neither is in the
+round.
+
+**Built.** `bar_tones(notes, bars)`: a part's pitch classes in each
+bar. `bass_roots(notes, bars)`: the bass's most-sounded pitch class
+in each bar, the chord reader's own first reading of a bar.
+`tones_before`, `tones_kept`: the bars with earlier bars on their
+root within TONES_BACK, how many sound one of those bars' set again
+and how many of those the bar before's. `tones_kept_field`: the
+balance token's twenty-seventh field for a chord part, `c60/47`,
+counted on the bass's roots; 49 of FFVI's 57 accompaniment tokens carry one, 10 of its 16 harmony tokens and 1 of its 3 arp tokens. The plan reads it
+(`Plan.tones_kept`). `hold_chord_tones`, called for each chord part
+once the tune and the counter-line are written and before the voices
+that follow a line by the token's stretches: while the part's share
+over the whole song is under the song's, a bar with earlier bars on
+its root that sounds none of their pitch classes takes voice by
+voice the notes of one of them that is on the plan's same chord in
+its part of the form and has its rhythm (the bar before's while the
+share of kept bars that are the bar before's runs under the song's,
+else a bar further back that sounds another set, so a figure of two
+bars can form); the whole bar or none of it. A bar on its loop's
+figure, a bar the line rides the bass in, and a bar one of whose
+notes would then sit a semitone from the tune or the counter-line
+where its own did not stand as written. The hold sits after the tune
+because the tune is written over the chord parts and steered by
+them: before it, the same hold re-wrote the tune in 217 of 400
+seeds. *The count is the token's own.* The hold first counted by the
+plan's chords in a part of the form, the token by the chord reader's
+roots; bar by bar from the song's start; and with the form's repeats
+as first written, which `copy_repeats` writes over afterwards. By
+that count a part at its song's share read far under it: the written
+Terra's harmony sounds an earlier bar's pitch classes again in 0.74
+of such bars as finally written (its song's 0.73) and read 0.46 by
+the plan's chords, and its line of four bars that comes round (G#,
+B, D#, E under one chord) had its second and fourth bars given the
+first's; over the 68 songs 6 of the 43 parts given bars were at
+their song's share before, as read back.
+So a bar's root is the bass's on both sides, the one reading of a
+root to be had of the game's song and of a song being written; a
+part of the form played again counts with the bars it plays, and is
+left as it is; and the share is the part's over the whole song.
+Tests: the count and the bass's root; the field and its place in
+the token; the plan's reading; a bar played again at five shares,
+one-bar and two-bar figures; the count's own cases (a part at its
+song's share over the whole song, a bass off the plan's root, a part
+of the form played again); the bars that stand (another root,
+another shape, another part of the form, a loop's bar, a riding bar,
+a clash with the tune, another rhythm), voice by voice; a written
+song's tune, counter-line and bass the same with the hold and
+without. The last fails with the hold switched off. Suite 558
+(1 skip). The vocabulary is refit (the balance tokens alone change);
+the vocabulary map is unchanged.
+
+**Measured.** Over the 68 songs the hold gives 75 of the
+accompaniments' bars and 15 of the harmonies' an earlier bar's
+notes (most in Kids Run Through the City, 17 of 47 bars; none in
+34 of 61 songs with a chord part). At the hold the accompaniments
+sound an earlier bar's pitch classes again in 0.48 of such bars
+(their token songs' 0.61 at the mean), the harmonies in 0.58
+(0.64). As finally written, on the bass's root (round 141's in
+brackets, then FFVI's): the accompaniment 0.42 (0.37; 0.62), the
+harmony 0.53 (0.49; 0.67). Of the 58 chord parts with a share,
+14 are within a tenth of their song's (11), at a mean distance
+from it of 0.235 (0.285); of the 28 parts given bars 22 are
+nearer their song's share, 1 farther, and none over it by more than
+a tenth. Read back, on the chord reader's roots: the accompaniment
+0.39 (0.36; 0.60), note for note as an earlier bar 0.25 (0.22;
+0.34); the harmony 0.48 (0.45; 0.67), note for note 0.42 (0.39;
+0.50). The chords as heard are where they were: 270 of 1,316
+changes on a held root (275 of 1,324), bars in their root's commonest
+shape 0.698 (0.698; FFVI's 0.756). The paired measures: cells sounding as the FFVI song's 0.962, backing lines within range 375 of 386, kit pieces 175 of 179, the same note counts and chords in all 68 songs, as they were. Plans
+(400 seeds, against round 141): every seed keeps its title, token
+song and band, and the tune, the bass and the kit every note; the
+accompaniment changes in 130 seeds, the harmony in 30; the
+counter-line in 3 (a voice of it that follows a chord part).
+
+**Open.** The item stands: what the chord reader hears is the whole
+band's, and the larger part of what is left is the tune's and the
+counter-line's (the standing item on the tune's shape: its bars that
+come back). The chord parts are short of their songs' shares still:
+a chord part's pitch classes kept across another rhythm are not
+written, nor its richness taken from its token song (LIMITS), and
+what changes how a chord part's tones are drawn re-writes the tune,
+so it belongs with the round that re-writes the tune. The standing
+list as at round 114.
+
+### Round 143: the counter-line beside a tune keeps to its token song's own line (2026-11-11)
+
+**Why.** By ear, on Song Check 104's Locke: "the tune seems to be
+spazzing out some". The notes showed two things that could be it, the
+tune's cut and held notes placed at chance and the counter-line running
+fast with leaps; asked which: "I thought #1 on locke sounded fine how it
+did it for that specific generated song. it didn't sound random to me. I
+think it was the counter-line then running fast and jumping around, so
+yea from 26 on was where it sounded bad." The first is not taken up
+(below). A list of three got the go-ahead; this is its first item.
+
+**Found.** *In Locke.* From its second part of the form (0:26) the
+written counter-line, the higher line and doubled an octave under so
+that its lower voice sits in the tune's register, ran bursts of
+sixteenths that leapt up to a seventh: 4.4 notes a bar where it
+plays, 0.26 of its moves a sixteenth apart, 0.35 of them a fourth or
+more. The game's Locke counter-line plays 2.8 notes a bar, no
+sixteenths (long notes, pickups in triplets, runs of eighths by
+step), and leaps a fourth or more in 0.17 of its moves. *Over the
+songs.* The 49 Song Check 100 songs with a counter-line in both: its
+moves a sixteenth or less apart 0.22 of its moves at the median (the
+game's 0.06), a tenth or more over the game's line in 18 songs; its
+moves of a fourth or more 0.22 (0.16), over in 18; a fourth or more
+within an eighth 0.12 (0.04), over in 16. *Why.* A counter-line
+beside a tune is a mask over the tune's bar from the `counter_figures`
+word (which of the tune's onsets it strikes with, and its own), a
+word pooled over the game and asked under the tune's bar: it knew
+nothing of the song's own counter-line's pace. The token has carried
+the line's onsets a bar by the form's letters since round 125 and
+the plan gave them to every line but this one (LIMITS: "the
+counter's beside a tune is not held"). And its note is the voice
+words' draw, an interval to the tune's note weighed by the move it
+makes, then moved by octaves into the line's span
+(`upper.in_register`): a note drawn outside the span sounded another
+interval and made another move than the ones weighed. Locke's span
+is G#4 to E5, under an octave, so it holds each pitch class once and
+a line stepping over its top came back in at its bottom. *Not taken
+up: the tune's cut and held notes.* A tune's note is held or cut as
+the note before it in 0.88 of the game's cases at the median and 0.73
+of the written ones', which is chance at its held share (65 songs; 23
+a tenth or more under their song); Locke's every bar mixes the two
+where one bar in eighteen of the game's does. It is heard as fine in
+Locke, and Battle Theme, the most scattered by the count, was marked
+better on Song Check 103. Where it could have hurt, the 13
+tunes that hold most notes and cut a few, the written ones are as
+the game's (a cut note alone between two held ones 104 of 133; the
+game's 81 of 143). The bar is musical, not the game's: left.
+
+**Built.** `token_sections` gives the counter-line beside a tune its
+line's onsets a bar (`plan.section_onsets`), as the tune's since
+round 138. `mask_strikes`, `counter_mask`: a bar's mask is the
+`counter_figures` draw where the bar it makes of the tune's strikes
+within half to one and a half times the song's own onsets a bar
+there (`envelope_at_for`'s own envelope) and keeps the part of the
+form's bars so far at them (`MASK_SLACK`: half of them, a note at the
+least, either way); else the word drawn again on the bar's own
+stream (`writer.TRIES` times), else one among the masks the table
+knows that fit, by its probabilities in the bar's context; where no
+mask is within both, the same asked of the envelope alone. The first
+draws are made as before, so a line whose masks all fit is as it
+was. The envelope alone, the first mask to fit taken, ran thin (0.89
+of the game's notes a bar at the median); hence the part of the
+form's running count. With the onsets the plan's test of a bar
+against a part's own (`own_keeps`, round 139) holds for the
+counter-line too: the theme band and the hand-offs put the tune's
+bar into it in 70 bars fewer over the 68 songs. `beside_pitch` and
+`interval_weights` take the voice's `span`: the note is drawn among
+the notes the span holds, the interval and the move weighed as they
+will sound; where the span holds none the words allow, as before
+(the caller moves it an octave in). `counter` takes `move_profile`,
+the token song's counter-line's moves (round 130's field): while the
+line's share of moves of a fourth or more is over its song's line's,
+a note a fourth or more from the last is drawn again, as a clash
+is. No token field is new and the vocabulary is not refit. Tests
+(`CounterLineTests`, four): the plan's reading; a bar's mask at
+seven askings; a note among the span's own, with the tune and alone;
+the far moves held. Suite 562 (1 skip); the vocabulary map is
+unchanged.
+
+**Measured.** The 49 songs, round 142's in brackets, then FFVI's.
+The counter-line's moves a sixteenth or less apart: 0.09 of its
+moves at the median (0.22; 0.06), a tenth or more over the game's
+line in 6 songs (18). Its moves of a fourth or more: 0.13 (0.22;
+0.16), over in none (18); a fourth or more within an eighth 0.04
+(0.12; 0.04), over in none (16). Its notes a bar where it plays
+within a quarter of the game's in 34 songs (21), over five quarters
+of them in 3 (17), under three quarters in 12 (11). Locke: 2.3 notes
+a bar (4.4; 2.8), no move a sixteenth apart (0.26; none), a fourth
+or more in 0.19 of its moves (0.35; 0.17). The writer's own account
+over the 52 songs with a counter-line: 1,007 bars with the song's
+own onsets, every one within them, 467 masks drawn again and 124
+among the table's; 154 of 5,040 notes moved an octave into the span.
+Plans (400 seeds, against round 142): every seed keeps its title,
+token song and band, and the tune's line, the bass and the kit every
+note; the counter-line changes in 309 seeds, the accompaniment in 62
+and the harmony in 7 (a voice that follows it, the theme band, round
+142's test against it), the tune's part in 11 (its second voice,
+where that follows the counter-line). The chord parts are as round
+142 left them (the accompaniment 0.42 on the bass's root, the harmony
+0.53). The chords as heard: 270 of 1,291 changes on a held root (270
+of 1,316). The paired measures: cells sounding as the FFVI song's
+0.962, backing lines within range 375 of 386, kit pieces 175 of 179,
+as they were; the notes a second 11.3 at the median (11.8; 12.4).
+
+**Open.** A bar the mask word draws as a rest stays one (the line
+sounds in 0.76 of the bars at the median; the game's 0.91), and the
+token counts a line's notes a bar, not how close together they fall:
+six songs still run sixteenths a tenth over their song's line. The
+counter-line's thirds and repeated notes are the voice words', not
+its token's. Not heard: for the one listening asked for once the list is
+done. Next on it: the tune's shape, with what is left of round 142's
+item; then Locke's snare march.
+
+### Round 144: a part comes back with its lead as often as its token song's part does (2026-11-11, the list's second item, first part)
+
+**Why.** The list's second item, the tune's shape with what is left of
+"chords as heard" (round 142: the larger part of what the chord reader
+hears change is the tune's and the counter-line's). It had been reported
+that the tune brings an earlier bar back far less often than the
+game's, 30 % against 48 %: that is round 142's count, a bar's pitch
+classes on the bass's root. This round counted the bars themselves
+first, and the answer is another one.
+
+**Found.** *The lines come back about as often as the game's.* A line
+plays an earlier bar again note for note (its onsets and its pitches,
+eight bars back at most): the written tune in 0.26 of its bars
+(FFVI's 0.29), the bass in 0.46 (0.41), the accompaniment in 0.34
+(0.37), the harmony in 0.50 (0.55); the counter-line in 0.14 (0.28).
+A tune's bar comes back moved, its rhythm and intervals at another
+pitch, in 0.16 (0.10), and a pair of bars as a pair in 0.12 (0.19).
+*They do not come back together.* Where the tune plays an earlier bar
+again, the bass plays that bar again too in 0.79 of such bars in the
+game and 0.52 in the written songs; the counter-line in 0.66 and
+0.44; the accompaniment in 0.68 and 0.40. Where the bass does, the
+accompaniment does in 0.57 and 0.40, the tune in 0.43 and 0.16. The
+written tune plays an earlier bar again more often where the bass
+does not (0.24 of such bars; the game's 0.13). Each writer draws its
+own returns: the tune's urn knows nothing of the bass's bars, the
+chord parts' tones are a bar's, and the counter-line beside a tune
+is drawn onset by onset with no bar of its own to play again. So a
+bar that comes back in one part has other notes under or over it,
+and the chord reader hears another chord on the root.
+
+**Built.** `bar_cells(notes, bars)`: a line's bars as their notes,
+the place in the bar and the pitch of each note begun in it.
+`bar_back`: the nearest earlier bar within TONES_BACK that is the bar
+note for note. `together(lead, part)`: the bars in which the lead
+plays an earlier bar again and the part plays in both, and how many
+of them the part plays that bar again in. `lead_of`: a chord part's
+lead is the bass, the counter-line's the tune. `together_field`: the
+balance token's twenty-eighth field for those parts, `w66`; none
+under TOGETHER_BARS (four) such bars. 36 of FFVI's 57 accompaniment tokens carry one, 10 of its 16 harmony tokens, 1 of its 3 arp tokens and 30 of its 52 counter tokens. The plan reads it
+(`Plan.together`). `played_again`: the bars of a part of the form
+played again and the bars they play. `hold_together`, for the
+counter-line and then each chord part once the tune and the
+counter-line are written, before round 142's hold: counted as the
+token counts and the song as it will be played, the share over the
+whole song; while it is under the song's, a bar in which the lead
+plays an earlier bar again and the part plays another takes the
+part's earlier bar whole, every voice with its onsets and lengths,
+where the plan's chord is the same under both, the bar keeps within
+the part's own onsets for its part of the form (`own_keeps`), and
+the bar sits a semitone from no more notes of the tune and the
+counter-line (for the counter-line: of the parts under it) than its
+own did. A bar on its loop's figure, a bar the line rides the bass
+in and a bar of a part of the form played again stand. The tune and
+the bass are not touched: the tune coming back with the bass
+re-writes the tune, and is kept for a round of its own that can be
+taken or left. Tests (`TogetherTests`, five): the count; the field
+and its place in the token; the plan's reading; a bar that comes
+back with its lead at four shares and three leads; the bars that
+stand, and the bar whole. Suite 567 (1 skip). The vocabulary is
+refit (the balance tokens alone change); the vocabulary map is
+unchanged.
+
+**Measured.** The 68 songs, round 143's in brackets, then FFVI's.
+Where the tune plays an earlier bar again the counter-line plays
+that bar again too in 0.55 of such bars (0.44; 0.66); where the bass
+does the accompaniment does in 0.50 (0.40; 0.57). The hold gives 74
+of the accompaniments' bars, 29 of the harmonies' and 13 of the
+counter-lines' the earlier bar; of the parts with a share, 9 of 36
+accompaniments, 2 of 9 harmonies and 4 of 26 counter-lines are still
+more than a tenth under it (the accompaniments' bars that stood: 34
+in a part of the form played again, 34 on a loop's figure or riding
+the bass, 30 a semitone from a line over them, 24 over another
+chord). The accompaniment plays an earlier bar again note for note
+in 0.37 of its bars (0.34; 0.37), the harmony in 0.53 (0.50; 0.55),
+the counter-line in 0.16 (0.14; 0.28). The chord parts' pitch
+classes on the bass's root (round 142's count): the accompaniment
+0.44 (0.42; 0.62), the harmony 0.60 (0.53; 0.67), 16 of the 58 parts
+with that share within a tenth of it (15). The chords as heard are
+where they were: 272 of 1,293 changes on a held root (270 of 1,291).
+The paired measures: cells sounding as the FFVI song's 0.962,
+backing lines within range 375 of 386, kit pieces 175 of 179, as
+they were. Plans (400 seeds, against round 143): every seed keeps
+its title, token song and band, and the tune, the bass and the kit
+every note; the accompaniment changes in 84 seeds, the counter-line
+in 56, the harmony in 33, the arp in 2.
+
+**Open.** The chord reader's count has not moved in three rounds: it
+reads a written song's counter-line as its accompaniment in 27 of
+the 68 songs and its tune in 19, so what it hears change on a held
+root is in part a line it takes for a chord part; the parts now come
+back together more, and what that does to a song is for the ear. The
+tune and the bass still come back by their own draws (LIMITS): next,
+as a round that stands alone. A part of one note a bar under a bass
+that plays one bar holds its note where its song's does (the written
+Terra's harmony through its first four bars, where it rose a step a
+bar): by the count; not heard.
+
+### Round 145: a song counted in double time takes its kit's bars from the kit tables counted so (2026-11-11, the list's third item)
+
+**Why.** Locke's snare march, standing since round 131 (LIMITS: "the
+march Locke's snare plays is not among the fast songs' kit figures").
+Asked for: "I will want lockes snare march in the next batch as
+well."
+
+**Found.** The reading has Locke at 70 beats a minute and Blackjack at
+72, half their speed; since round 131 their balance tokens are counted
+in double time, and a song written on them is a fast song. Every
+other table still counted them as read. As read, 9 of Locke's 16 kit
+bars are left out of the kit's bar tables as rolls (28 strikes a bar)
+and the rest sit under the slow class; in double time they are 32
+bars under the fast class, none a roll, the snare at 12 strikes a
+bar at the median: the march, with its ruff in sixths of a beat
+(`0 1/2 3/4 1 7/6 4/3 3/2 5/3 11/6 2 9/4 5/2 11/4 3 7/2 15/4`).
+A song on Locke's token drew its kit from the other fast songs' bars,
+within the strikes its token asks: 8, 9, 12 and 12 in its first four
+bars, straight sixteenths, where the game's are 9, 8, 16 and 16.
+*Tried and not taken.* The five tables themselves counted in double
+time, for every song: the fast class gains the two songs' bars and
+the slow class loses them, so every fast song's kit and fourteen
+others' were drawn again (23 of the 68 Song Check 100 songs), and
+through the bass, which strikes with the kit, the tune in 9 of them
+(Battle Theme's in 35 of its 124 notes). Every table counted so had
+moved 130 of 400 seeds onto another token song in round 131.
+
+**Built.** `rhythm.DOUBLE_TABLE` ("@2") and `packtables.DOUBLE_TIME`:
+the kit's five bar tables are kept a second time under their name
+and the mark, counted on the songs as their tokens count them
+(`songs_for`, `rhythm.token_song`); one that comes out as the table
+as read is left out (the other sounds': no half-speed song strikes
+one). `Plan.beat`: 2 where the token's song is counted in double
+time. `plan.write` draws the kit of such a song from the tables kept
+in double time, where the pack has them, and says so in the kit's
+log; every other song's from the tables as read. `tools/vocab_map.py`
+lists a table kept in double time under the writers that draw the
+table as read; the vocabulary map is written again with the four
+tables. Test (`DoubleTimeTests`): the tables kept twice and the
+songs each is counted on; a half-speed song's bars rolls under the
+slow class as read and a fast song's bars in double time; the plan's
+mark. Suite 568 (1 skip). The vocabulary is refit: 115 tables (111),
+530 KB (475).
+
+**Measured.** The written Locke (Song Check 104's seed): its snare
+strikes 8, 8, 16, 16, 16, 16, 12 and 12 times in its first part's
+bars (8, 9, 12, 12, 12, 12, 12, 12; the game's 9, 8, 16, 16, 16, 16,
+13, 13), 20 of its 32 bars with the ruff (none); in its second part
+the snare rests seven bars and comes back at 11 a bar (3 to 6 a bar
+through it; the game's thins to one to three for six of its sixteen
+bars). Its bass, which strikes with the kit, changes in 25 of its 59
+notes and its tune in 7 of 118. Blackjack's kit changes in 90 of 451
+hits. Of the 68 songs these two change and no other, in any part.
+Plans (400 seeds, against round 144): every seed keeps its title,
+token song and band; 390 are the same note for note; the kit changes
+in 10, the bass, the tune, the accompaniment and the counter-line in
+5. The paired measures: cells sounding as the FFVI song's 0.961
+(0.962), backing lines within range 375 of 386, kit pieces 175 of
+179.
+
+**Open.** The other tables hold the two songs as read (LIMITS). Not
+heard: whether the march carries Locke as the game's does is for the
+listening asked for once the list is done.
+
+### Round 146: the tune comes back with the bass as often as its token song's does (2026-11-11, an experiment that stands alone)
+
+**Why.** The list's second item, its second part: round 144 held the
+chord parts and the counter-line to their lead and left the tune and
+the bass each coming back by their own draws, "as a round that stands
+alone". The tune is what the ear follows, and a hold on it
+re-writes it, so this is built as its own pull request on top of the
+list's three, to be heard with its own verdict and taken or left.
+
+**Found.** *Where the bass plays an earlier bar again, the tune plays
+that bar again too* in 0.43 of such bars in the game (225 of 529) and
+0.16 in the written songs (117 of 737); where the tune does, the bass
+does in 0.79 and 0.52 (round 144). *It is two things.* The bass's
+earlier bar is the bar right before, a figure it stands on, in 169 of
+the game's such bars, and the tune plays its bar before again in 53 of
+them (0.31): nearly all of it a few songs whose tune is a figure too.
+Of FFVI's 63 songs with a tune over a bass 44 have no such bar, and of
+the 13 with four or more the tune never does in 8 and does in over
+three quarters in 2. The bass's earlier bar is further back, a phrase
+come round, in 360, and the tune plays that bar again in 172 (0.48):
+0.35 two bars back, 0.71 four back, 0.82 eight back. The written songs
+(round 145): 359 bars of the first kind, the tune with it in 17
+(0.05); 379 of the second, in 99 (0.26): 0.08 two bars back, 0.35
+four, 0.70 eight. A written bass stands on one bar more than the
+game's (the bar before again in 0.23 of its bars; 0.14). *Why.* The
+tune's bar is the urn's (the bar before again, an earlier bar, a new
+one) where no theme, phrase relation or pair decides it, and the urn
+knows nothing of the bass.
+
+**Tried and set aside: one share for both kinds.** The first form held
+the tune to one share, the token song's of all the bars in which the
+bass plays an earlier bar again. It measured well in the sum (0.30 of
+such bars; 0.16; the game's 0.43) and wrong in the parts: 92 of its
+221 such bars were the bar right before under a standing bass (0.25 of
+those; the game's 0.31 is a few songs' doing) and the bars from
+further back barely moved (0.34; 0.26). The tune played the bar before
+again in 0.07 of its bars (0.03; the game's 0.05) and one bar three
+times or more running in 11 songs (5; 7); the written Troops March on
+in 10 of its 27 bars where its song's tune never does. A share counted
+over the game's mix of the two kinds was being spent on the written
+songs' mix. Hence the two counts. *And the urn's returns left new.*
+The first form also left one of the urn's own returns new wherever the
+tune's returns were at its song's share, whether a bar had been given
+or not, so a song given no bar was still another tune (the written
+Locke from its second half on and Battle Theme through its last eleven
+bars, to no purpose). It is now one for each bar given: 280 of 400
+seeds are the same note for note where 247 were.
+
+**Built.** `together(lead, part, near=None)`: round 144's count of one
+kind of bar alone, the lead's earlier bar the bar right before or one
+further back. `returns(cells)`: a line's bars with an earlier one
+within TONES_BACK, and those that are an earlier bar note for note.
+`lead_of`: the tune's lead is the bass (the melody's, and the
+counter-line's in a song without a melody). `together_field` for the
+tune: `w48/-/29`, the percent with the bass's bar from further back,
+with the bar before (each `-` under TOGETHER_BARS bars of its kind; no
+field where neither has them), and the percent of the tune's bars that
+are an earlier bar. 42 of FFVI's 66 tune tokens carry the field, 34
+with a share for the bars from further back (none of them in 8, all of
+them in 8) and 13 for the bar before (none in 8); no counter-line's
+does. The plan reads them (`Plan.tune_together`); `tune_lead` gives
+the tune's writer the bass line's bars as they will be played (a part
+of the form played again as the bars it plays, `played_again`) and the
+three shares. `writer.melody` takes `with_lead`: `bar_key` (a cell as
+the token counts a bar), `lead_back` (the bar the bass plays again
+here, where the tune played in it), `together_so_far` (the token's
+count of one kind on the bars written), `returns_so_far`; `again`
+takes `literal` (the cell's own pitches where they sit in the bar's
+register). Where the urn decides a bar: if the bass plays an earlier
+bar again there, the song has a count for the kind, the bar keeps
+within its own onsets (`keeps`) and the plan's chord is the same under
+both, the tune plays that bar again while its share of such bars of
+the kind, this one in, is under its song's; else, where the urn draws
+a return and fewer of its returns have been left new than bars given,
+the return is left a new bar while the tune's bars that are an earlier
+bar are at its song's share. The tune's log says both counts, the bars
+given and the returns left new. The bass, the kit and the chord parts'
+writers are not touched; a tune without the field is written as
+before. Tests (`TuneReturnsTests`, four): the counts, with the two
+kinds apart; the token's field under a bass that stands, a bass of two
+bars, a counter-line that is the tune, and under four bars; the plan's
+reading and `tune_lead`; a written song at five settings (no field;
+both kinds held; the bars from further back alone, the tune not made
+to stand; shares of none, the tune as the urn drew it; a tune over its
+share, no more returns left new than bars given). Suite 572 (1 skip).
+The vocabulary is refit (the balance tokens alone change); the
+vocabulary map is unchanged.
+
+**Measured.** The 68 songs, round 145's in brackets, then FFVI's.
+Where the bass brings a bar back from further off the tune plays that
+bar again too in 0.33 of such bars (0.26; 0.48): 0.18 two bars back
+(0.08; 0.35), 0.39 four (0.35; 0.71), 0.68 eight (0.70; 0.82). In the
+34 songs whose token has the count, 114 of 262 (0.44) against their
+songs' mean 0.47, ten more than a tenth under and seven over. Where
+the bass stands on the bar before, 0.12 (0.05; 0.31): in the 14 songs
+with a count 39 of 164 (0.24; their songs' 0.31). Of all the bars in
+which the bass plays an earlier bar again, 0.23 (0.16; 0.43); where
+the tune plays an earlier bar again the bass plays that bar again too
+in 0.61 (0.52; 0.79), the accompaniment in 0.44 (0.43; 0.68). The
+tune's own returns: an earlier bar note for note in 0.27 of its bars
+(0.26; 0.29), the bar right before in 0.05 (0.03; 0.05); one bar three
+times or more running in 8 songs (5; 7) and four or more in 1 (none;
+4), the written Returners six bars (its song's tune stands twelve). 55
+bars are played again with the bass, in 19 of the 68 songs, and 8 of
+the urn's returns left new. The tune's notes a bar against its song's:
+0.89 at the median (0.94 at round 143), within a quarter in 50 songs
+(51). The chords as heard are where they were: 268 of 1,304 changes on
+a held root (272 of 1,293 at round 144). The paired measures: cells
+sounding as the FFVI song's 0.960 (0.961), backing lines within range
+375 of 386, kit pieces 175 of 179. Plans (400 seeds, against round
+145): every seed keeps its title, token song and band; 280 are the
+same note for note; the tune changes in 120, the counter-line in 101,
+the bass in 76 (the theme band and the hand-offs put the tune's cells
+into it, and its last pass follows), the accompaniment in 54, the
+harmony in 13.
+
+**Open.** It is an experiment: not heard, and for the ear alone, since
+the count it moves is one nobody has complained of. A bar given moves
+every draw after it, so in one song the tune's returns can fall (Kids
+Run Through the City, given two bars: 8 of 45 where it had 13) while
+the 68 rise. The bars from further back are at 0.33 against the game's
+0.48: a theme's, a phrase's and a pair's bars are not touched, and 26
+of the 68 songs are written on a token without the field. The written
+bass stands on one bar more than the game's, and comes back by its own
+draws still (LIMITS).
+
+### Round 147: a tune keeps to the places in the beat its token song's tune plays on (2026-11-12, asked at Song Check 105)
+
+**Why.** By ear, part way through Song Check 105: "the tune seems
+to go off beat at times... sometimes off beat playing makes sense but
+it sounds off to me. like that 20-40 second in lockes song". Asked
+whether it was real, and then: go.
+
+**Found.** It is in the notes. The written Locke (the page's seed)
+plays every tune note on a beat through its first eighteen bars; from
+bar 19 to its last, 39 of the tune's 50 notes sit a quarter of the
+beat from the beat, the bass and the chords on it. The game's Locke
+tune plays 101 notes and none there. Dev writes the same rhythm: the
+batch laid it bare, the counter-line of rounds 143 and 144 playing
+two of those notes with the tune where it had filled the bars. Bar
+19's rhythm, `1/4 3/4 5/4 7/4`, is one bar of the game: the opening
+of The Wedding Waltz-Duel (part 4), ten bars in which tune,
+counter-line and bass strike together at another tempo than the
+song's (0.52 and 0.63 of a beat apart). The reading counts a song at
+one tempo and keeps those notes where its grid puts them. The bar
+chain is conditioned on the bar before, so the next two bars came
+from the same passage, and the tune's own returns carried the three
+through fourteen bars. The melody's bar table is pooled over the
+game under the bar's density, the feel and the tempo class; since
+round 138 a bar keeps its token song's count of notes, and nothing
+says where in the beat they fall. Over 400 seeds, of the 276 tunes
+written in their token song's feel 133 end over their song's tune's
+share of a place finer than the half beat (a quarter of the beat in
+122, a third in 26), 88 of them by a twentieth of their notes or
+more, and 79 play on a quarter of the beat where their song's tune
+never does. The written Terra: four notes, one bar and the form's
+three repeats of it (`0 3/4 1`, a bar of Fanfare's).
+Three things the count turned up. A written song's feel is the
+pooled `feels` word's draw, not its token song's: 21 of the 68 Song
+Check 100 songs are written in the other feel. The reading's grid is
+the one its song's notes fit best, a half beat or coarser for nine
+songs: on it Dancing Mad (part 2)'s tune plays nothing finer than
+the half beat, and by its notes' times 0.04 of them fall on a
+quarter of the beat and 0.11 on a third or a sixth. And Terra's
+other trouble is not the tune's places (LIMITS: the half beat is
+not held).
+*Tried and not taken.* (1) The places asked of every draw and every
+return, the bar drawn again where it failed: a draw made for the
+places shifts every draw after it, and a changed tune kept 0.35 of
+its bars; one bar of Terra's tune drawn again re-drew the tune from
+there on. On a bar's own stream, the tune's streams and its rhythm
+chain left as they were, 0.42, and the tune after the bar was still
+re-pitched. (2) The share held to the tune's notes so far alone: a
+tune could play on no fine place until it had played twenty notes on
+the beat, and the figure a song opens with came late or never. (3)
+Held whatever the feel: a tune on Dancing Mad (part 5)'s token, a
+triple song whose tune plays a third in 0.46 of its notes and a
+quarter in 0.06, written duple, lost its sixteenths and took the
+organ's triplets over a band in sixteenths, one bar seventeen times;
+a tune on Dark World's token drawn triple lost its thirds. (4) The
+notes moved to the nearest place whatever it is: a sixteenth is
+nearer a third of the beat than the half, and a song whose tune
+plays some thirds had its sixteenths moved onto them. (5) The places
+counted on the reading's grid: a song read on half beats then says
+its tune plays nothing finer. (6) The mis-read bars taken out of the
+tables: the rule that finds them (a bar the whole band strikes a
+fifth of a grid step or more off the grid) takes 58 bars of 18
+songs, most of them finer than their song's grid and at its tempo;
+not built (LIMITS).
+
+**Built.** `rhythm.beat_place` (an onset's place by its time, within
+PLACE_NEAR of it), `FINE_PLACES`, `fine_places`, `tune_places` and
+`tune_places_field`: the melody's and the counter's twenty-ninth
+token field, `p12/0/3`; the token's `feel=` word. `keeps_places`
+(the ceiling: of the line's notes so far, or of the least it will
+play; a bar counted once for each time the form plays it),
+`adds_places`, `held_places` (the song's feel against its token
+song's; the third in a triple feel). `Plan.tune_places`,
+`Plan.token_feel`, `plan.own_places`. In `tune.melody`: `in_places`,
+`written_places` (with the form's repeats still to come),
+`rhythms_of`, `nearest`, `on_places`, and `realize` asks every bar
+it writes but the form's repeat of one. In `plan.write`, the
+counter-line's masks: `counter_mask` takes `placed` and tries the
+nearest mask the table knows before it draws again. Tests
+(`TunePlacesTests`, six): a place by its time; the token's field,
+counted where the notes are played on a song read on half beats, and
+the feel word; the plan's reading and what a song's feel holds; the
+ceiling, the least, the form's repeats, a place not held, no place
+added; the tune written within its song's places, the same notes in
+the same order moved no further than half a beat, a tune within them
+already the tune it was, and a song in another feel not held; the
+counter-line's mask moved, drawn again, and left. Suite 574 (1
+skip). The vocabulary is refit: 115 tables.
+
+**Measured.** Plans (400 seeds, against round 145): every seed keeps
+its title, token song and band; 202 are the same note for note; the
+counter-line changes in 161, the tune in 138, the bass in 65, the
+accompaniment in 62, the harmony in 3. No tune written in another
+feel than its token song's changes (124). Of the 276 held, none ends
+over its song's share of a place (133) and none plays on a place its
+song's tune never plays on (a quarter of the beat 79, a third 22,
+finer 5); 138 change, and in those 0.56 of the bars are the same note
+for note and 0.66 the same rhythm. Counter-lines: 210 of 309 held;
+by their masks none is over; as finally written 18 are (138), by 111
+notes (1,744).
+The 68 Song Check 100 songs: 45 of 65 tunes held; 60 bars' notes
+moved in 24 songs, 16 notes left out in 4, no bar without a rhythm
+that keeps the places; 21 held tunes untouched. Notes on a quarter
+of the beat with no note a quarter of a beat before or after, 89 of
+7,903 (242 of 7,982; FFVI 111 of 8,212); bars with every note so, 2
+(12; 7). Counter-lines: 35 of 52 held; 11 bars' own onsets moved, 75
+bars' masks drawn again.
+The written Locke: 4 bars' notes moved and their returns with them,
+12 of its 32 bars (bar 19 `0 1/2 1 3/2`, bar 20 `0 1 3 7/2`, bar 21
+`1/2 1 3/2 7/2`); no note on a quarter of the beat (39), the same
+118 notes; its counter-line's 16 such notes gone with them, 60 notes
+as before; 5 bars' pitches differ. The written Terra: one bar and
+its three repeats, `0 3/4 1` to `0 1/2 1`, the game's own figure;
+its counter-line the same four bars; no pitch changes. The written
+Dancing Mad (part 2) (Song Check 105's seed 134): 147 of its tune's
+268 notes sat on a quarter of the beat, where its song's tune plays
+0.04; its rhythm changes in 44 of 46 bars.
+Nothing else moved: the tune's bars that are an earlier bar note for
+note 0.26 (0.26), the bar before again 47 of 1,701 (45), its notes a
+bar against its song's 0.92 at the median (0.94), the counter-line's
+0.95 (0.95). Chords as heard and the tunes' strong-beat notes on the
+chord: LIMITS. The paired measures: cells sounding as the FFVI
+song's 0.961 (0.961), backing lines within range 375 of 386, kit
+pieces 175 of 179.
+
+**Open.** A song's feel is still the pooled draw's (LIMITS): the
+token now says its song's, and the plan taking it is a round of its
+own, every part of 21 of the 68 songs written anew. The half beat:
+Terra's bass against its kit's triplet, and its tune's notes inside
+it. The bars the reader could not place. Not heard: Song Check 105's
+part D is for the ear.
+
+### Rounds 146 and 147 together (2026-11-12, merged)
+
+At Song Check 105, the page unmarked: "I think all these
+changes are the right direction. Go ahead and merge everything into
+dev." Rounds 142 to 145 went in as they stood. Rounds 146 and 147
+were each built on round 145, beside each other, and both change the
+tune's writer, its token and the shipped vocabulary; this is the two
+in one tree.
+
+**Put together.** Round 146's field is the tune's twenty-eighth and
+round 147's its twenty-ninth, so the token carries both (`w50/-/38`
+and `p0/0/0` for Locke's tune). The two holds meet in the tune's
+writer: round 146 decides which bar the tune plays (an earlier bar
+again where the bass plays one), and round 147 asks every bar as it
+is written (`realize`), so a bar given with the bass is moved onto
+its song's places like any other. One name clashed: round 146's
+`placed` is a flag in the bar loop, and round 147's helper is
+`in_places`. The vocabulary is refit: 115 tables.
+
+**Measured.** Suite 578 (1 skip): both rounds' tests, round 147's
+writing test asking the two holds of one tune too. Each round does
+in the tree what it did alone. Round 147: of the 276 tunes written
+in their token song's feel none ends over its song's share of a
+place (133 before either round); over the 68 Song Check 100 songs
+56 bars' notes moved in 21 songs, 10 notes left out. Round 146: the
+tune comes back where the bass brings a bar back from further off in
+126 of 377 such bars (0.33; 126 of 378 alone; FFVI 0.48), in 0.43 of
+them in the 34 songs with a count (their songs' 0.47), 55 bars given
+in 19 songs. Plans (400 seeds): against round 145, 155 are the same
+note for note; against round 147 alone 280, which is round 146's own
+count against round 145; against round 146 alone 204 (round 147's
+own, 202). The tune's bars that are the bar before again 80 of 1,701
+(0.05, FFVI's), one bar three times running or more in 8 songs (7);
+chords as heard on a held bass note 289 of 1,317 changes (0.22);
+cells sounding as the FFVI song's 0.960; backing lines within range
+375 of 386; kit pieces 175 of 179.
+
+**Not heard.** Each round was heard against the batch (Song Check 105's
+parts C and D), not the two together: in a song both change, the song in
+the tree is neither file heard. 120 of 400 seeds differ from round 147
+alone and 196 from round 146 alone.
+
+### Round 148: a song is written in its token song's feel (2026-11-12, asked on ten new songs)
+
+**Why.** By ear, on ten new songs dev wrote after rounds 142 to 147
+(seeds no page had used, one FFVI song each), of the one on Terra's
+token: "the bassline in Terra sounds off ... kinda clashing with the
+song pretty hard", and then: "Bass is definitely not with the drums but
+it seems off from the tune as well ... it sounds so out of sync all
+together", through the whole song and at no one place, the notes fine
+and the bass fine alone. The work was asked for in one batch and merged:
+this round and round 149.
+
+**Found.** The song (seed 1178, its theme asked back with the band) is
+written in duple feel on Terra's token, a triple song. Its kit, a snare
+alone as Terra's is, drew the duple songs' bars and none of Terra's: it
+strikes the bar's first beat in 20 of its 44 bars, the second in 40, the
+third in 4 and the fourth in 24, where the game's Terra strikes all four
+in all 74. Of the bass's notes 0.52 fall with a snare hit and of the
+tune's 0.52 (the game's 1.00 and 0.91): nothing in the song states the
+beat the other parts play on. The test song on the same token (seed 29,
+Song Check 100's) was drawn triple and plays the march on every beat of
+its 44 bars; its trouble is the bass's own (round 149). The token has
+said its song's feel since round 147 (`feel=`), and the plan drew the
+pooled `feels` word beside it: 120 of 400 seeds are written in the other
+feel than their token song's, and 21 of the 68 test songs, five of the
+ten heard.
+*Looked at and not the cause.* The tune's sound. In the song's render,
+each channel alone, a tune note is silent for about 30 ms after its
+written time and at half its level at 45 ms, the bass's and the snare's
+within 3 ms. It is the sample's own start: the game's Terra, each SNES
+chip voice alone off the emulator and timed from the key-on, plays the
+same sample silent for 30 ms and at half level at 54 ms, and keys the
+tune and the snare at the same instant (84 of the tune's 93 key-ons fall
+within 40 ms of a snare's, the gap 0.0 ms at the median and at the
+quartiles). Over the ten songs no tune, bass or accompaniment sounds
+later after its written time than the game's part on the same sample
+after its key-on (38 parts measured on both sides). What is heard is
+where the notes are written.
+
+**Built.** The plan writes a song in its token song's feel: `_plan_once`
+takes `token_feel` in place of the `feels` draw where the vocabulary's
+tokens say their songs' feel (`tokens_say_feel`: one of the balance
+table's outcomes at least carries the word; a song that is not duple
+says so, so in such a vocabulary a token without it is a duple song's).
+The draw is still made, on the plan's stream, so no other draw moves,
+and it stands for a vocabulary counted before the word. The plan says so
+in its log where the two differ ("the song's feel from the balance
+(round 148): triple (the draw duple)"). Every figure table is drawn by
+the feel, so the song's kit, bass, chord parts and tune are then drawn
+among its song's feel's bars; round 147's places are held in every song,
+the feels agreeing.
+
+**Measured.** Suite 582 (1 skip). Plans (400 seeds, the player's
+asking), against dev: the feel is taken from the token in 120 seeds, 59
+to triple and 61 to duple, and those are the 120 with a note changed;
+the other 280 are the same note for note and their plan logs the same;
+all 400 keep their token song, title and band, and all are written in
+their token song's feel (74 triple, 326 duple). The 68 Song Check 100
+songs: 68 in their song's feel (47 before). The tune's places (round
+147's account): 65 of the 65 tunes are held (45), none over its song's
+share of a place at the end, 89 bars' notes moved in 30 songs and 24
+notes left out in 4 (56 in 21, 10 in 2); the counter-line 51 of 52 (35).
+The tune's bars within their part of the form's own onsets: 1,648 of
+1,648. The song on Terra's token: triple, its kit on all four beats in
+all 44 bars; the tune strikes with a kit hit in 0.98 of its notes (0.52)
+and the bass in 0.74 (0.52), still in straight eighths in 20 bars. Over
+the 68 songs, the medians of the songs that have the parts (the game's):
+the bass's notes with a kit hit 0.72 (dev 0.79; 0.83), the tune's 0.70
+(0.74; 0.82); in the 11 changed songs with a bass and a kit the bass's
+0.53 (0.65; their songs' 0.77), and in the 13 with a kit the kit's bars
+with a hit on the first beat 0.75 (1.00; 0.83). Two against three, one
+part on a third of a beat where another plays its half or quarter: the
+bass against the kit in 144 of 965 bars (106 of 962; the game's 217 of
+949), the tune against the bass in 95 of 1,609 (50; the game's 90 of
+1,411), the accompaniment against the kit in 121 of 832 (60 of 830; the
+game's 256 of 771). The tune's strong-beat notes on the chord sit 0.09
+under their song's at the median (0.08).
+
+**Open.** A song's parts are each drawn among the feel's bars, a part at
+a time: which bar of the bass sits over which bar of the kit no word
+says, and in the songs the round changes they agree less than they did
+(the bass's notes with a kit hit 0.53 from 0.65). Round 149 counts it. A
+vocabulary whose tokens say no feel keeps the pooled draw (LIMITS).
+
+**Not heard before the merge.** The round was built with round 149 and
+merged with it.
+
+### Round 149: the bass and the tune strike with the kit as often as their token song's (2026-11-12, asked on ten new songs)
+
+**Why.** Round 148's: by ear, on the song on Terra's token, "Bass is
+definitely not with the drums but it seems off from the tune as well ...
+it sounds so out of sync all together". Asked whether to stretch the
+bass's lock or to count a new word: "count a new word sounds like the
+better direction". Built with round 148 as one batch.
+
+**Found.** The game's Terra: the snare strikes all four beats of every
+bar, with a triplet inside the second beat or the fourth, and the bass
+plays that march hit for hit on one pitch a bar. The bass's two
+commonest bars are the snare's two (24 bars each; the snare's 26 and 27
+of 74); every bass note falls with a snare hit, 0.88 of the snare's hits
+carry a bass note and 0.91 of the tune's notes fall with a hit. The test
+song on its token (seed 29, drawn triple) has the march in its kit and a
+bass in straight eighths in 32 of its 44 bars: 0.67 of the bass's notes
+fall with a hit, two against the kit's three in 28 bars, and 0.79 of the
+tune's. Its bass's log reads "on the kit's accents in 0 bars": the one
+word between the bass and the kit, `bass_locks` (round 28), counts the
+kit's accents, two pieces struck together, and a snare alone has none
+(17 of FFVI's 45 kits with a bass never stack two pieces). The bass's
+bars, the tune's and the kit's are each drawn from their own tables
+under the habit, the tempo class and the feel, and nothing says which
+bar of one sits over which bar of another. Counted over the 68 test
+songs after round 148, in the bars both strike in: the bass strikes 0.72
+of its notes with a kit hit at the median where the game's does 0.83,
+and is 0.20 or more under its own song's in 10 of the 37 songs with
+both; the tune 0.70 against 0.82, in 9 of 39. The game's bass is with
+the kit in every note in twelve songs (Terra, Shadow, Opening Theme
+(part 3), Troops March on, Searching for Friends, Grand Finale (part 2),
+Blackjack and five more); the songs written on their tokens stood at
+0.47 to 1.00, seven under 0.85. Two against three is not the count to
+hold: the game plays the bass against the kit so in 217 of 949 bars,
+more than the written songs (144 of 965), a fifth of the bars or more in
+12 of its songs.
+*Tried and not taken.* (1) The share held bar by bar in the song's
+order, as a place in the beat is: the first bars were asked every note
+on a hit whatever the song's share (six notes of eight are under 0.83),
+and a song whose bass was within its share over the whole was moved all
+the same; over 400 seeds 171 songs changed and 1,059 bars were moved,
+against 166 and 1,026 with the share taken over the song and the bars
+furthest off the kit first, which is also where the two parts disagree
+most. (2) A rhythm of a count outside the part of the form's own onsets:
+19 of the tunes' 1,648 bars fell outside them, four or more in one song;
+with the count kept within them, none. (3) Notes left out to bring more
+of the kit's hits a bass note: a bass that plays fewer notes than its
+kit strikes would be thinned to chase a share it cannot reach.
+
+**Built.** A thirtieth field on the bass's and the melody's token
+(`rhythm.with_kit_field`): `x100/88` for Terra's bass, the percent of
+its line's onsets struck with a kit hit and of the kit's hits struck
+with a bass note, over the bars both strike in; `x91` for its tune. 39
+basses' tokens carry one and 41 tunes'. The plan keeps it (`with_kit`).
+The bass is held on its figures before they are pitched
+(`writer.on_the_kit`), so a note moved takes its pitch from the chord
+where it falls: counted over the song as it will be played (`played_as`,
+`kit_hits`), the bars on one figure over the same hits one case; a line
+within both shares stands, and under either the cases furthest off the
+kit are moved first, the notes in their order onto the nearest rhythm
+the bass table knows that puts the case at the shares, the first beat's
+note kept. The tune's notes off the kit's hits are held in its writer as
+a place in the beat is (`with_the_kit`), and `on_places` takes a rhythm
+that keeps the places and the share with the kit. No draw is made for
+either (VOCABULARY, the `balance` entry).
+
+**Measured.** Suite 588 (1 skip). The vocabulary is refit: 115 tables,
+the balance table alone changed, its outcomes in the order they stood
+in. Plans (400 seeds, the player's asking), against round 148: 210 songs
+have a note changed and 190 are the same note for note; all 400 keep
+their token song, title and band. The bass is held in 232 songs: bars
+moved in 167 (1,024 bars), 526 notes left out in 87, 200 bars of 50
+songs with no rhythm the table knows that brings them nearer; as finally
+written 167 are at their song's share of notes with a kit hit (69
+before) and 165 at the kit's (126), the median share 0.85 (0.72; the
+tokens' 0.83). The tune is held in 244: bars moved in 165 (835 bars),
+459 notes left out in 94, 120 bars of 39 songs with none; 206 are at
+their song's share (84), the median 0.83 (0.70; the tokens' 0.82).
+Against dev, the two rounds together: 247 songs changed, 153 the same.
+The 68 test songs, medians of the songs with the parts (round 148, dev;
+the game's): the bass's notes with a kit hit 0.87 (0.72, 0.79; 0.83),
+0.20 or more under its own song's in 1 of 37 songs (10, 8); the kit's
+hits with a bass note 0.48 (0.42, 0.44; 0.54), in 7 (11, 11); the tune's
+notes with a kit hit 0.84 (0.70, 0.74; 0.82), in 1 of 39 (9, 10); the
+tune's with a bass note 0.49 (0.48, 0.48; 0.61), in 18 of 63 (21, 21).
+Of the twelve songs whose game bass is with the kit in every note eleven
+stand at 0.95 to 1.00; Opening Theme (part 3) at 0.47 (LIMITS). The test
+Terra: the bass on a snare hit in 258 of 258 notes (198 of 296) and on
+0.85 of the snare's hits (0.66), in straight eighths in the 8 bars the
+kit plays them (32); the tune in 81 of 87 (69). The song heard
+(seed 1178): the bass in 254 of 254 (190 of 256 after round 148, 136 of
+264 at dev), the tune in 93 of 97. Two against three: the bass against
+the kit in 103 of 965 bars (144 after round 148, 106 at dev; the game's
+217 of 949), the tune against the bass in 80 of 1,609 (95, 50; 90 of
+1,411). The tune's places: 65 of 65 held, none over its song's share at
+the end, 84 bars moved in 29 songs; its bars within their part of the
+form's own onsets 1,648 of 1,648; its notes a bar over its song's 0.93
+at the median (dev 0.89). The tune's strong-beat notes on the chord 0.12
+under their song's at the median (0.09 after round 148, 0.08 at dev), 23
+of 59 within a tenth (28, 30). Chords as heard on a held bass note 285
+of 1,328 changes (0.21; dev 289 of 1,317); the bass's strikes a bar 4.46
+(4.52; FFVI's 4.39); cells sounding as the FFVI song's 0.960, the least
+song 0.77 (0.84); backing lines within range 375 of 386; kit pieces 175
+of 179.
+
+**Open.** The kit is held to nothing: where its bars are not its song's
+the lines stand off it (Opening Theme (part 3), the kit on a roll's bar
+in about half its bars). The passes after the writers are not asked (197
+basses at their share by the writer's count, 167 as finally written). A
+note moved keeps its pitch, and the tune's strong beats are on the chord
+less often. A song without a kit has no such word, and the tune is not
+held to the bass (0.49 against the game's 0.61). All in LIMITS.
+
+**Not heard before the merge.** Built with round 148 and merged with it.
+247 of 400 seeds are not the songs dev wrote.
+
+### Round 150: a part's level changes by section only where its token song's does (2026-11-12, asked on the songs after rounds 148 and 149)
+
+**Why.** By ear, on the songs written after rounds 148 and 149, of
+the one on Fanfare's token: "how come fanfare increases in volume at 21
+seconds and then drops back down in the melody, that seems kinda odd",
+and then: "thats my only real complain out of all the song, its a deal
+breaker on that song I think we should go ahead and fix it".
+
+**Found.** It is the `section_levels` word (round 48), and dev wrote the
+same before the two rounds. The song (seed 1009) has a form of its own,
+A12 B4 C20, its token song's (A2 B8) being short of the bars asked. The
+word drew the tune 0.8 of its level in A and 2.0 in B, the top of its
+range; the tune rests in B's first bar, so it plays from 21.5 s to 26.5
+s at 2.5 times the level before it, 8 dB by the render, and falls back
+in C. The game's Fanfare tune sits at 1.0 in both its sections. The word
+is counted by the part and the section's place in the form and drawn
+pooled over the game: 0.72 of the tune's sections at 1.0 over 400 seeds,
+as the game's, but which song's section steps the draw does not know. In
+the game a tune's section sits at 1.5 times its level or more in 2 of
+207 (Grand Finale (part 2), Setzer); written, in 18 sections of 17 songs
+of 400. Every other word of a part's place in its song has moved to the
+token since round 113 (the form, the spans, the onsets by section, the
+loops); the levels by section had not.
+
+**Built.** A thirty-first field on every pitched part's token
+(`rhythm.section_levels_field`): the form's own parts in its order, each
+with the part's level there over its level in the song, `vA1.0+B0.4`, by
+the word's own count (`section_level_ratios`, which the pooled units are
+now made from). The plan reads it and, in a vocabulary whose tokens say
+it (`tokens_say_levels`), sets each part's levels by section after the
+pooled draws, which are still made on their own stream
+(`own_section_levels`): by the form's letters where they are the token
+song's; one level through in a form that is not, and for a part the
+token says nothing of.
+*Tried and not taken.* In a form not the song's, the token song's levels
+by the section's place (the first part the first's, the last the
+last's): a song on Fanfare's token then played its bass at 0.4 of its
+level through its last twenty bars, the level of the game's eight, a
+step with no section of the song under it, which is what was heard.
+
+**Measured.** Suite 591 (1 skip). The vocabulary is refit: 115
+tables, the balance table alone changed, its outcomes in the order they
+stood in. Plans (400 seeds), against dev: a level by section changes in
+391 songs, by the form's letters in 356 and held through in 35 whose
+form is not their song's; a note changes in 4, all among those 35 (the
+section's density tier is drawn by its level's step); all 400 keep their
+token song and title. Sections off the part's level, of those it plays
+in: the tune's 368 of 1,672 (463), the bass's 204 of 1,638 (311), the
+accompaniment's 417 of 1,435 (449), the counter-line's 439 of 1,192
+(419). At 1.5 times or more: the tune's 11 sections in 11 songs (18 in
+17), the counter-line's 105 in 26 songs (60 in 43), no bass's; any
+part's in 74 songs (94). The song on Fanfare's token: the tune at one
+level through (the score's volumes 8 and 15 to 9 and 17 across the song,
+where B's were 18 and 34).
+
+**Open.** The token's level is a section's median: what moves inside a
+section is not in it (LIMITS).
+
+**Heard.** Before the merge, by ear: the song on Fanfare's token.
+
+### Round 151: a bass's doubling voice does what its token song's does of its own (2026-11-12, asked on the level-fix songs)
+
+**Why.** By ear, on the songs of round 150, a question: whether Overture
+(part 3) is meant to hold one note for over twenty seconds at its start;
+told that the game pulses a second bass voice over the held note: "maybe
+its the pulse part lacking that makes it sound less musical than it
+should", and, the survey showing the fix would touch no other song: go.
+
+**Found.** The written song (seed 1006) holds G2 on both bass voices,
+unbroken, through its A, 29.7 s: fourteen whole-bar notes on the line
+and the same fourteen on the second voice. The game's line (voice 7)
+holds B1, 77 notes of two beats; its second voice strikes all 77 with it
+at the same pitch, 0.2 of a beat long, and 48 notes between them a
+fourth below, at the half of the line's two-beat gaps: root and fifth, a
+pulse a beat apart over the held note. The layers word calls a voice a
+doubling where it plays the line's pitch at the line's onsets
+(`harness.relation`), and since round 126 `double_bass` writes a bass's
+doubling as the line as finally played, again. Over the game's 153
+voices beside a line, 52 are called a doubling; 2 strike a quarter of
+their onsets or more where the line strikes none, this bass (49 of 125)
+and The Wedding Waltz-Duel (part 4)'s tune (42 of 167).
+
+**Built.** `rhythm.doubling_own(line, other)`: for a doubling voice,
+"sounds 0.10" (the median of its notes' lengths over the line's notes
+they are struck with, at three quarters or under) and "between -5 0.50"
+(its notes struck alone, a quarter of its onsets or more: the commonest
+interval from the line's note before and place in the line's gap). A
+bass's voice's tenth sub-field carries them after the layers word
+(`bass_layer_text`: `vdoubling_+0_sounds_0.10_between_-5_0.50`); the
+layers word's units and its outcome are untouched, so no pooled draw
+moves. The plan's layer word keeps the words, `layer_of` reads its kind
+and interval as before, and `double_bass` reads the rest
+(`doubling_own_of`): each note of the double sounds the share of its
+line's note, and in the line's gaps as long as its usual one (the
+median) or longer a note is struck at the place, at the interval, as
+long as the double's note there. The double is still written last, on
+the line as finally played.
+
+**Measured.** Suite 594 (1 skip). The vocabulary is refit: one balance
+token changes (Overture (part 3)'s; Returners' double has no words of
+its own), the outcomes in their order, no other table. Plans (400
+seeds), against dev: a note changes in 6 songs, the six on that token,
+in the bass alone; every other song is the same note for note, the
+levels by section the same in all 400, and every seed keeps its token
+song and title. The song on Overture (part 3)'s token: the second voice
+strikes the line's 50 notes with it, each a tenth as long as its line's
+note (0.4 of a beat under a whole-bar note), and 27 notes between at the
+half of the bar, a fourth below; the line is as it was.
+
+**Open.** The pulse is at the written line's pace, two notes a bar where
+the game's is four, and the tune's doubling voice on The Wedding
+Waltz-Duel (part 4)'s token is still the line again (LIMITS).
+
+**Heard.** Before the merge, by ear.
+
+### Round 152: the lead pass run again, nine tunes back on the voice heard as the tune (2026-11-13, found checking dev for a release; heard before the merge)
+
+**Why.** Round 64's lead pass moved the tune of nine Final Fantasy VI
+songs from the voice the reader labels melody to the voice heard as the
+tune, each voice rendered alone and judged by ear. The pass writes into
+the readings, and a game read again loses what it wrote
+(`translate/lead.py` says so in its first lines). Round 102 read the
+game again and the pass was not run after it, nor after round 105's
+re-read: every vocabulary from round 102's to round 151's counted those
+nine songs' tune from the reader's label. Round 102's record saw it
+("their melodies and counters swapping") and took it for the role
+reader of rounds 89 and 90 reaching songs an earlier re-read had
+missed. It was the relabels going.
+
+**Found.** The pass run on the readings as they are picks the same nine
+songs and the same voices as it did at round 64. Of the game's 68
+songs, 57 keep their label, 2 have no melody, and in nine the lead
+moves:
+
+| Song | The tune is now voice | It was read as | The voice that was the tune |
+|---|---|---|---|
+| Shadow | 0 | an accompaniment, 0.7 dB under the whole | 2 (a counter-line; its two layers accompaniments) |
+| The Phantom Forest | 0 | a counter-line, at the whole's level | 1 (an accompaniment) |
+| Gau | 1 | a counter-line, 2.3 dB under | 4 (an accompaniment) |
+| The Serpent Trench | 0 | a counter-line, 0.9 dB over | 5 (a counter-line; its two layers arpeggios) |
+| Under Martial Law | 3 | an accompaniment, at the whole's level | 1 and 2 (counter-lines) |
+| Aria de Mezzo Carattere | 6 | an accompaniment, 6.8 dB under | 1 (an accompaniment), 2 (a counter-line) |
+| Epitaph | 6 | a counter-line, 0.7 dB under | 0 (a counter-line) |
+| The Magic House | 0 | a counter-line, 0.6 dB over | 5 (an accompaniment) |
+| Umaro | 1 | a counter-line, 3.1 dB under | 2 (an accompaniment) |
+
+**Built.** Nothing in the writer. The pass run on the readings, the
+pack's tables refit, the vocabulary shipped (115 tables). So that a
+vocabulary counted without the pass says so: `lead.passed(db, game)`
+counts the songs whose voices the pass has heard and the songs whose
+tune it moved, `packtables.build` keeps the two numbers in the tables'
+source (`"lead": {"heard": 68, "relabelled": 9}`) and says them, or
+that the pass has not run, as it counts; the shipped vocabulary's test
+asserts them. The performance's test bounded a vibrato's first bend
+strictly after its note's start, which held because no song of its
+seeds drew a word with no onset; seed 6's counter-line now draws one
+the game has (15 cents at 13 Hz from the note's own start), and the
+bound is the note's start.
+
+**Measured.** Suite 597 (1 skip). The vocabulary: 9 of the 68 balance
+tokens change, the nine songs'; 54 tokens have a counter-line (52), 58
+an accompaniment (57), 4 an arpeggio (3); 84 of the 115 tables' counts
+change, and the 31 that do not are the kit's, the bass's bars, the
+chords', the form's, the keys' and the tempos' (`theme_body` and
+`return_band` count 36 units where they counted 50). Plans
+(400 seeds, the player's asking), against dev: a note changes in every
+song, the tune in 400, the bass in 360, the accompaniment in 341, the
+counter-line in 321, the harmony in 72, the arpeggio in 14, and the
+kit in 19 of the 269 songs with one. 379 seeds keep their token song
+and 21 draw another; the title is the same in all 400, the band in
+362, the bars in 379, the tempo in 381. The writer's own account of
+its holds stands where it stood: over the songs that state a share
+beside their token song's, the median of the share less the song's is
+the same to the hundredth before and after for the tune's moves (round
+130), its bars come back (146), its places (147) and its notes with
+the kit (149: 0.05 or more under in 27 of 260 songs, 24 of 244
+before), and within 0.02 for the counter-line's and the chord parts'
+(142 to 147; the five songs with an arpeggio apart).
+On the nine tokens, the same seed before and after: Shadow's tune 507
+notes then 84 with a counter-line beside it, Under Martial Law's 86
+then 28 with a counter-line, Epitaph's 67 then 18, The Magic House's 97
+then 57 with an accompaniment, Aria de Mezzo Carattere's 276 then 450,
+Umaro's 89 then 109, The Phantom Forest's 57 then 71, Gau's 42 then 37.
+
+**Open.** The Serpent Trench is no longer written under the player's
+asking: its tune read from voice 0 has no phrase that can come back,
+the player asks every song for a theme that returns, and the plan is
+drawn again on another token (6 of 400 seeds before, none of 1,400
+now; written without the asking it is a song of 33 bars). The counts
+this record and `VOCABULARY.md` quote for rounds 102 to 151 wherever
+they say the game's tune, counter-line or accompaniment were made with
+the nine songs on the reader's label, and are not counted again here.
+The readings' other pass, the song's rendered loudness (round 59), was
+lost with the lead pass and is not put back: the player levels what it
+plays (`VOCABULARY.md`, **loudness**).
+
+**Heard.** Eleven pairs on the same seeds before the merge, a song on
+each of the nine tokens (The Serpent Trench's without the theme asked)
+and on Terra's and Locke's, passed by ear.
+
+### Round 153: a line keeps its song's pace where the form is not its own (2026-11-13, from a counter-line heard running away)
+
+**Why.** By ear, on a song written on Metamorphasis's token (seed 69204,
+from an imported game's vocabulary): the counter-line's two voices
+heard as horns in a spasm, taking from the song. Investigated first,
+then built on the pick of the first of three candidate words, for
+every line.
+
+**Found.** The written counter-line plays 8.7 notes a bar, in every
+bar, two voices in parallel thirds a triplet apart at 160 BPM; the
+game's plays 3.8, and its tune 6.7 where the written tune plays 5.0.
+The second voice and the sample are the song's own. The pace is not.
+The writers hold a line to its token song's onsets a bar (the bass and
+the chord parts since round 125, the tune since round 138, the
+counter-line beside it since round 143), and the token says them by the
+form's letters. Metamorphasis is read as one part: its token carries no
+form, so it said no onsets, and `counter_mask` kept the pooled draw (a
+line with no own onsets keeps its first). Six of the 68 tokens carry no
+form. The same gap opens where a token has a form the plan does not
+take, one short of the bars asked. Over 400 seeds the plan's form is
+not its token song's in 35, and there, against the pace the token now
+says, the tune ran over one and a half times its song's in 16 songs of
+33, the bass in 13 of 33, the counter-line in 7 of 13, the harmony in
+12 of 18, and the accompaniment under half its song's in 5 of 11.
+
+**Built.** A song with no letters says one number: `section_onsets_text`
+gives, for a song whose form the token does not carry, the median of the
+voice's onsets a bar over the bars it plays in, the whole song through
+(`n3` in a part's twenty-second field, and in a voice beside a line's
+ninth sub-field); `plan.onsets_of` reads it under `WHOLE_SONG`. Where
+the plan's form is not its token song's, `plan.whole_song_onsets` gives
+each line (the bass, the chord parts, the tune, the counter-line beside
+it) its song's onsets a bar in every bar: that one number, or, for a
+token with a form the plan did not take, the median over the song's
+bars of its parts' own (`song_pace`). The writers are untouched: they
+hold a line to it as they hold it to a letter's, within half to one and
+a half times it. Nothing is drawn. The pooled `section_densities` and
+`section_fills` draws are made as before, and a line with a pace reads
+the pace in place of their shifts, as it does on its song's own form.
+The kit is not in it: its pieces' hits a bar are still said by the
+letter alone.
+
+**Measured.** Suite 599 (1 skip). The vocabulary is refit: five balance
+tokens gain the numbers (the sixth with no form has no line that plays),
+the outcomes in their order, no other table. Plans (400 seeds, the
+player's asking), against round 152: a note changes in 33 songs, the 33
+whose plan says the round's line; the other 367 are the same note for
+note, and every seed keeps its token song, title, band, bars and tempo.
+By token song: Overture (part 2) 9, Fanfare 7, Relm 5, Fanatics 4,
+Metamorphasis 4, Shadow 2, The Phantom Train 2. In those 33 every line
+is now within half to one and a half times its song's pace: the
+counter-line in 13 of 13 (the median of written over the song's 0.99;
+1.62 before), the tune in 33 of 33 (1.00; 1.33), the bass in 33 of 33
+(1.00; 1.31), the accompaniment in 11 of 11 (0.85; 0.53), the harmony
+in 18 of 18 (1.00; 1.80). The four songs on Metamorphasis's token:
+their counter-lines play 3.0 notes a bar (8.4 to 11.7 before; the
+token says 3), their tunes 6.5 to 7.1 (4.7 to 8.6; 7). The song first
+heard, written again from its seed on the same import refit with the
+round's code: its counter-line 2.9 notes a bar (8.7), its tune 6.7
+(5.0), its bass 4.9 (5.7), the key, tempo, form and title the same.
+The two earlier tests that write on one generated song's tables (the
+tune's places, round 147; the tune back with the bass, round 146) set
+that one-part song's pace aside, being tests of the writers' own bars.
+
+**Open.** A song on a form not its token song's still takes the pooled
+textures, entrances, loops and fills, and its kit's pieces their tables'
+own hits a bar. The song's pace is one number for the whole song: a
+song that thins in one part of its form is written at its median
+throughout (the tune on Fanatics's token goes from seven notes a bar to
+one, its song's). An imported game's vocabulary counted before this
+round says no such number until the game is imported again.
+
+**Heard.** Seven pairs on the same seeds, one song on each token the
+round changes, before the merge: better by ear, the pace on Fanatics's
+and Overture (part 2)'s tokens their songs'.
+
+### Round 154: a short form is the song's own, played round again (2026-11-13, asked after round 153's songs)
+
+**Why.** Round 153 gave a line one pace for the whole song where the
+plan's form is not its token song's. Asked how a song could keep its
+pace by the part of the form there, and its kit with it: for the four
+songs with a form under the sixteen bars a song is asked, the token
+already says all of it by the form's letters, and the plan dropped the
+form for being short.
+
+**Found.** Fanfare (A2B8, ten bars), Fanatics (A4B4B4, twelve), Shadow
+(A2B12, fourteen) and The Phantom Train (A3B4B4C4, fifteen). In
+Fanatics's first four bars the bass and the chant strike eight a bar,
+the accompaniment three and the kit eight; from the fifth the bass and
+the chant hold one note a bar, the accompaniment strikes eight and the
+kit sixteen. At one pace it was written as its second part throughout.
+The game loops each of the four.
+
+**Built.** `plan.round_again(form, loop_part, least)`: a token song's
+form short of the bars asked, with its parts from the loop's part on
+(the token's `loop=`; the first where none is read) added whole until
+the bars reach the ask, a letter's bars its first statement's; no
+further than the twelve parts a song may have, and a form that still
+falls short leaves the draw standing as before. `_plan_once` takes the
+longer form as the token song's own (`own_letters`): the parts that
+play in each part of the form, each line's onsets a bar, the kit's
+pieces, the loops and the levels are then the song's by the letter, as
+on any own form, and a part that comes round again is its first
+statement (`copy_repeats`). The written song's loop goes back to the
+token song's loop's part. Nothing is drawn that was not: the form's
+stream is read as it was.
+
+**Measured.** Suite 599 (1 skip). The vocabulary is as it was. Plans
+(400 seeds, the player's asking), against round 153: the plan says the
+round's line in 20 songs (Fanfare 9, Fanatics 6, The Phantom Train 4,
+Shadow 1); a note changes in 22 and the other 378 are the same note for
+note. Three seeds draw another token song, the plan drawn again for the
+theme asked: two of the three that were on Shadow's (its own form gives
+the tune no phrase to come back in under the asking), and one that was
+drawn again off Fanfare's before and now stays on it. By the part of
+the form over the 20 songs: each line's notes a bar over its song's for
+that letter, 109 parts of the form, the median 0.91 and every one
+within half to one and a half times it; the kit's hits a bar over the
+game's kit's there, 44 parts of the form, the median 0.91, 38 within
+half to one and a half times it and 6 under (The Phantom Train's A,
+where the game's hat runs thirteen a bar and the written kit rests: a
+piece the song plays in some bars may rest). The song on Fanatics's
+token (seed 84): A at bass 5, chant 4, accompaniment 3, kit 8.5; B at
+bass 1, chant 1, accompaniment 8, kit 9 (the game's 8, 8, 3, 12 and 1,
+1, 8, 18). The song on Shadow's (seed 11): its kit 17.5 hits a bar in B
+where the game's plays 21 and the written song played 7 throughout.
+
+**Open.** A part of the form that comes round again is its first
+statement note for note, where the game's second time can differ. A
+song of ten bars is eighteen as written, and the player's loop plays
+its second part again after that. Shadow is drawn less under the
+player's asking (1 seed of 400 where 3 were). The kit's piece that
+plays in some bars of a part of the form may rest through it.
+
+**Heard.** Four pairs on the same seeds before the merge, a song on each of
+the four tokens: passed by ear. On Fanatics's the chant was heard holding
+one note through its second part, which round 156 takes up.
+
+### Round 155: a kit keeps its song's pieces where the song has no form (2026-11-13, asked with round 154)
+
+**Why.** Round 153 left the kit out: its pieces' hits a bar were said
+by the form's letters alone, and a song read as one part said none.
+Round 154 brought the four short forms' kits in by the letter. This is
+the rest: the songs with no form.
+
+**Found.** Six tokens carry no form and four of their songs have a
+kit: Metamorphasis (a cymbal once a bar in 21 of its 22 bars),
+Overture (part 2) (an open hat twice a bar in 8 of 10), Quiet Beach
+(once a bar in 11 of 12) and "??" (five pieces, none in half its
+bars). Written on those tokens a kit struck at its tables' own rate in
+whatever bars the pooled textures and the drums' entrances gave it:
+over 400 seeds the three songs on Metamorphasis's had a kit in 4 bars
+of 28, in 4 of 20, and none at all (never in a texture, it was left
+out of the band), and the nine on Overture (part 2)'s in from none of
+their bars to all.
+
+**Built.** `rhythm.kit_onsets_field` says a song with no form's pieces
+the whole song through, under `*` for the letter (`n*c1@95`: the
+cymbal one hit a bar at the median of the bars it plays, in 95 in a
+hundred of the song's bars); `plan.kit_onsets_of` reads it under
+`WHOLE_SONG`. Where the plan's form is not its token song's the kit's
+pieces take those bounds in every bar (`kit_piece_bounds`, as a part of
+the form's: a piece that plays through keeps within half to one and a
+half times its hits, one in some bars from none to that many, a rare
+one a hit at most). And a kit one of whose pieces plays in three
+quarters of its song's bars or more (`KIT_THROUGH`, the bound's own
+line for playing through) plays in every bar: the drums are put into
+every bar's texture after the pooled texture draw and their pooled
+entrances are not taken, as on a token song's own textures. Nothing is
+drawn that was not; the entrances' stream is its own.
+
+**Measured.** Suite 600 (1 skip). The vocabulary is refit: four balance
+tokens gain the word (the four kits above), the outcomes in their
+order, no other table. Plans (400 seeds, the player's asking), against
+round 154: the plan says the round's lines in 12 songs (Overture (part
+2) 9, Metamorphasis 3) and a note changes in 13, the kit in all 13 and
+the bass and the tune, held to the kit's hits since round 149, in 5;
+the other 387 are the same note for note. One seed draws another token
+song: a kit kept in the band draws its own words, and the plan drawn
+again for the theme asked lands elsewhere. In the 12 the kit plays in
+every bar: the three on Metamorphasis's token one hit a bar (the
+game's one), the nine on Overture (part 2)'s two (its two), where the
+kit had played in 4 of 28 bars, 4 of 20 and none, and in from 0 of 28
+to 22 of 22.
+
+**Open.** The kit plays in every bar where its song's plays in nearly
+every bar: the bar or two the game rests it are not carried. The
+pieces' bounds are one for the whole song. A song with no form still
+takes the pooled textures and entrances for its other parts. And
+Metamorphasis's own main drum voice, read as a roll and filed apart,
+is not in its kit at all.
+
+**Heard.** Two pairs on the same seeds before the merge, a song on
+Metamorphasis's token and one on Overture (part 2)'s: passed by ear.
+
+### Round 156: a harmony's figure of two bars is not written on one chord (2026-11-13, from a chant heard holding one note)
+
+**Why.** By ear, on the song on Fanatics's token after round 154 (seed
+84): the chant holds one note through, and a long sustained sound is
+all there is. Investigated first; built on the pick of the first of
+three candidates.
+
+**Found.** That song is on one chord for its 24 bars. The game's
+second part turns two chords about, a bar each (G#5, F#5), and its
+chant, its bass and its low voice move with them; the token says so
+(`cycle=A1~100+B2~100`: the harmony's figure one bar long in A, two in
+B). Round 121's step copies a figure's first bars across the part, and
+the chain had drawn the figure's two bars alike (I5 I5 I5 VI5 for the
+part): a figure of two bars on one chord, the part on one chord, and
+the chord the chain drew later in it written over. A drawing fault:
+the song's harmony loops on two bars because they differ, and on one
+chord it would loop on one. Over 400 seeds 173 parts of the form, in
+132 songs, have a figure of two bars or more, and 71 of them, in 60
+songs, were written on one root; in 45 of the 71 by the chain's draw
+alone.
+
+**Built.** In `plan_chords`, before the figure's bars are copied: a
+figure of two bars or more whose bars (the first on the figure at each
+place of it) are on one root takes, for a later bar, the first chord on
+another root the chain drew in the part, at that chord's own place in
+the figure (the last, where it was drawn at the first); where the
+chain drew the part on one root whole, a chord asked of the chord word
+on a stream of its own (`figure_rng`, `FIGURE_TRIES`) until it gives
+another root. The chain's draws, its holds and its shapes stand, so no
+other draw moves.
+
+**Measured.** Suite 601 (1 skip). The vocabulary is as it was. Plans
+(400 seeds, the player's asking), against round 155: the plan says the
+round's line in 55 songs, 67 figures in all; a note changes in 50 (the
+tune in 47, the bass in 46, the accompaniment in 41, the counter-line
+in 27, the harmony in 10) and the other 350 are the same note for
+note; every seed keeps its token song, title, band, bars and tempo. Of
+the 173 figures, 22 are on one root now, in 22 songs, where 71 were:
+none by the chain's draw. The chord changes at 0.45 of a song's bar
+lines at the median (0.39; the token songs' 0.61), and 8 songs are on
+one chord throughout (10).
+
+**Open.** The 22 figures still on one root are every one under a
+theme's return that comes back with its chords: the plan copies the
+theme's four bars of chords over the bars it returns in, whatever the
+part's own harmony there. The song on Fanatics's token is one of them
+and is note for note what it was: its theme, four bars on one chord,
+returns at the second part's first bar, where the tune, the bass and
+the accompaniment cannot follow it (their pace there is not the
+theme's), and only the chords come back. Over the 400 seeds 409
+returns bring their chords, 239 of them into a part whose harmony the
+token song loops, and 86 where the tune's own pace is outside half to
+one and a half times the theme's part's. What a return may bring over
+a part's own harmony is the player's asking, and is put to the ear
+with a song written both ways.
+
+**Heard.** Six pairs on the same seeds before the merge: passed by ear.
+The song on Fanatics's token written with its theme's return bringing no
+chords was heard as the better; that is not built here.
+
+### Round 157: a theme's return brings no chords where the tune cannot follow (2026-11-13, left open by round 156; heard as a song written both ways)
+
+**Why.** Round 156 left 22 figures of two bars or more on one root,
+every one under a theme's return that brings its chords back, the song
+on Fanatics's token among them: its second part still held one chord,
+and its chant one note. Written with that return bringing no chords
+the song was heard as the better, and the rule was built.
+
+**Found.** Asked for a theme that returns with the band, the plan
+copies the theme's four bars of chords over the bars the theme returns
+in, as it is planned, before a writer is asked. The writers then bring
+a bar back only where it keeps within their part of the form's own
+onsets a bar: the tune since round 138, the bass and the chord parts
+since round 134. Where the theme cannot come back by that test, the
+chords are all that came. On Fanatics's token the theme is four bars
+at eight notes a bar on one chord; it returns at the second part's
+first bar, where the tune holds a note a bar, and the one chord lay
+over the two the part turns about. Over 400 seeds 409 returns brought
+their chords.
+
+**Built.** `plan.theme_fits(tune_onsets, theme_bar, return_bar)`: the
+tune's own onsets a bar where the theme is stated, within the envelope
+its writer holds a bar to where the theme returns (half to one and a
+half times the tune's onsets a bar there); true where the plan has no
+such onsets for either bar. In `_plan_once` a return that would bring
+chords is asked it first: where the theme does not fit, the return
+brings no chords and the part of the form keeps its own, and the plan
+says so. What else the return was drawn to bring (the bass, the
+accompaniment) is left to their writers, as before. Nothing is drawn
+that was not.
+
+**Measured.** Suite 607 (1 skip). The vocabulary is as it was. Plans
+(400 seeds, the player's asking), against round 156: 99 of the 409
+returns bring no chords now, in 87 songs; a note changes in 84 (the
+tune in 84, the bass in 74, the counter-line in 70, the accompaniment
+in 67, the harmony in 26) and the other 316 are the same note for
+note; every seed keeps its token song, title, band, bars and tempo.
+By token song: Last Dungeon 9, Searching for Friends 6, The Magic
+House 6, and five each on Aria de Mezzo Carattere's, Celes's, Save
+Them!'s, Fanatics's, Coin Song's, Dancing Mad (part 1)'s and The
+Prelude's. The figures of two bars or more on one root: 11 of 173
+(22), each under a return whose theme the tune can play there. The
+chord changes at 0.43 of a song's bar lines at the median (0.45: a
+theme's chords had changed a part's now and then; the token songs'
+0.61). The song on Fanatics's token (seed 84): its second part turns
+C#5 and A5 about, the chant C#4 and A4 and the bass C#2 and A1 with
+them.
+
+**Open.** A return the tune can follow still brings the theme's
+chords over the part's own harmony (310 returns, 177 of them into a
+part whose harmony the token song loops). The test is the tune's
+pace alone: a theme that fits by its onsets a bar and not by its
+part's chords comes back all the same. Eight songs of 400 are on one
+chord throughout, none of them by a return.
+
+**Heard.** The song on Fanatics's token written both ways, before the
+round was built: the better without the chords. Six pairs on the same
+seeds before the merge: passed by ear.
+
+### Round 158: a voice beside a chord part's line hears its own part's voices (2026-11-13, from an accompaniment heard clashing with itself)
+
+**Why.** By ear, on the song on Good Night's token (seed 1016): the
+notes of the accompaniment clash, and the song is hard to listen to.
+Investigated first; built on the pick of the second of three
+candidates, after four songs were heard written both ways.
+
+**Found.** The game's Good Night is a jingle of two bars, 26 notes in
+eight voices, and the reader files its harmony as an accompaniment of
+five voices. In the written song a semitone sounds between two voices
+of the accompaniment at 92 of the 169 onsets where two or more of
+them sound. Each voice beside a line is placed against the chord and
+the line (`parallel`, the voice words), and the `clashes` word holds
+it against the parts written before its part (round 94), never
+against its own part's voices: two doubling voices a third over one
+line land on the major third and the minor at once (bar 2: a G major
+chord in three voices, B flat in the other two). It grows with the
+voices. Over 400 seeds (1000 to 1399, the player's asking) the share
+of an accompaniment's onsets with a semitone between two of its
+voices is 0.06 at the median with two voices (99 songs), 0.15 with
+three (86), 0.22 with four (34) and 0.41 with five (7, every one on
+Good Night's token); FFVI's own accompaniments are at 0.01 at the
+median and 0.22 at the most (Slam Shuffle). A drawing fault: the
+clashes word exists and is not held where a part's voices meet each
+other.
+
+**Built.** `plan.hear_own_voices`, called by `settle_chord_parts` at
+the end of `write`, once every part is written: a chord part changed
+before the tune is written re-writes the tune, so the tune, the
+counter-line, the bass and the kit stand as they were. A part's
+voices are taken in order and the line is never moved. A note a
+semitone by pitch class from a note that a lower-numbered voice of
+its part sounds while it sounds moves to the nearest pitch within a
+tritone (`HEAR_REACH`) that is not: a tone of the bar's chord before
+a tone of the key's scale before any other; among those one not a
+semitone from another part's note at its onset, then one that is not
+a unison with its own part, then the nearer, then the lower. Where no
+pitch clears the whole of a held note, the notes at its onset alone
+are asked. A voice's notes in the bars where it doubles another
+part's line or runs parallel to it (the token's relation word, round
+90; `follows_another_part`) are that line's again and are left. A
+part of the form that repeats another still does. What the pass moved
+is put under the SNES chip's ceilings again (round 120). No draw is
+made, so no other note moves.
+
+**Measured.** Suite 611 (1 skip). The vocabulary is as it was. Over
+the 400 seeds, against round 157: a note changes in 229 songs, 9
+notes at the median and 130 at the most, every one the pitch of a
+voice beside a chord part's line (4,064 the accompaniment's, 184 the
+arp's, 97 the harmony's); the other 171 are the same note for note,
+and in every song the lines, the tune, the counter-line, the bass and
+the kit are. Of 4,327 notes moved, 4,291 went to a tone of the chord
+and 36 to a tone of the scale; none was left. Accompaniments with a
+semitone between two of their voices at a quarter of their onsets or
+more: 22 before, none now (226 with two voices or more; notes whose
+tails meet for less than 0.06 of a beat not counted); the median 0.11
+before and 0.00 now, the highest 0.51 and 0.22, in a voice that
+follows the tune. The song on Good
+Night's token: 92 of 169 onsets before, 3 now (108 of the
+accompaniment's 634 notes moved, 6 of the arp's 210).
+
+**Open.** The share is held to nothing, where FFVI's own
+accompaniments run to 0.22: a song on Slam Shuffle's token loses the
+semitones its game song has. A count of a part's own semitones by
+song, held as the clashes word is, would say how many a song keeps.
+A moved note goes to a chord tone, so a part with many voices is
+plainer than it was. The semitones between parts are as they were
+(the song on Good Night's token: a semitone sounding at 0.60 of all
+its onsets before, 0.37 now, the accompaniment against the arp and
+the tune), and its line still leaves the chord on a third of its
+onsets: the jingle changes chord on every note and the reader gives a
+bar one chord, so the song's tier is "many". A token song of two bars
+is still written from.
+
+**Heard.** Before the round was built, as a pass over the written
+parts, on the songs on Good Night's, Dark World's, The Day After's
+and Johnny C. Bad's tokens, each written both ways: passed by ear.
+The round writes the first three note for note as they were heard.
+In the fourth it moves 14 notes where the pass heard moved 32: the
+other 18 are a voice's where it runs parallel to the tune, left since
+as that line's own.
+
+### Round 159: a struck voice no mask could thin strikes where its token voice does (2026-11-13, from an accompaniment heard as rapid fire)
+
+**Why.** By ear, on the song on The Day After's token (seed 1044): the
+accompaniment is rapid fire, and nothing like its game song's.
+Investigated first; built with round 160 after the song was heard
+written both ways.
+
+**Found.** The game's accompaniment is a tremolo, two voices a third
+apart that strike 24 times a bar each on one pitch, and from its
+ninth bar a plucked voice of seven notes a bar (140 notes in 20
+bars). The written song's plucked voice plays 672 notes, 24 in every
+one of its 28 bars. Its token has what it needs: the voice is struck
+with the tremolo's second voice on 0.29 of that voice's onsets (round
+108), and its onsets a bar by the form's letters say none in A (round
+125). `struck_with` holds the share by drawing the bar's
+`second_figures` mask again, and under a bar of 24 strikes the word
+has one mask, every strike (225 of 225 draws in this song): the voice
+struck 618 of the 627 onsets it followed. A drawing fault: the word
+and its share exist, and the hold has nothing to draw. Over 400 seeds
+it is this token's nine songs, three of the five on The Phantom
+Forest's and one on Johnny C. Bad's; every other struck voice is
+within 0.15 of its token's share.
+
+**Built.** The balance token says where a struck voice strikes, as its
+last word, so that no token's place among the balance word's outcomes
+moves (`rhythm.struck_places_field`, `struck=`): for each chord part's
+voice with struck facts, the part's letter and the voice's number, its
+median note length in hundredths of a beat, and its usual bar's
+places in each part of the form by the form's letters, in twelfths of
+a beat, `-` where it rests (`a3~45:A-+B0.6.18.24.30.36.42+...` for
+this voice). The plan reads it (`struck_places_of`) and keeps it only
+where its form is the token song's. `write` keeps what each struck
+voice struck and what its masks thinned, and
+`plan.strike_where_token_does`, in `settle_chord_parts` once every
+part is written and before round 158's pass, takes a voice left 0.15
+or more over its token's share (`STRUCK_OVER`): in each bar the note
+nearest each of the token voice's places, within a twelfth of a beat,
+is kept and the voice's other notes are taken out; in a part it rests
+in, every note. A note kept sounds the token voice's median length,
+or 0.9 of the gap to the voice's next note, the shorter. Nothing is
+drawn.
+
+**Measured.** Suite 613 (1 skip). The vocabulary is refit: 115 tables as
+before, the balance word alone changed, each of its outcomes what it
+was but for the new word and in the place it had; 22 of the 68 tokens
+carry the word. Over 400 seeds (1000 to 1399, the player's asking),
+against round 158: a note changes in 13 songs, every one in the
+accompaniment (4,305 notes taken out, 850 notes' lengths, and 177
+pitches where round 158's pass meets other notes than it did); the
+other 387 are the same note for note and every seed keeps its token
+song. Seed 1044: the plucked voice's 672 notes are 140, the game's
+count, seven a bar from bar 9.
+
+**Open.** The places are the token voice's usual bar in each part of
+the form, so every bar of a part is struck alike. A form that is not
+the token song's has no letters to go by, and such a voice is left as
+written. The 0.15 is how far over its share a voice must be before it
+is taken for one no mask could thin, not a counted word; the mask word
+still has no mask that thins a bar of 24 strikes. The notes kept keep
+the pitches they were drawn with, one by one, where the game's voice
+plays a figure.
+
+**Heard.** Before the round was built, as a pass over the written
+song together with rounds 158's and 160's, on the song on The Day
+After's token written both ways: passed by ear.
+
+### Round 160: a block line's note changes where its token song's does, and a voice on its sample holds with it (2026-11-13, with round 159)
+
+**Why.** The same song as round 159, by ear: the accompaniment is
+rapid fire. With the plucked voice at its seven notes a bar the
+tremolo was still not one.
+
+**Found.** Two things, each counted on the game. The line: the
+tremolo's upper voice stays on a pitch six strikes at the median
+(nine at the mean) and its note changes on the first or the third
+beat half the time; the written line stayed three strikes and turned
+between beats on 0.76 of its turns. Its step profile is held (round
+117: the note again on 0.84 of its moves against the song's 0.89),
+but as a share over the line, so the changes fell wherever the share
+let them, and no word says where a line's note changes. The voice
+beside it: the tremolo's second voice keeps its note on every strike
+where the upper one keeps its own (513 of 513); the written one kept
+it on 0.67. `parallel` draws each note's landing anew, by the line's
+tone against the chord and the landing before, so under a repeated
+line note the voice flickers between chord tones: a drawing fault.
+It is general. Over 400 seeds, where a line repeats its pitch a voice
+beside it repeats its own on 0.47 of its strikes; FFVI's on 0.83, and
+FFVI's voices on their line's own sample, an instrument struck as a
+chord, on 0.97 (twelve voices in eleven songs, 0.80 at the least).
+
+**Built.** A new word and a hold, both in `settle_chord_parts` once
+every part is written, before rounds 159's and 158's passes. The
+word: the balance token says, after every other word, where a block
+line's note changes, bar by bar (`rhythm.line_turns_field`, `turns=`:
+for a chord part whose line's pitch differs from the strike before's
+on under a third of its strikes, the motion word's block, the places
+of its turns in each bar in twelfths of a beat, `-` for a bar on one
+note; `a24/-/24/-/...` for the tremolo). `plan.lay_turns` lays each
+bar of such a line out between the places of one of the token song's
+bars, drawn on a stream of its own: the bar keeps as many of its
+written pitches as the places make stretches, those on the bar's
+chord before the ones it struck most, in the order written. The
+hold: `plan.hold_with_line`, for a voice whose token sample is its
+line's own. Where the line's note at the voice's strike is the one it
+had at the voice's strike before, the voice takes its own note of
+that strike again, held as a share is (`SAMPLE_KEEPS`, within
+`STRUCK_MARGIN`); in a bar the turns laid out, the voice is laid out
+with the line, taking for each stretch a note it had under that line
+pitch in the bar as written. A voice is left where it follows another
+part's line, and a part of the form that repeats another still does.
+
+**Measured.** Suite 617 (1 skip). The vocabulary is refit: 115 tables,
+the balance word alone changed, each outcome what it was but for the
+new word and in its place; 12 of the 68 tokens carry `turns=`. Over
+400 seeds (1000 to 1399, the player's asking), against round 159: a
+note changes in 153 songs, 17 notes at the median and 729 at the
+most, every one a pitch in a chord part (5,606 of the
+accompaniment's voices beside the line and 2,955 of its line, 1,821
+and 657 of the arp's, 75 of the harmony's voices); the other 247 are
+the same note for note, and the tune, the counter-line, the bass and
+the kit are in every song. The 49 lines laid out, on ten tokens, stay
+on a pitch 8 strikes at the median of their medians where they stayed
+3, and turn on the first or the third beat on 0.78 of their turns
+where they did on 0.39. Where a line repeats its pitch a voice beside
+it repeats its own on 0.74 of its strikes, every voice counted
+whatever its sample, where it did on 0.47. Seed 1044: the line stays
+14 strikes (3), turns on the first or third beat on 0.56 (0.19), and
+the second voice keeps its note on 600 of 602 such strikes (361 of
+535).
+
+**Open.** The turns are drawn from the token song's bars at random,
+so a bar's turns are one of that song's bars' and not the bar's own
+harmony's; the written tremolo holds longer than the game's (14
+strikes against 6), since a bar keeps no more pitches than it was
+written with. A held note is whatever the writer drew: where it drew
+one off the key it now lasts half a bar. The turns' stream keeps the
+name it was heard under. The hold is for a voice on the line's own
+sample; a voice on another sample that the game holds with its line
+is as it was. Rounds 158 to 160 are passes over the written parts,
+after the tune: the tune was drawn against the chord parts as they
+stood before them.
+
+**Heard.** Before the round was built, as a pass over the written
+parts with rounds 158's and 159's, on the song on The Day After's
+token and, without round 158's, on the song on Strago's, each written
+both ways: passed by ear. The three rounds together write both songs
+note for note as they were heard.
+
+### Round 161: a moving chord line is held to its token song's line by its place in the beat (2026-11-14, from a piano heard playing notes that make no sense together)
+
+**Why.** By ear, on the song on Johnny C. Bad's token (seed 1018),
+after rounds 158 to 160 and two passes over it that were heard and set
+aside (a bar under its song's pace playing its part's busy bar again; a
+voice resting where its token voice rests): the piano's notes do not
+make sense together, where the game's is a blues riff. Investigated
+first; built as a new word on the pick of it.
+
+**Found.** The game's song is a boogie shuffle, and the reader counts
+it at half its speed. Every voice plays one small figure on swung
+eighths. The bass walks a note on every half beat (E G# B C# D C# B
+G#). The piano's top voice, the accompaniment's line, plays G#, A, G#
+on the beat and its half, the third, a step up and back, and one note,
+E, on every swung off-beat between them; its lower voice rocks B, C#,
+B a sixth under the top. Of the line's notes off the beat and its
+half, 0.73 are their bar's one pitch, the same pitch as the bar
+before's in 0.70 of its bars; of the moves from one note on the beat
+or its half to the next, 0.26 repeat the note, 0.68 are a step and
+0.07 a leap. The step profile the token carries (round 117) counts
+every move in the order it comes: same 0.20, step 0.16, leap 0.65. A
+pedal under a stepping line reads as leaping, and the lines written to
+it leaped wherever they went: on the two songs heard, 0.53 and 0.47 of
+their off-pulse notes are their bar's one pitch, and 0.40 and 0.43 of
+their moves on the pulse a step or less. No word says a line by its
+place in the beat; the tune has one for where its notes fall (round
+147), none for what they are there.
+
+**Built.** A new word, by song. The balance token says, after every
+other word, a moving chord line by its place (`rhythm.line_pulse`,
+`line_pulse_field`, `pulse=`): the line's pulse, the coarsest of the
+beat and its half on which a third of its notes or more fall and a
+third or more do not; the pedal's share, of its notes off the pulse in
+the bars with two or more, those on the bar's most struck such pitch;
+the pedal's carry, how often that pitch is the bar before's; and the
+step profile of its notes on the pulse as a line of their own
+(`a6~73~70~26/68/7` for this piano). A block line has its turns
+instead (round 160). The plan reads it (`line_pulse_of`,
+`plan.line_pulse`), and `plan.hold_pulse`, first in
+`settle_chord_parts` once every part is written, holds the written
+line to both. The notes on the pulse, in time order: a move whose
+class, the move counted, is over its share by `STEP_MARGIN` gives way
+to the class most under its own, as `hold_line_steps` does for the
+whole line, "same" playing the on-pulse note before again and "step"
+the chord's tone within a whole tone of it, the scale's where the
+chord has none; a leap is never forced. The notes off the pulse: each
+bar with two or more has one pedal, its own where it has one (the
+pitch it strikes most off the pulse, twice or more, on the bar's chord
+or half its off-pulse notes), else the bar before's where that keeps
+the carry and is a tone of the bar's chord, else the one of its
+off-pulse pitches on the chord it strikes most; a note off the pedal
+moves to it while the share on it would be under the token's. A note
+of a voice beside the line that is struck with a moved line note moves
+as far, where the voice follows its part's line by its relation word
+or sounds the line in octaves. Nothing is drawn; a part of the form
+that repeats another still does.
+
+**Measured.** Suite 626 (1 skip). The vocabulary is refit: 115 tables,
+the balance word alone changed, each outcome what it was but for the
+new word and in its place; 35 of the 68 tokens carry `pulse=`. Over
+400 seeds (1000 to 1399, the player's asking), against round 160: a
+note changes in 196 songs, 18.5 notes at the median and 270 at the
+most, every one a pitch in a chord part (4,158 of the accompaniment's
+line and 2,273 of its voices beside it, 25 and 2 of the arp's); the
+other 204 are the same note for note, the songs on a token with turns
+among them, and the tune, the counter-line, the bass and the kit are
+in every song. Seed 1018: the off-pulse notes on their bar's one pitch
+0.53 before and 0.68 now, the moves on the pulse a step or less 0.40
+and 0.89 (the token's 0.73 and 0.94); 224 of the accompaniment's 820
+notes moved. Seed 1234, on the same token: 0.47 and 0.68, 0.43 and
+0.89. Seed 1335, on Battle Theme's: 0.64 and 0.66, 0.39 and 0.75 (the
+token's 0.53 and 0.81).
+
+**Open.** The pedal's share is raised to the token's and never
+lowered, and a bar's own pedal is kept on the chord or off it. Both
+holds are shares over the line: a bar is held where the share asks and
+left where it does not, so a busy bar late in a song can stand as it
+was written. The pulse is the beat or its half and no finer. What the
+line plays is held, not where: seed 1018 has 0.30 of its line's notes
+off the swing's places and eight notes a bar where the game's piano
+plays thirteen, and is written at 120 for the game's 110; a chord
+part's line has no places word (the tune's is round 147's), and the
+writers hold a bar within half to one and a half times its song's
+onsets a bar. A run and a fall into a beat have no word. Like rounds
+158 to 160 the hold runs after the tune is written.
+
+**Heard.** Three pairs on the same seeds were rendered: the song on
+Johnny C. Bad's token that was heard (seed 1018), another on it that
+keeps the game's pace (seed 1234), and one on Battle Theme's (seed
+1335). On seed 1234 the piano's line passed by ear; the voices beside
+it did not, which rounds 162 to 164 took up. No word was given on the
+other two pairs.
+
+### Round 162: a struck voice is taken for one no mask could thin only where a mask ran out (2026-11-14, a fault in round 159's test)
+
+**Why.** By ear, on a song on Johnny C. Bad's token (seed 1234) with
+round 161 in: the piano's line passes, and the voices beside it are
+off and clash. Investigated first; this round and the next are the
+two faults found.
+
+**Found.** The piano's lower voice plays six notes a bar in the game,
+under the top's notes on the beat. In the written song it played two
+to four, 70 notes in all, at places the line did not keep. Round 159
+had taken it for a voice no mask could thin: it struck 0.60 of the
+line's onsets against its token's 0.44, a hundredth over that round's
+margin of 0.15, after its masks had thinned 180 of the 448 onsets it
+followed, in every one of the 34 bars they were asked in; 233 of its
+303 notes were taken out and the rest left at its token voice's
+places. The margin was the whole test. Over 400 seeds it took 13
+voices: The Day After's nine, where no mask thinned 12 to 28 of the
+28 bars; one on The Phantom Forest's token with 29 such bars of 35;
+and three whose masks thinned every bar asked, two on The Phantom
+Forest's token and this one, over their share by the masks' own drift.
+
+**Built.** `struck_with` keeps the bars in which it asked the share of
+a mask and those in which every draw of the mask struck every followed
+onset (`stats["asked"]`, `["unthinned"]`; `write` puts them in
+`extras[part]["struck_bars"]`). `strike_where_token_does` takes a
+voice that is over the margin and has one such bar or more, and its
+log says how many. Nothing else changes: the nine and the one are
+taken as they were.
+
+**Measured.** Suite 626 (1 skip). The vocabulary is as it was. Over
+the 400 seeds, against round 161: a note changes in three songs
+(seeds 1162 and 1175 on The Phantom Forest's token, 1234 on Johnny C.
+Bad's), whose struck voices have their 445 notes back; the other 397
+are the same note for note. Seed 1234: the voice plays 303 notes
+where it played 70.
+
+**Open.** The margin stands beside the cause, as a margin. A voice
+left over its share by its masks' drift (0.60 to 0.67 against 0.43
+and 0.44) is not held nearer it.
+
+**Heard.** With rounds 163 and 164, on seed 1234: passed by ear.
+
+### Round 163: a note left where it follows another part is heard by every voice of its part (2026-11-14, a fault in round 158's pass)
+
+**Why.** The same listening as round 162: on the song on Johnny C.
+Bad's token (seed 1234) the voices beside the piano's line clash.
+
+**Found.** The accompaniment's third voice follows the tune there (its
+token's word: parallel to the melody), so round 158's pass leaves it.
+The pass takes a part's voices in order and each hears the voices
+before it: the second voice, the piano's lower one, never heard the
+third, and the third is not moved, so a semitone between them stood.
+On dev there was none in this song; round 161 moved the second voice
+with its line, and on its branch the two sat a semitone apart at 0.08
+of their meetings. A fault in the pass: a note that will not move is
+for every other voice of its part to stand clear of, whatever its
+number.
+
+**Built.** In `hear_own_voices` a voice hears, beside the voices
+before it, a later voice's notes in the bars where that voice is left
+(`leave`). Nothing else changes.
+
+**Measured.** Suite 626 (1 skip). The vocabulary is as it was. Over
+400 seeds (1000 to 1399, the player's asking), against round 162: a
+note changes in 28 songs (11 on Last Dungeon's token, 7 on Johnny C.
+Bad's, 5 on The Phantom Forest's, 4 on Cyan's, 1 on Terra's), 8 notes
+at the median and 26 at the most, every one the pitch of a voice
+beside the accompaniment's line; the other 372 are the same note for
+note. The onsets with a semitone between two voices of a chord part
+(notes whose tails meet for less than 0.06 of a beat not counted) go
+from 903 to 715 of 43,016. Seed 1234: the second voice against the
+third, a semitone at 0.08 of their meetings before and at none now.
+
+**Open.** The line is never moved, so a semitone between the line and
+a voice left where it follows another part stands (seed 1234: 12 of
+its 216 onsets with two voices or more). The pass asks semitones
+alone: in that song the second voice is a whole tone from the line at
+0.16 of their meetings and from the third at 0.19. And the second
+voice is not yet the game's: it lands on the chord, a third or a sixth
+from the line at 0.52 of their meetings where the game's lower piano
+voice is at 0.71, the line's note on the beat again a sixth lower; and
+it strikes 0.60 of the line's onsets against its token's 0.44, six to
+sixteen notes a bar where the game's plays six.
+
+**Heard.** One pair on the same seed, the song on Johnny C. Bad's
+token (seed 1234) as round 161 wrote it and with rounds 162 and 163:
+the third voice still did too much on its runs, which round 164 took
+up; with it, passed by ear.
+
+### Round 164: a voice beside a line keeps its token voice's pace in the bars that are its own (2026-11-14, from a voice heard doing too much on its runs)
+
+**Why.** By ear, on the song on Johnny C. Bad's token (seed 1234) with
+rounds 162 and 163 in: the accompaniment's third voice does too much
+on its fast runs, and clashes with the rest of the song when it goes
+off. Investigated first; built on the pick of the first of two
+candidates.
+
+**Found.** That voice follows the tune through most of the song, six
+notes a bar where its token voice plays six and a half. In part D,
+fifteen bars, its token's word is a stretch of its own, and there it
+was written at 13, 0, 9, 8, 14, 14, 13, 8, 14, 14, 8, 8, 1, 8 and 3
+notes a bar, between D3 and C4, under the piano and in the register of
+the tune and the bass, two to seven of a bar's notes off its chord.
+Its token voice, the guitar's low voice, plays one note a bar there.
+The token has it: each voice's onsets a bar by the form's letters
+(round 125, the ninth sub-field of its entry). The writers hold a
+line's bar within half to one and a half times its own (rounds 125,
+134, 138), and a voice beside the line to nothing: its own bars are
+written beside the line's, at the line's pace, and the plan read the
+word for one voice's fills alone. Over 400 seeds, of 1,480 parts of
+the form in which a voice beside a line has its token's onsets a bar,
+the written voice was over one and a half times them in 228; this one
+was the furthest over, in every song on the token. A drawing fault:
+the word exists and no writer held it.
+
+**Built.** The plan keeps the voices' onsets (`plan.layer_onsets`,
+`voices_onsets`: by the letters where its form is the token song's, a
+song with no letters' one number either way). `plan.keep_voice_pace`,
+in `settle_chord_parts` once every part is written and before the
+voices hear each other, takes each bar of a voice that is its own: a
+stretch of its own by its relation word, or a voice with no word; not
+a bar where it doubles a line, runs parallel to one or is struck with
+one, whose pace is that line's. Where the bar has more notes than
+`TIGHT`'s upper multiple of its token voice's for the part of the form
+(the part's last bar by its own count where the token gives one; one
+note at the least), the notes on the bar's strongest places are kept,
+as many as that, and the others taken out: the first beat, then the
+bar's middle beat, the other beats, the half beats, the rest, the
+earlier of equals. Nothing is drawn or moved.
+
+**Measured.** Suite 627 (1 skip). The vocabulary is as it was. Over
+400 seeds (1000 to 1399, the player's asking), against round 163: a
+note changes in 143 songs, 12 notes at the median and 154 at the most,
+every one a note of a voice beside a chord part's line taken out
+(2,831 of the accompaniment's, 227 of the arp's, 224 of the
+harmony's; 15 pitches where round 158's pass meets other notes); the
+other 257 are the same note for note, and the lines, the tune, the
+counter-line, the bass and the kit are in every song. The parts of
+the form in which a voice is over one and a half times its token's
+onsets a bar: 228 before, 99 now, every one of those in bars where it
+follows a line. Seed 1234: the third voice in D plays 1, 0, 1, 1, 1,
+1, 1, 1, 1, 1, 1, 1, 1, 1 and 3 notes a bar, the last a bar in which
+it follows the tune again.
+
+**Open.** The hold takes notes out and puts none in: a voice under
+half its token's onsets a bar (280 of the 1,480 parts) is left. A
+voice still plays where its token voice rests (189 of 267 such parts,
+four notes a bar at the median; in seed 1234 the piano's lower voice
+through D): a rest has no hold. Which notes stay is by the bar's
+places, not by the voice's figure. A bar in which a voice follows a
+line keeps that line's pace, whatever its token's.
+
+**Heard.** Two pairs on the same seeds, the song on Johnny C. Bad's
+token (seed 1234) and one on Dancing Mad (part 2)'s (seed 1305), each
+as round 163 wrote it and with this round: passed by ear, the second
+as the better for it.
+
+### Round 165: a voice keeps its token voice's share of semitones with its own part (2026-11-14, a rule of round 158's made a word)
+
+**Why.** Asked for: rounds 158 to 164 were gone over for what in
+them decides a note with no count behind it, and this is the first
+of four taken up, in the order agreed. Round 158's pass is a filter:
+no voice of a chord part sounds a semitone from a voice of its own
+part, ever. Its record said so under Open.
+
+**Found.** Counted on FFVI's own songs, voice by voice: of 79 voices
+beside a chord part's line, 64 have sixteen pitched notes or more.
+The share of such a voice's notes that sound a semitone from the
+line or a voice numbered before it is none in 32 of them, 0.05 or
+more in 21 and 0.10 or more in 14: 0.25 for Slam Shuffle's second
+voice and for the guitar's low voice under Johnny C. Bad's piano,
+0.22 on Mt. Koltz, 0.12 for The Day After's plucked voice. It is a
+song's own: a rag and a blues have them, a march has none. The
+written voices, every such note moved: none in 0.82 of 446 voices,
+0.10 or more in 0.06.
+
+**Built.** A new word, by song. The balance token says, after every
+other word, `rubs=`: for each voice beside a chord part's line with
+sixteen pitched notes or more, the part's letter, the voice's
+number and the share in hundredths (`arrangement.voice_rubs_field`;
+`rubs=a2~25,a3~4,a4~15` for Slam Shuffle's accompaniment). The plan
+reads it whatever its form (`voice_rubs_of`, `plan.voice_rubs`).
+`hear_own_voices` takes a voice's notes in time order as before, and
+a note that sits a semitone from its part now stays where the
+voice's share of such notes so far, itself counted, is within its
+token voice's; where it would be over, the note moves as round 158
+moved it. A voice the token says nothing of (under sixteen notes in
+the game) keeps none. Nothing else is touched and no draw is made.
+
+**Measured.** Suite 629 tests, OK. The vocabulary: the balance table
+alone differs, 204 outcomes in the same order, each the same but for
+the new word and in its place; 39 of the 68 tokens carry `rubs=`.
+Over 400 seeds (1000 to 1399, the player's asking), against round
+164: a note changes in 93 songs, 4 notes at the median and 61 at
+the most, every one the pitch of a voice beside a chord part's line
+(1,050 the accompaniment's, 2 the harmony's); the other 307 are the
+same note for note, and in every song the lines, the tune, the
+counter-line, the bass and the kit are. The songs that change are
+the ones on tokens whose game song has such notes: all nine on Slam
+Shuffle's (64 notes at the most), all eight on Mt. Koltz's (55), all
+nine on The Day After's (16). Written voices with none: 0.82 before,
+0.61 now (FFVI 0.50); with 0.10 or more: 0.06 and 0.15 (FFVI 0.22).
+The song on Good Night's token (seed 1016) is the same note for
+note: the jingle's voices are under sixteen notes each and have no
+word. The song on Johnny C. Bad's (seed 1234) differs by one note,
+the one on The Day After's (seed 1044) by 14.
+
+**Open.** Which notes stay is the order they come in: the first
+that the share lets through, not the ones the game song's voice
+leans on. A note that stays was drawn against the chord and the
+line, so it is a semitone the writer fell into, where the game's is
+a blue note meant. The share is by the voice's number, so a part
+written with fewer voices than its token's drops the later ones'
+shares. The pass still runs after the tune is written.
+
+**Heard.** Not yet: it waits for the ear with rounds 166 to 168.
+
+### Round 166: a voice thinned to its token voice's pace keeps the notes at that voice's places (2026-11-14, a rule of round 164's made a word)
+
+**Why.** The second of the four (round 165's Why). Round 164 holds
+a voice beside a line, in the bars that are its own, to its token
+voice's notes a bar, a counted word (round 125). Which notes it kept
+was a hand order: the first beat, the bar's middle beat, the other
+beats, the half beats. Round 159's test for a struck voice no mask
+could thin (a margin of 0.15) and its cap on a kept note's length
+(0.9 of the gap to the next) were looked at with it.
+
+**Found.** The token already says where a voice plays in its bar,
+by the form's letters, for the voices struck with another (the
+`struck=` word, round 159): 22 tokens. The voices that are their own
+had no such word. Counted on FFVI's songs, a voice's usual bar in a
+part of the form is a rest while the voice plays in some bar of it
+in 44 cases (18 of them struck voices): a voice of fills. The word's
+"-" there says nothing of the bar it does play.
+The margin was gone over on the 400 seeds: 160 struck voices, ten
+taken by the test, nine of them on The Day After's token. In seven
+of the ten no mask thinned 21 to 28 of the 28 bars asked; in two
+(seeds 1155, 1314) 12 of 28, the other bars thinned a little by
+masks that leave the voice at 0.79 and 0.82 of the followed onsets
+against the token's 0.29. Another 29 voices have one to six bars no
+mask thinned and sit within their share, the hold having made it up
+in the bars after. So the test cannot go bar by bar after the fact
+(the share was already held around those bars), and a test with no
+margin belongs where the mask is drawn, before the tune: it stays
+as it is this round.
+
+**Built.** The word says more, the hold reads it, one number goes.
+`arrangement.struck_places_field` says every voice beside a chord
+part's line, struck with another or not; where a voice's usual bar
+in a part is a rest and it plays in some bar there, the bar most of
+those are follows a `/` (`A-/0.24`); a song with no form says one
+bar with no letter, the bar the voice plays the song through.
+`plan.voice_places_of` reads the places a voice plays at
+(`plan.voice_places`, by the letters where the form is the token
+song's, the no-letter bar either way); `struck_places_of` reads the
+usual bar as before, so a struck voice still rests where its token
+voice mostly does. `keep_voice_pace` keeps, of a bar over its
+token's pace, the notes nearest those places, the earlier of equals,
+as many as before. A part of the form the token gives no places for
+is left. `STRUCK_GAP` is gone: a kept note of round 159's sounds its
+token voice's median length or to the voice's next note, the
+shorter, a voice playing one note at a time.
+
+**Measured.** Suite 630 tests, OK. The vocabulary: the balance table
+alone differs, 204 outcomes in the same order, each the same but for
+the word; 43 of the 68 tokens carry `struck=` (22 before), 23 with
+a `/` bar, three with no letter. Over 400 seeds (1000 to 1399, the
+player's asking), against round 165: the hold thins the same 974
+bars in the same 143 songs, none left for want of places; in 109 of
+them other notes stay (901 of the accompaniment's and 116 of the
+arp's, and 14 pitches the voices' hearing moved after), 10 notes at
+the median and 150 at the most; the other 291 songs are the same
+note for note, and in every song the lines, the tune, the
+counter-line, the bass and the kit are. No note's length changed:
+the cap had not bitten on these seeds. The song on Johnny C. Bad's
+token (seed 1234): the guitar's low voice, one note a bar through
+the fifteen bars the piano is out, now plays it on the third beat,
+where the game's does (`D24`), and round 164 had kept the first
+beat's. The song on The Day After's (seed 1044) is the same note
+for note.
+
+**Open.** The struck test's margin (0.15) and its being after the
+tune stand; so does a struck bar's being its part's usual bar
+alike. A voice's kept notes sit near its token voice's places, not
+on them: the notes were drawn at the line's pace, and the nearest
+may be a half beat off. The pitches are the ones drawn. A voice
+under its token's pace is still left, and one that plays where its
+token voice rests still plays.
+
+**Heard.** Not yet: it waits for the ear with rounds 165, 167 and
+168.
+
+### Round 167: a voice keeps its note with its line as often as its token voice does (2026-11-14, a rule of round 160's made a word)
+
+**Why.** The third of the four (round 165's Why). Round 160 made a
+voice on its line's own sample take its note again wherever the
+line kept its own: a hand share of 1.0, less a margin, by FFVI's
+0.97 for such voices, and a test by the sample that left every
+other voice as drawn.
+
+**Found.** Counted on FFVI's songs, voice by voice: of a voice's
+strikes at a strike of the line where the line's pitch is the one
+it had at the voice's strike before, the share on which the voice
+plays its own note again. 31 voices have sixteen such strikes or
+more: 0.95 at the median, eight under a half (0.03 for a voice of
+The Phantom Forest, 0.13 for The Day After's plucked voice over its
+tremolo, 0.21 for two of Battle Theme's). The sample does tell: the
+twelve voices on their line's sample keep their note on 0.80 or
+more, the nineteen on another run from 0.03 to 1.00. So the test by
+the sample read something true, and missed the voices on another
+sample that hold (four at 1.00) as well as how often each does.
+A token voice with too few such strikes has no share: 145 of the
+231 written voices on their line's sample over 400 seeds are on
+such a token voice (a jingle's, a voice under a line that keeps no
+note), in 73 songs.
+
+**Built.** A new word, twice: by song on the token, and pooled.
+The balance token says, after every other word, `keeps=`: for each
+voice beside a chord part's line with sixteen such strikes or more,
+the part's letter, the voice's number and the share in hundredths
+(`arrangement.voice_keeps_field`; `keeps=a2~100,a3~13` for The Day
+After's accompaniment). The same shares to a twentieth, by whether
+the voice plays its line's sample, are a table, `voice_keeps`
+(`voice_keep_units`): a written voice whose token gives it no share
+draws one there, on a stream of its own, among the voices on their
+line's sample or among the others as it is itself. `hold_with_line`
+holds every voice with a share to it, by the same count as before:
+the voice takes its note again while its share of such strikes, the
+strike counted, is within its word's. A voice over its share is not
+made to move. `SAMPLE_KEEPS` is gone. The turns' layout (round 160)
+still takes the voices on the line's sample with the line.
+
+**Measured.** Suite 631 tests, OK. The vocabulary: 116 tables for 115,
+the new one `voice_keeps`; of the rest the balance table alone
+differs, 204 outcomes in the same order, each the same but for the
+new word and in its place; 23 of the 68 tokens carry `keeps=`. Over
+400 seeds (1000 to 1399, the player's asking), against round 166:
+a note changes in 190 songs, 5 notes at the median and 164 at the
+most, every one the pitch of a voice beside a chord part's line
+(3,323 the accompaniment's, 381 the arp's, 39 the harmony's); the
+other 210 are the same note for note, and in every song the lines,
+the tune, the counter-line, the bass and the kit are. Of all such
+strikes the written voices keep their note on 0.82 (0.73 before;
+FFVI 0.83). Voice by voice (301 written, 31 of FFVI's): the median
+0.85 (0.57 before, FFVI 0.95); under a half 0.25 of them (0.45
+before, FFVI 0.26); 0.9 or more 0.44 (0.27, FFVI 0.61). The songs
+heard before: the one on Good Night's token (seed 1016) differs by
+20 notes, on Johnny C. Bad's (seed 1234) by 5, on The Day After's
+(seed 1044) by 24; on Dancing Mad (part 2)'s (seed 1305) by none.
+
+**Open.** A voice over its token's share is left there: the plucked
+voice that moves over a held tremolo in the game is not made to
+move in the writing. A pooled share is another song's voice's: a
+voice whose token says nothing may be held where its own would not
+be. The note a voice takes again is the one it had, whatever the
+chord has become under a line that kept its note across the bar
+line. The hold still runs after the tune is written; the landing
+kept where it is drawn, in `parallel`, would carry it.
+
+**Heard.** Not yet: it waits for the ear with rounds 165, 166 and
+168.
+
+### Round 168: a block line turns by the move its token song's line makes there (2026-11-14, a rule of round 160's made a word)
+
+**Why.** The last of the four (round 165's Why). Round 160 lays a
+block line's bar out between the places of one of its token song's
+bars, and which of the bar's written pitches it kept there was a
+hand order: a tone of the chord first, then the note the bar struck
+most, then the one written first.
+
+**Found.** The word said where the line's note changes and not what
+it changes by. FFVI's twelve block lines turn 119 times in 277
+bars: 72 of the turns are a whole tone or a semitone and 35 a
+third. The written lines, by the hand order: 0.40
+a tone or less, 0.20 a third, and 0.27 turns a bar where the game's
+have 0.43, since a bar kept only as many pitches as it had been
+written with distinct, each once. The first cut went by the moves
+alone, the bar opening on the note it was written to open on: the
+lines' strikes on their bar's chord fell from 0.80 to 0.64, where
+FFVI's block lines are on it on 0.75, a passing note struck once in
+the bar as written held half a bar. The line's share of notes off
+its chord is a word already, by song (the tone profile, round 111),
+which the line is drawn to and the layout undid.
+
+**Built.** The word says more and two words are held, no order of
+the hand. `arrangement.line_turns_field` writes each place with the
+move made there, in semitones with its sign (`24+3`);
+`plan.line_turn_moves_of` reads them (`plan.line_turn_moves`),
+`line_turns_of` the places as before. In `lay_turns` a bar drawing
+a token bar opens on the note it was written to open on and at each
+turn goes to the one of its other written pitches whose distance
+from the note it is on is nearest the token bar's move there, the
+earlier written of equals; a pitch may come again later in the bar;
+a bar on one pitch, or one that draws a bar with no turn, holds its
+opening note. A stretch sits on a note off the bar's chord only
+while the line's share of strikes off the chord, the stretch's
+counted, is within the token line's (the tone profile's "other");
+over it, the stretch takes the nearest of the bar's pitches on the
+chord, the opening the first of them written. The bar drawn for
+each written bar is the one round 160 drew: the same stream, the
+same places. A vocabulary whose turns carry no moves is laid out by
+round 160's order.
+
+**Measured.** Suite 632 tests, OK. The vocabulary: the balance table
+alone differs, 204 outcomes in the same order, each the same but for
+the word; the twelve tokens with `turns=` carry the moves. Over 400
+seeds (1000 to 1399, the player's asking), against round 167: a
+note changes in 33 songs, 64 notes at the median and 571 at the
+most, the pitches of a chord part's line and of the voices laid out
+with it (2,465 and 2,040 the accompaniment's, 562 and 497 the
+arp's); the other 367 are the same note for note, and in every song
+the tune, the counter-line, the bass and the kit are. The 54 block
+lines: turns a bar 0.40 (0.27 before, the tokens' 0.43); moves of a
+tone or less 0.54 (0.40, FFVI 0.61), of a third 0.23 (0.20, FFVI
+0.29); strikes on the chord 0.77 (0.80, FFVI 0.75) and on the key's
+scale 0.81 (0.81, FFVI 0.91); strikes on one pitch 6 at the median
+of the lines' medians (7). On The Day After's token (nine songs) a
+pitch is held 6 strikes at the median (9 before, the game's 6) and
+the line turns 1.44 times a bar (1.01); on Strago's (six) 2.5
+strikes (5) and 0.90 turns a bar (0.45). The song on The Day
+After's token heard before (seed 1044) differs by 351 of its
+accompaniment's 1,436 notes, the one on Strago's (seed 1019) by 96
+of 238.
+
+**Open.** The pitch a turn goes to is one the bar was written with,
+so a move the bar has no pitch for becomes the nearest it has. The
+opening note is the written one, and what the line does over the
+bar line is not said. The voices on the line's sample are laid out
+with it by round 160's order still (a note they had under that line
+pitch, the chord's first): a hand order, the next to count. A
+written line is off its key's scale more than the game's (0.81
+against 0.91), as it was. The places are the song's and the bar
+they land in is not.
+
+**Heard.** Not yet: it waits for the ear with rounds 165 to 167.
+
+### Round 169: a tune keeps its token song's tune's share of notes on the half beat, in a triple feel (2026-11-14, from a tune heard off the beat in a shuffle)
+
+**Why.** By ear, on the song on Slam Shuffle's token (seed 1232):
+the melody plays off the beat now and then and breaks the rhythm.
+Investigated first; this is the first of the two words picked.
+
+**Found.** The song is a shuffle: its accompaniment strikes the
+beat and the third after it in every bar. Six of the tune's 70
+notes fall on the half beat, a sixth of a beat ahead of the band's
+off-beat (bars 11 and 12, and the part played again). The game's
+Slam Shuffle plays 0.41 of its tune on the swung off-beat and no
+note on the half beat. A song's feel is duple or triple, and a
+triple song draws its bars among every triple song's. FFVI's
+fourteen are two kinds: four play no note of their tune on the half
+beat (the shuffles), seven play 0.15 of them or more there
+(triplets among straight eighths). The token's places word (round
+147) counts the tune's notes on a quarter of the beat, a third and
+finer, and not the half beat (LIMITS: "its share on the half beat
+is still the bar table's"). Over 400 seeds, 84 songs are on a
+triple song's token: the tune is 0.15 or more over its song's share
+on the half beat in 24, the counter-line in 27; of the 29 whose
+song's tune plays none there, 22 play some. The kit is not: none of
+69 is 0.15 over. The accompaniment's line is in 7 of 65.
+
+**Built.** The word says one place more. The half beat is a place
+of the tune's places field (`rhythm.FINE_PLACES`, a fourth number:
+`p0/41/5/0` for Slam Shuffle's tune), and `beat_place` names it.
+It is the duple feel's own division of the beat, as the third is
+the triple feel's (`FEEL_PLACE`), so a duple song does not hold it
+and is written as it was; a song in triple feel on a triple song's
+token holds its tune and its counter-line to their song's shares
+there, by the hold round 147 built: a bar that would put the line
+over is moved onto the nearest rhythm the table knows that keeps
+the places. A moved bar may still go onto the half beat, within
+the share, as it could before; onto a quarter or a third it was
+not on it may not (round 147). A vocabulary counted before the
+round says three numbers and holds three.
+
+**Measured.** Suite 632 tests, OK. The vocabulary: the balance table
+alone differs, 204 outcomes in the same order; 195 differ, by the
+tune's and the counter-line's field. Over 400 seeds (1000 to 1399,
+the player's asking), against round 168: a note changes in 67
+songs, every one on a triple song's token (twelve songs' tokens),
+246 notes at the median and 1,331 at the most: the tune in 56, the
+counter-line in 52, and with them the bass in 34 and the
+accompaniment in 33 (the parts that come back with the tune, and
+the chord parts' voices settled against it); the other 333 are the
+same note for note. The tune on the half beat, by token song, the
+written songs' median before and after against the game's: Slam
+Shuffle 0.20 and 0.00 (0.00), The Phantom Train 0.17 and 0.00
+(0.01), Gogo 0.09 and 0.00 (0.00), Overture (part 3) 0.13 and 0.01
+(0.02), Dancing Mad (part 1) 0.38 and 0.15 (0.16), Johnny C. Bad
+0.31 and 0.26 (0.26), The Day After 0.26 and 0.26 (0.36). No tune
+is 0.05 over its song's share (47 before); the counter-line in 3
+songs (42 before). The song heard (seed 1232): three bars' notes
+moved, none of its 70 notes on the half beat.
+
+**Open.** The share is a ceiling: a tune under its song's share is
+left there (New Continent's tunes 0.08 against the game's 0.34).
+The first cut let no moved bar onto the half beat at all, and a
+tune moved for another place fell far under its song's share there
+(Johnny C. Bad's 0.18 against 0.26): put right before the round was
+heard. The bars are still drawn among every triple song's
+and moved after: a third feel would draw a shuffle's among
+shuffles', and four songs is few to draw from. The bass has no
+places word (round 170). The accompaniment's line is on the half
+beat 0.15 or more over its song's in 7 of 65 songs.
+
+**Heard.** Not yet: it waits for the ear with round 170.
+
+### Round 170: a bass keeps its token song's bass's share of notes on the half beat, in a triple feel (2026-11-14, with round 169)
+
+**Why.** The second of the two words picked after the song on Slam
+Shuffle's token was heard (round 169's Why): under the tune, the
+bass does the same and more.
+
+**Found.** In that song 48 of the bass's 126 notes are on the half
+beat (bars of straight eighths through the whole last part), where
+the game's Slam Shuffle's bass plays none. The bass has no places
+word: its bars are drawn among every triple song's, as the tune's
+are. Over 400 seeds, 77 songs on a triple song's token have a bass:
+it is 0.15 or more over its song's share on the half beat in 18,
+and plays some where its song's plays none in 19 of 21.
+Counting the game's basses showed a reader's fault on the way: a
+line played a hair off its places throughout sits on none of them
+as it is played. New Continent's bass is 0.05 of a beat early on
+every note and its field read "finer" for all of them, where half
+its notes are on the half beat. (The same holds for three tunes'
+fields since round 147: Fanatics' tune and bass, 0.04 late, and
+Under Martial Law's counter-line, 0.07 early. Those are left as
+they are counted.)
+
+**Built.** A new word for the bass, and a hold where its figures
+are drawn. The bass's token carries the places field the tunes
+carry (`rhythm.PLACE_PARTS`), counted with the line's own lag
+taken off (`rhythm.line_lag`: the median distance of its onsets
+from the nearest place). The plan holds one of its four numbers,
+the half beat, in a song written in triple feel on a triple song's
+token (`plan.bass_places`); the other three, and a duple song, are
+not held: nothing was heard of them. `writer.on_the_places` holds
+the line's figures before they are pitched, as round 149's
+`on_the_kit` does: counted over the song as it will be played, the
+bars written on one figure one case; while the line is over its
+song's share, its cases are taken from the one that puts the
+fewest of the song's notes on the half beat (a bar played once
+before a riff), and a case's notes are moved, in their order, onto
+the nearest rhythm the table knows with no note there, of as many
+onsets before fewer and never outside the part's own onsets; the
+marks ride the notes, so each is pitched on the chord where it now
+falls. The kit's hold after it puts more notes on the half beat
+only while the line is within its share. Nothing is drawn.
+
+**Measured.** Suite 633 tests, OK. The vocabulary: the balance table
+alone differs, 204 outcomes in the same order; 174 differ, by the
+bass's field. Over 400 seeds (1000 to 1399, the player's asking),
+against round 169: a note changes in 36 songs, every one on a
+triple song's token (ten songs' tokens), 163 notes at the median
+and 935 at the most: the bass in all 36, and with it the
+accompaniment in 19, the counter-line in 18 and the tune in 17 (the
+parts written over the bass); the other 364 are the same note for
+note. The bass on the half beat, by token song, the written songs'
+median before and after against the game's: Slam Shuffle 0.29 and
+0.00 (0.00), The Phantom Train 0.16 and 0.00 (0.00), Dancing Mad
+(part 5) 0.32 and 0.04 (0.09), Terra 0.30 and 0.19 (0.18), Johnny
+C. Bad 0.41 and 0.41 (0.43), The Day After 0.33 and 0.28 (0.31).
+No bass is 0.15 over its song's share (18 before) and four are
+0.05 over (31). The song heard (seed 1232): eleven bars' notes
+moved, none of the bass's 126 notes on the half beat, none left
+out. Rounds 169 and 170 together, against round 168: 70 of 400
+songs change.
+The tune battery over the 68 test songs, round 168 against the two
+rounds together: of all the tunes' notes 0.268 are on the half beat
+(0.291 before, the game's 0.255) and 0.076 on a third (0.055; the
+game's 0.090); of the counter-lines' 0.265 (0.290; 0.226) and 0.093
+(0.076; 0.092). A tune's notes a bar 4.07, as before (the game's
+4.44); the bar before again in 43 of 1,621 bars (40). Bars where
+the tune plays two against the bass's three, or three against its
+two: 62 of 1,544 (74 before; the game's 95 of 1,387); against the
+counter-line's 36 of 1,119 (63; the game's 88 of 1,091), further
+under the game's than it was. No other measure of the battery moved.
+
+**Open.** The bass's share on a quarter of the beat, on a third and
+finer is on its token and not held, in either feel. A case's notes
+all move or none do, so a bass can land under its song's share
+(Dancing Mad (part 5)'s 0.04 against 0.09). The moved notes keep
+their marks and their count: a run of straight eighths becomes a
+swung run, not a bar drawn as a shuffle's. The accompaniment's line
+is still drawn among every triple song's bars and held to nothing:
+0.15 or more over its song's share on the half beat in 5 of 65
+songs (four of the 198 notes of the song heard). The tunes' fields
+are counted without the lag taken off.
+
+**Heard.** Not yet: it waits for the ear with round 169.
+
+### Round 171: a tune and a counter-line go with a chord that leaves the key (2026-11-14, from two songs heard clashing)
+
+**Why.** By ear, on the songs on Dancing Mad (part 5)'s token (seed
+1242: "the voices competing") and The Day After's (seed 1044: "the
+counter and melody clashing"). Investigated first; this is the first
+of the candidates, built on the pick of it.
+
+**Found.** Both songs are the same on round 168 and on the rounds
+before it. The song on The Day After's token is written in F sharp
+major with 22 of its 28 bars on a chord with a tone off that key,
+15 of them on one (a major chord on the seventh degree: F, A, C).
+The accompaniment and the bass play the chord; the tune and the
+counter-line play the key, not one note off it. Over 400 seeds a
+song's bars on such a chord are a quarter at the median, as the
+game's time on one is (0.25 both). What differs is the tune over
+them: FFVI's is on the chord on 0.53 of its notes and on the key's
+scale on 0.66, the written on 0.36 and 0.82. The `off_scale` word
+holds a line to its share of notes off the key over the whole song,
+whatever the chord, and the `chord_tones` word asks for chord tones
+on the beat: over a chord off the key they meet and the key wins.
+Counted on FFVI's tunes, for each tone a chord has off the key:
+over such a chord the tune plays that tone five times as often as
+over the chords of the key (0.169 of its notes against 0.034), the
+key's tone a semitone over it a third as often (0.043 against
+0.119) and the one under it three fifths as often (0.072 against
+0.120). Both give way, the one over it the more.
+
+**Built.** A new word, by song and pooled. For the tune and the
+counter-line the balance token says, after every other word,
+`follows=`: of the line's notes on a tone a chord has off the key
+or on the key's tone a semitone over it, the share on the chord's
+tone; and the same against the key's tone under it
+(`arrangement.chord_follows_field`, `given_way`; `m85/60,c70/-`).
+The same pairs are a table, `chord_follows`, for a line whose token
+song has too few such notes. In `plan.write`, once a line is
+written and before the next is, `follow_chords` takes each note on
+a key's tone that gives way to a tone of its bar's chord a semitone
+onto that tone, in time order, while the line's share on the
+chord's tone is within its song's for that side; the voices beside
+the line after them. A note keeps its place and its length; nothing
+is drawn. A vocabulary counted before the round has neither word
+and the lines stay on the key.
+
+**Measured.** Suite 634 tests, OK. The vocabulary: 117 tables for 116,
+the new one `chord_follows`; of the rest the balance table alone
+differs, 204 outcomes in the same order, each the same but for the
+new word and in its place; 28 of the 68 tokens carry `follows=`.
+Over 400 seeds (1000 to 1399, the player's asking), against round
+170: a note changes in 270 songs, 26.5 notes at the median and 558
+at the most, the tune's and the counter-line's pitches and what is
+written over them. The tune over a chord with a tone off the key:
+on the chord 0.48 of its notes (0.36 before, FFVI 0.53), on the
+key's scale 0.71 (0.82, FFVI 0.66). A note struck a semitone from
+a note another voice is sounding, song by song: 0.17 at the median
+before and after (the game's songs 0.09); 46 songs better by 0.02
+or more and 15 worse. The two songs heard are not among the better:
+seed 1044 0.22 before and 0.23 now, seed 1242 0.22 and 0.21. Their
+band is not on its own chord in those bars either (seed 1044's
+tremolo holds notes of the key through the bars on the chord off
+it), and seed 1044's chords are two tones off the key, more than a
+semitone's bending reaches: chords that far are in 0.19 of the bars
+of a song written in the other mode than its token song's, as this
+one is, and 0.07 of one written in its mode.
+
+**Open.** The chord parts do not go with the chord: their notes off
+it are the key's (a what-if with every part following: seed 1044
+0.18, seed 1242 0.17, 81 songs better and 17 worse; heard, and not
+preferred). The song's mode is the pooled key draw, not its token
+song's. A note bent for one chord and copied into a bar on another
+by a later hold keeps its bend. The shares are counted against the
+readings' chords, a chord a span, where the plan's are a chord a
+bar.
+
+**Heard.** Six songs each as it stood, with this round, and with
+the what-if (The Day After, Dancing Mad (part 5), Awakening, Last
+Dungeon, Celes, The Phantom Train): "the tune direction for sure",
+this round's over the other two. The Day After's counter-line and
+Dancing Mad (part 5)'s drums were heard as still wrong: other
+words' work.
+
+### Round 172: a song's own answers to the once-a-song words, before the pool (2026-11-14, the pooled draws gone over)
+
+**Why.** Asked for: "we keep fixing pooled draws individually";
+how many are left, and which should be the song's own. Since round
+32 a word that says something of a song as a whole, drawn from the
+pool beside a token that is one song's, has been heard to disagree
+with the rest of the song and moved onto the token, a field and a
+round at a time. Investigated first; this is the first of two
+steps agreed.
+
+**Found.** A written song draws from 84 of the vocabulary's tables.
+Most draws are material, the bars and the notes, pooled by design.
+Of a plan's 377 facts of the song as a whole, 275 are the same in
+every song written on one token, the token song's; about twenty
+words are still drawn from the pool apart from it: the key with its
+mode, each part's clashes, the tune's and the counter-line's share
+off the key and of chord tones, their manner and their notes'
+lengths, what a voice does on its own, the voicing, the kit's limbs'
+habits, the riff's periods, the theme's returns. FFVI's songs split
+widely on them: the commonest answer under a context is 0.28 of the
+songs' for the clashes and the chord tones and 0.24 for the
+off-scale share, so a pooled draw gives a song another kind of
+answer than its token song's three times in four. The mode is the
+other song's in a third of the songs, and those have chords two
+tones off the key in 0.19 of their bars against 0.07: the token's
+chord facts are by numeral, and a numeral is not the same degree in
+the other mode.
+
+**Built.** One mechanism, and four words by it. The vocabulary
+keeps each song's own answer to the once-a-song words beside the
+pooled counts: a table, `song_answers`, by the song, the word and the word's
+context (`rhythm.own`: `OWN` lists the words, `own_units` counts
+them with the pooled tables' own builders). The balance token says
+which song it is, after every other word (`song=`). The plan makes
+each pooled draw as before, so no stream moves, and takes the token
+song's own answer over it where the song has one (`whole/own.py`:
+`answer`, `take`); a song with too few notes for a share has none
+and keeps the draw. By it: a part's clashes, the tune's and the
+counter-line's share of notes off the key, and their share of chord
+tones on the beat. And the song is written in its token song's mode
+(the token's `key=` word, there since round 79); the tonic is the
+draw's. A vocabulary counted before the round has no `song_answers` table
+and draws every word, the mode too, as it did. A word goes by the
+song from here on by being added to `OWN`: no field of the token,
+no reading of it in the plan.
+
+**Measured.** Suite 637 tests, OK. The vocabulary: 118 tables for 117,
+the new one `song_answers`, 871 answers of 65 songs (three too short for any
+of the three words); of the rest the balance table alone differs,
+by the `song=` word. Over 400 seeds (1000 to 1399, the player's
+asking), against round 171: 127 songs take their token song's mode
+over the draw, and 1,047 of 1,176 parts take an own answer over a
+pooled draw. A note changes in 389 songs; eleven are written on
+another token than they were (a themed plan whose tune cannot come
+back is drawn again, and the mode changes which can). No song is in
+the other mode than its token song's (65 of the 247 whose token's
+key is known here, before). Bars on a chord of the key 0.73 (0.67
+before, FFVI's time 0.69), on a chord two tones or more off it 0.078
+(0.096, FFVI 0.095). The tune over a chord with a tone off the key:
+on the key's scale 0.68 (0.71, FFVI 0.66), on the chord 0.48 (0.48,
+FFVI 0.53). A note struck a semitone from a note another voice is
+sounding: 0.17 of a song's notes at the median, as before (the
+game's songs 0.09); 115 songs are 0.10 or more over their game
+song's (126 before), 205 are 0.05 or more over (214). The tune
+battery over the 68 test songs: no measure moved the wrong way; the
+tune plays the bar before again in 48 of 1,635 bars (43 of 1,621;
+the game's 71 of 1,547), and the song on Returners' token stands on
+a bar ten bars running where its game song does twelve (three
+before).
+
+**Open.** The words still drawn from the pool, to go by the song in
+the second step: the tune's and the counter-line's manner and their
+notes' lengths, what a voice does on its own, the voicing, the
+parts' samples' speed, the kit's limbs' habits, the riff's periods,
+the vibrato. The counter-line's masks and the voices' note lengths
+are drawn many times a song and need the song's own answers drawn
+among, not looked up. The tune's shape and the theme's returns stay
+pooled: they are the new song. The token's own thirty-one fields
+are still text; they can move into the same table. The semitone
+meetings are where they were: what a part does against the parts
+written after it is held by no word.
+
+**Heard.** Not yet.
+
+### Round 173: thirteen more words by the song (2026-11-14, the second step of round 172's)
+
+**Why.** The second of the two steps agreed (round 172's Why), on
+the first being heard: "everything sounds good, go ahead and
+proceed".
+
+**Found.** Of the words still drawn from the pool, thirteen are one
+answer a song under a context, as round 172's three are: the tune's
+and the counter-line's articulation, echo habit, step and repeat
+habits, repeat rate, grain and held notes' lengths; what a voice
+beside a line does (the layers word) and how long its notes sound;
+the voicing's richness; a part's sample's speed; the kit's limbs'
+habits; how far the bass locks to the kit. Three are in the phrases'
+tables, counted on the phrases' songs. Three more are many answers
+a song (a riff's periods and their holds, the voices' note lengths
+by the gap) and are not looked up; the vibrato is drawn where the
+song is rendered.
+
+**Built.** The draw asks the song. `plan._draw` takes the balance
+token's song (`own`): it makes the pooled draw as before and returns
+that song's own answer under the context where the `song_answers`
+table has one. Round 172's three words go by it too (their songs are
+the same note for note), and the pass that put the answers over a
+part's draws is gone. `rhythm.OWN` lists sixteen words, each with
+the module its units are counted in; `packtables.build` counts the
+phrases' words on the phrases' songs.
+
+**Measured.** Suite 637 tests, OK. The vocabulary: 118 tables; the
+`song_answers` table has 2,289 answers of all 68 songs (871 of 65
+before); no other table differs. Over 400 seeds (1000 to 1399, the
+player's asking), against round 172: a note changes in 394 songs,
+every one on the token it was on. An own answer is taken over
+another draw, song by song: a part's sample's speed in 368 songs,
+the layers word in 382, the held notes' lengths in 358, the repeat
+habit in 322, the step habit in 298, the articulation in 270, the
+grain in 261, the voicing in 255, the echo habit in 212, the kit's
+limbs in 148, the bass's lock in 166. A song's share of notes struck
+a semitone from a note another voice sounds is within 0.05 of its
+own game song's in 167 songs (154 after round 172, 131 before it);
+with the layers and the voicing words' answers switched off, 149.
+The tune battery over the 68 test songs: a note held or cut as the
+note before 0.69 of the tune's (0.67, FFVI 0.87); tunes with more
+leaps of a fourth than their game song's by a tenth, 9 (11); bars of
+seven notes or more 307 (325, FFVI 433). One song moved the wrong
+way: the tune on Troops March on's token stands on one bar five bars
+running (none before; its game song's never does).
+
+**Open.** A song's own answers make it its game song's kind of song
+more than before, the rough with the smooth: the song on The Day
+After's token is at 0.17 of its notes a semitone from a sounding
+voice (0.10 after round 172, 0.23 before it, the game's 0.08), by
+its own layers and voicing. The periods, the voices' note lengths by
+the gap and the counter-line's masks are still pooled: many answers
+a song, to be drawn among. The vibrato is. The token's thirty-one
+fields of text can move into the same table.
+
+**Heard.** Not yet.
+
+### Round 174: the voices' note lengths and the vibrato by the song (2026-11-14, the first of the rest of round 172's plan)
+
+**Why.** Rounds 172 and 173 were heard and passed ("this is all
+good"), and the words they left pooled were agreed as the next step:
+the ones a song answers many times, and the vibrato.
+
+**Found.** Fewer were left than round 173's record says. A riff's
+period inside a part and its hold are the token's since round 106
+(the `p2/83` field), so they were not pooled at all: round 173's
+"still pooled" was wrong about them. Of the voices' note lengths by
+the gap (`gap_sounds`), the line's and an only voice's are the
+token's since round 95; what stayed the pooled word was a second
+voice's, and any gap class the token's line never played. That word
+is counted a unit a note, so a song answers it many times under one
+context: 387 of FFVI's contexts have more than one answer. The
+vibrato is one unit a part a song, a part with none included.
+
+**Built.** Two more words in `rhythm.OWN`, eighteen now:
+`gap_sounds` and `vibrato`. `whole.own.answer` gives a word a song
+answers many times its middle answer where the answers are numbers
+(the one at half the song's notes, in order); where they are not
+numbers there is no one answer and the draw stands. The plan's
+second draw of the note lengths (under the part's speed) and the
+performance's draw of the vibrato are given the token's song. The
+pooled draws are still made, so no stream moves. A new word, twice:
+no constant, weight or filter added.
+
+**Measured.** Suite 638 tests, 1 skipped. The vocabulary: 118 tables; the
+`song_answers` table has 3,252 answers (2,289 before); no other
+table differs. Over 400 seeds (1000 to 1399, the player's asking),
+against round 173: a note changes in 265 songs (the accompaniment in
+223, the bass in 111, the tune in 101, the counter-line in 94, the
+arp in 13, the harmony in 4), every song on the token it was on. A
+song's own note length is taken over another draw 2,858 times in 391
+songs. A part's median share of its gap that a note sounds is within
+0.10 of its game song's part's in 1,140 of 1,445 parts (1,125
+before) and 0.25 or more off in 183 (199); the bass's 280 of 353
+(264) and 39 (57); the accompaniment's 226 of 336 (227) and 68 (67).
+The vibrato: an own answer over another draw in 397 songs. The tune
+takes a vibrato its game song's tune has where the draw gave none in
+109 songs, loses one its game song's tune has not in 80, and takes
+another depth in 131; the counter-line 93, 68 and 76. The tune
+battery over the 68 test songs: nothing moves by more than two bars
+or one song. Against it: a song's share of notes struck a semitone
+from a note another voice sounds is within 0.05 of its own game
+song's in 163 songs (167 after round 173): a second voice held as
+long as its song holds it sounds under more of the other parts'
+notes.
+
+**Open.** The round is small in the notes: most of the lengths were
+the token's already. The vibrato is the larger change by ear, and it
+is the tune's sample that carries it: a deep vibrato that suited its
+game song's instrument is now put on whatever sample the part drew.
+The counter-line's masks (which of the tune's notes it strikes with)
+are still the pooled word; they belong with the counter-line's
+relation to the tune by part of the form. The token's thirty-one
+fields of text can move into the same table.
+
+**Heard.** Not yet.
+
+### Round 175: a tom on the beats over a bass is a drum (2026-11-14, the second of the rest of round 172's plan)
+
+**Why.** Songs written on Mt. Koltz's token failed the tuning
+measure on a voice of the accompaniment and were kept out of two
+listening sets (the roadmap's item of that day); asked for with the
+plan: "that issue needs to be addressed as well".
+
+**Found.** That voice is the game's toms. Mt. Koltz strikes the
+kit's tom sample (the tom of four other songs' kits) 279 times at
+three rates, on nine beats in ten, over a string bass. The role
+reader makes a voice on drum-named samples a drum voice, but not one
+on kick or tom samples that sounds on half the beats or more: "a
+bass on a low sample passes for a tom" (phase 3's record). So the
+toms were read an accompaniment, the song had no kit, a song written
+on it played a chord line on a tom, and the tuning measure, which
+cannot hear one pitch in a drum, read that line two semitones off
+wherever enough of its notes fell in the octave it can judge (three
+of the token's eight songs in 400 seeds). The clause catches 14
+voices in 7 of FFVI's songs; ten are drums all the same by how they
+play; the four it made pitched parts are Mt. Koltz's toms, two of
+Fanatics' and one of Troops March on's. Over the 1,836 songs of the
+40 games on hand it catches 420 voices and makes 151 pitched parts,
+98 of them basses.
+
+**Built.** The clause keeps its reason and loses its reach: a kick
+or tom sample on the beats is a bass passing for a drum only where
+it can be the song's bass. Where an instrument's voice (the namer's
+"none" on BY_SOUND of its notes) has its median note under the
+voice's lowest note, the voice is the drum the namer called it
+(`roles.under_of`, `roles.drum_clause`'s `under`). A reading fault
+put right; no constant added. FFVI was read again and the lead pass
+run on it.
+
+**Measured.** Suite 639 tests, 1 skipped. The reader over the 1,836 songs,
+before and after: 8 songs change a voice's part, none a bass, none
+its beat or its bars (Mt. Koltz; Chrono Trigger's Primitive
+Mountain; EarthBound's Title Screen, Whoa!, What a Great Picture!
+and Teleportation End; Kirby Super Star's Cocoa Cave; Romancing SaGa
+3's Byunei's Nest). FFVI read again: Mt. Koltz's rows alone differ
+from the readings before; the lead pass ends as it did (57 labels
+kept, 9 relabelled, 2 with no melody). Mt. Koltz now has a kit (a
+tom, 6.5 hits a bar), an accompaniment of two voices, and reads in G
+minor (A minor before, the toms' three readings being its triad; the
+fit 0.74 from 0.71). The tables: 62 of 118 differ. Four balance
+tokens differ: Mt. Koltz's, and three whose tom gains the tuned mark
+(Dancing Mad (part 5), Wild West and the song titled "??": with Mt.
+Koltz's hits counted the game strikes that sample at enough rates in
+enough songs to read as tuned to the key). Over 400 seeds (1000 to
+1399, the player's asking), against round 174: a note changes in 384
+songs (the tune in 354), every one on the token it was on: one
+song's units moved in the pooled tables and every draw from them
+moved. The tuning measure on the eight songs on Mt. Koltz's token: 0
+off pitch (3 before). The tune battery over the 68 test songs: notes
+a bar 4.07 (4.18, FFVI 4.44); a note held or cut as the note before
+0.69 (0.69, 0.87); bars of seven notes or more 321 (309, 433); the
+bar before again 38 of 1,633 bars (43 of 1,635); one bar four times
+running in no song (2).
+
+**Open.** A re-read makes nearly every song another song of its
+kind: nothing in the measures moved, but no song heard before this
+round is note for note what it was. The written kit strikes Mt.
+Koltz's tom at one rate where the game's are three drums (round
+176). Fanatics' and Troops March on's toms have nothing under them
+and stay pitched parts. The seven songs of other games are in no
+shipped vocabulary and were not heard.
+
+**Heard.** Not yet.
+
+### Round 176: a kit piece's rate by its place in the bar (2026-11-14, with round 175)
+
+**Why.** Dancing Mad (part 5) was heard as "a lot of noise in the A
+and B sections, mostly the drums now maybe" (the counter and kit
+investigation of that day), and its toms were found to be three
+pitches in the game and one in the written kit. Round 175 gave Mt.
+Koltz its kit, whose one piece is three drums.
+
+**Found.** A kit piece is one rate a song on the token (`r43`), the
+rate struck most. FFVI strikes 17 kit pieces at more than one rate
+(no one rate on nine hits in ten). What says which rate a hit takes
+is mostly its place in the bar: the rate struck most at a hit's
+place is that hit's rate on three hits in four or more for 14 of
+the 17. Mt. Koltz: 0.91 (the high tom on beat one, the low on two
+and four, the middle on three); The Mines of Narshe's snare and
+Troops March on's: 1.00, two rates in turn. Two are not by the
+place: Wild West's toms (0.66; the hit's order in the bar says all
+of them) and Dancing Mad (part 5)'s (0.62), which roll in pairs
+across the bar line.
+
+**Built.** A new word, `kit_rate_places`: a unit a place in the bar
+at which a song strikes a kit slot's sample, where the song strikes
+it at more than one rate; its outcome the rate struck most there, in
+semitones from the slot's own; and a unit a beat of the bar the same
+way, over the beat's hits. It is a song's own answer and nothing
+else: it joins `rhythm.OWN` (nineteen words) and has no pooled table
+behind it, the first such word. The loader keeps each kit hit's rate
+(`Song.kit_hit_rates`). The plan asks its token song for every place
+it has (`whole.own.answers`, `plan.kit_places`; no draw), and the
+renderer strikes a hit at its place's rate, the beat's where the
+song never struck that place, the slot's own where it never struck
+in that beat (`plan.kit_place_offset`, `render.kit_note_of`). The
+offset is added outside round 88's wall, so a piece's drums keep
+their distances when the key moves a tuned slot's rate. A slot's
+second sample plays its own rate as before. No constant, weight or
+filter.
+
+**Measured.** Suite 640 tests, 1 skipped. The vocabulary: 118 tables; the
+`song_answers` table has 3,539 answers (3,252 before), 287 of the
+new word in 11 songs; no other table differs. Over 400 seeds (1000
+to 1399, the player's asking), against round 175: no note of any
+song changes (a kit hit's rate is the renderer's); 66 songs on ten
+tokens have a kit that says its places, and in 58 a piece is struck
+at more than one rate. In the score of the song on Mt. Koltz's token
+(seed 1322) the tom sounds at three pitch registers, five and eight
+semitones over the first (one before). The eight songs on that
+token: the tom at its own rate on 164 hits, eight semitones over on
+54 to 70, five over on 41 (the game's 143, 102 and 34). The seven on
+Dancing Mad (part 5)'s: at its rate on about 195 hits and three
+semitones under on about 150, the third drum (seven under) never
+(the game's 140, 115 and 39); a hit at the rate of the hit before on
+0.52 to 0.61 (the game's 0.50). The eight on Wild West's: three
+rates (130, 26 and 26 hits) of the game's five. The tuning and
+ceiling measures on the six songs rendered for the listening: no
+voice off pitch, no note at the ceiling.
+
+**Open.** The place says a rolling figure badly: Dancing Mad (part
+5)'s written toms are two drums of its three and their pairs are by
+chance, Wild West's are three of five. A word for a piece's rates in
+their order would say those; it was not counted. A written kit's
+hits come from every song's figures, so a hit often falls where its
+token song never struck the piece and takes the beat's rate. The
+word is by the bar: Dancing Mad (part 5)'s hat, three semitones
+under for its first bars only, is one rate. Last Dungeon's two toms
+are struck at two rates and its token has no kit (the roll voice of
+round 152's investigation).
+
+**Heard.** Not yet.
+
+### Round 177: the counter-line goes with its tune as its token song's does (2026-11-14, the third of the rest of round 172's plan)
+
+**Why.** By ear, on The Day After's song: "the counter and melody
+seem to be clashing ... I think its trying to do some sort of call
+and echo like the original"; and after round 171: "the counter in
+the original song has like a specific call and then recall style
+between them".
+
+**Found.** The game's counter-line does two things by the part of
+the form. In A it plays alone in the first half of the bar and the
+tune answers; it is with a tune note on 0.12 of its notes. In C it
+is a second voice under the tune, note for note, a third or a fourth
+under (0.71 and 0.29 of its notes). The written counter's bar is a
+mask over the tune's bar from the pooled `counter_figures` word,
+and its note with the tune an interval from the pooled
+`voice_intervals` word: neither knows the song, nor the part of the
+form. Over FFVI's 54 songs with a tune, a counter-line and a form
+the counter is with its tune on 0.54 of its notes a part at the
+median, and of the 39 with two parts counted the parts differ by
+0.3 or more in 17. Over 400 seeds the written counter was with its
+tune on 0.76 of its notes a part, within 0.15 of its game song's
+part in 401 of 923 parts and 0.3 or more over in 218. Where the two
+strike together the game's part is on its two commonest intervals
+(in scale steps, octaves apart as one) on 0.73 of the notes at the
+median, the written part on those two on 0.36.
+
+**Built.** Two new words, a song's own with no pooled table, by
+the form's letter (each letter's first part, as the onsets a bar
+are counted) and over the whole song. `counter_with`: the share of
+the counter-line's notes struck with a tune note. `counter_intervals`:
+its interval to the tune's note at each such note, as the
+`voice_intervals` word counts one; many answers a place, kept as
+shares (`whole.own.shares`). The plan asks by its bar's letter where
+the form is the token song's (`plan.form_own`), the whole song's
+answer where it is not or the letter has none. A bar's mask is
+asked first to keep its part of the form within a note of the
+song's share (`counter_mask`'s `shared`, `mask_with`, `WITH_SLACK`:
+the count's grain); with the song's onsets a bar where both can be
+met, without them where not; the places hold stands over both. A
+note with the tune is drawn among the song's own intervals for the
+part, by their shares and the move each makes (`beside_pitch`'s
+`own_intervals`); where the span holds none of them, the same
+interval an octave off (`octaves_off`); then the pooled word. Two
+new words and a hold; the hold's slack is one note.
+
+**Measured.** Suite 641 tests, 1 skipped. The vocabulary: only `song_answers`
+differs (4,067 answers; 219 of the first word in 54 songs, 309 of
+the second in 53). Over 400 seeds (1000 to 1399, the player's
+asking), against round 176: every one of the 326 songs with a
+counter-line changes it; the accompaniment changes in 98, the tune
+in 10. The counter with its tune, by part: within 0.15 of its game
+song's part in 575 of 899 parts (401 of 923), 0.3 or more over in
+115 (218), 0.3 or more under in 13 (39); the median 0.72 (0.76, the
+game's parts 0.54). Its intervals: a note with the tune takes one
+of its song's own intervals for the part on 0.76 of the draws, the
+same an octave off on 0.15, the pooled word on 0.09; a part is on
+its game part's two commonest intervals on 0.54 at the median
+(0.36), within 0.2 of the game's in 362 of 656 parts (179). The
+song on The Day After's token (seed 1044): in C with the tune on
+0.60 of its notes (0.27), every one of those a third under; 28 of
+its 30 notes with the tune a third under (15 of 19). Against it:
+the counter-line is thinner, 0.84 of its game song's notes a bar at
+the median (0.90) and under three quarters in 15 of 47 songs (11),
+the share being asked before the onsets a bar where both cannot be
+met. A song's semitone meetings between voices are within 0.05 of
+its game song's in 146 songs (155). The tune battery otherwise: the
+counter's moves of a fourth or more 0.14 of its moves (0.12, FFVI
+0.15); the tune's measures as they were.
+
+**Open.** The call and its answer are not said: in A the written
+counter plays where the tune rests, its own notes, where the game's
+tune takes up the counter's three notes two and a half beats later
+(three of FFVI's songs do the like). The Day After's C reaches 0.60
+with the tune, not 1.00: two of its bars' masks give way to the
+places hold. A counter-line whose song doubles the tune at the
+unison now does (Last Dungeon: 20 of its notes on the tune's own).
+The counter-line's masks are still the pooled word, held to the
+song three ways now.
+
+**Heard.** Not yet.
+
+### Round 178: a voice struck with another part's line (2026-11-14)
+
+**Why.** By ear, after rounds 174 to 177: Dancing Mad (part 5) "is
+better now it just still lacks coherence into an actual song like
+the original". Investigated that day and two things chosen from what
+was found: parts that are one figure, and the song's beat.
+
+**Found.** *One figure.* In the game's busy parts the bass and the
+accompaniment's second voice strike every note together, a fifth or
+a fourth apart, and the tune and the accompaniment's line strike
+together on 1.00 and 0.95 of their notes. Over FFVI 52 pairs of
+voices of different parts in 22 of 67 songs are one figure in some
+part of the form (each with the other on 0.9 of its notes or more,
+24 notes each, not a doubling). The songs written on those tokens
+had the first's notes with the second's on 0.91 at the median and
+the second's with the first's on 0.70, under 0.7 one way in 98 of
+254 cases. The token says what a voice beside a line does stretch by
+stretch; a double or a parallel can name a voice of any part, and
+"struck with" (round 107: together, at intervals that change with
+the chord) only the voice's own line or a sibling. Dancing Mad (part
+5)'s second voice is not at one interval, so not parallel, and the
+bass is another part: it read its own for eighteen bars. *The
+beat.* The song is read at 87 beats a minute in bars of four with a
+triple feel; phase 1's decode comparison has the written tempo at
+130 (its class "x2/3" then), and listeners' transcriptions count its
+last part in 4/4 and 7/8 in turn at about 130. A rule taking the
+written beat where the read one is a compound of it was looked at
+and not built: the reader as shipped does not see the written tempo
+(the comparison used an outside decoder, for checking only); over
+the 39 games 91 songs differ that way, and most are a bar's grouping
+(three quarters against two dotted beats), not a wrong tempo; and in
+this song the dotted beat is the one steady pulse there is, fifteen
+eighth notes to a pair of bars, so its beat cannot be put right
+without bars that are not four.
+
+**Built.** The struck-with word names a part. A chord part's voice
+whose stretch reads its own, eight notes or more, struck with
+neither a sibling nor its line, is asked of the other parts' lines
+(`roles.with_relation`, as it stood): `wb+5`, with the bass, at the
+commonest of its intervals; its struck facts are counted against
+that line. The plan writes the voice on that part's line as written
+(`struck_with`, as it stood): at once where the part is written
+before it, and after the lines are written where it follows the
+tune or the counter-line (`late_struck`). The late pass no longer
+takes a struck stretch for a double. A reading fault put right: the
+word, its reading and its writing existed, and the candidates it was
+asked of stopped at the part. No constant added.
+
+**Measured.** Suite 642 tests, 1 skipped. Eight tokens change (a voice of the
+accompaniment with the tune in Edgar and Sabin, Umaro, Last Dungeon,
+Johnny C. Bad and Dancing Mad (part 2), with the bass in Dancing Mad
+(part 5) and Slam Shuffle; a voice of the harmony with the bass in
+Searching for Friends). Two tables differ: `balance`, and
+`parallel_intervals`, which counts the struck stretches' intervals.
+Over 400 seeds (1000 to 1399, the player's asking), against round
+177: a note changes in 158 songs (the accompaniment in 100, the tune
+in 44, the counter-line in 41, the harmony in 10, the bass in 6):
+the songs on the eight tokens, and others whose parallel or struck
+voices draw from the table that moved. The game's one-figure pairs
+in the songs on their tokens: the first's notes with the second's
+0.97 at the median (0.91), 0.9 or more in 158 of 254 cases (128),
+under 0.7 in 68 (98); the second's with the first's 0.74 (0.70).
+Dancing Mad (part 5)'s accompaniment and bass: 1.00 and 0.70 (0.38
+and 0.61; the game's 1.00 each way); Last Dungeon's accompaniment
+and tune 1.00 and 0.77 (0.66 and 0.35); Umaro's 1.00 and 0.92 (0.87
+and 0.86). A song's semitone meetings between voices are within
+0.05 of its game song's in 154 songs (152). The tune battery over
+the 68 test songs: nothing moves by more than two bars or one song.
+
+**Open.** A part's own line struck with another part's line has no
+word: Dancing Mad (part 5)'s tune and accompaniment line (written
+0.66 and 0.38, the game's 0.95 and 1.00), Blackjack's and Locke's,
+and the accompaniment with the counter-line in Ending Theme (part
+1), Overture (part 3), Troops March on and Umaro stand where they
+were. A voice of the bass, the tune or the counter-line struck with
+another part is not asked (their writers follow no stretch words).
+The struck voice is thinned to its token voice's share of the
+followed notes, counted over its whole stretch, so the bass's notes
+with Dancing Mad (part 5)'s voice are 0.70 where the busy parts'
+are every one. The song's bars: see LIMITS.
+
+**Heard.** Not yet.

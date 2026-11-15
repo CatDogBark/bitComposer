@@ -80,7 +80,7 @@ def main(argv=None) -> int:
     ap.add_argument("--check", action="store_true", help="report Qt, libopenmpt, the audio output and the music folder, then exit")
     ap.add_argument("--install-desktop", action="store_true", help="write the app-menu entry (Linux; the first launch does it by itself) and exit")
     ap.add_argument("--remove-desktop", action="store_true", help="remove the app-menu entry (Linux), e.g. before pipx uninstall, and exit")
-    ap.add_argument("--music-dir", help="folder of songs (default: $BITCOMPOSER_MUSIC_DIR, ~/Music/Chiptune if it exists, else ~/Music/bitComposer)")
+    ap.add_argument("--music-dir", help="folder of songs (default: $BITCOMPOSER_MUSIC_DIR, then the folder chosen in the player, else bitComposer in your Music folder)")
     ap.add_argument("--minimized", action="store_true", help="start in the tray, window closed (what start at login runs)")
     ap.add_argument("--try-update", metavar="FILE", help="offer UPDATE for a local setup.exe (the Windows build) or wheel (a pipx install), to try the update path without a release")
     ap.add_argument("--screenshot", metavar="PNG", help="render the window offscreen to PNG and exit (with a few fresh songs, nothing played)")

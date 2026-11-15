@@ -15,6 +15,7 @@ import json
 import math
 import os
 import random
+import re
 import shlex
 import struct
 import sys
@@ -22,12 +23,14 @@ import threading
 import time
 from pathlib import Path
 
+from . import level as leveling
 from .openmpt import Module, SAMPLE_RATE, LibraryMissing
 from .audio import make_output, OutputUnavailable, CHANNELS, LATENCY_MS
 
 EXTENSIONS = {".mod", ".xm", ".it", ".s3m", ".mptm"}
 FRAMES_PER_BUFFER = 2048
 VOLUME_MAX = 3.0
+MEASURE_JOIN = 2.0                 # seconds a shutdown waits for the song being measured in the background
 _LIMIT_KNEE = 20000.0
 _LIMIT_SPAN = 32767.0 - _LIMIT_KNEE
 
@@ -77,6 +80,11 @@ def state_file() -> Path:
     return base / "bitcomposer" / "player.json"
 
 
+def levels_file() -> Path:
+    """The levels measured so far (level.Levels), beside the settings."""
+    return state_file().with_name("levels.json")
+
+
 def _soft_limit(y: float) -> int:
     a = abs(y)
     if a <= _LIMIT_KNEE:
@@ -98,8 +106,10 @@ def _apply_gain(raw: bytes, n: int, gain: float) -> bytes:
 def parse_message(message: str) -> dict:
     """The machine-readable lines bitcomposer writes into the song message:
     layout (every channel's role), voices (role=name), drew (what the song
-    drew), echo. Older files without a layout line get the 14-channel one."""
-    out = {"layout": None, "voices": {}, "drew": {}, "echo": "", "lines": []}
+    drew), echo; and a converted or written module's echo channels (each
+    repeat channel's voice, both counted from 0 here) and master channel.
+    Older files without a layout line get the 14-channel one."""
+    out = {"layout": None, "voices": {}, "drew": {}, "echo": "", "echo_of": {}, "master": None, "lines": []}
     for line in message.replace("\r", "\n").split("\n"):
         line = line.strip()
         if not line:
@@ -112,9 +122,88 @@ def parse_message(message: str) -> dict:
             out["drew"] = dict(p.split("=", 1) for p in line[5:].split(",") if "=" in p)
         elif line.startswith("echo:"):
             out["echo"] = line[5:].strip()
+        elif line.startswith("echo channels:"):                  # "1=8-16, 4=17-25": the voice, its repeats' channels, from 1
+            for voice, first, last in re.findall(r"(\d+)=(\d+)-(\d+)", line):
+                for ch in range(int(first), int(last) + 1):
+                    out["echo_of"][ch - 1] = int(voice) - 1
+        elif line.startswith("master channel:") and line[15:].strip().isdigit():
+            out["master"] = int(line[15:]) - 1
         else:
             out["lines"].append(line)
     return out
+
+
+_TEMPO = re.compile(r"^\d+ BPM$")
+_SAID_OF_EVERY_SONG = (": the band, the figures, the tune and its",
+                       "balance drawn from a vocabulary of counted habits, none of any song's notes.")
+DETAIL_LINES = 6                       # a module's message can run to pages: this many of its lines at most
+
+
+def song_card(lines: list[str], title: str, drew: dict) -> tuple[list[str], list[str]]:
+    """What the window says of a song, from its message's lines (parse_message's "lines"): (the facts beside the
+    title, the details kept behind MORE). The facts are a bitComposer song's key, tempo and form, or a converted
+    song's game and composer; any other module has none. The details are the message's other lines, less what a
+    written song's message says of every written song alike."""
+    if not lines:
+        return [], []
+    head = [p.strip() for p in lines[0].split(" - ")]
+    rest = lines[1:]
+    tempo = next((i for i, p in enumerate(head) if _TEMPO.match(p)), 0)
+    if tempo:                                              # written: "Title - C# major - 120 BPM - form A B C B D"
+        facts = head[tempo - 1:]
+    elif len(head) > 1 and title.strip() and head[0][:25].strip() == title.strip()[:25].strip():
+        facts = head[1:]                                   # converted: "Title - Game - Composer" (a module's name holds 25 letters)
+    elif rest and any(_TEMPO.match(p.strip()) for p in rest[0].split(" - ")):
+        facts = [p.strip() for p in rest[0].split(" - ")]  # Classic: the title alone, then "G harmonic minor - 106 BPM"
+        if drew.get("form"):
+            facts.append(f"{drew['form']} form")
+        rest = rest[1:]
+    else:
+        facts = []
+        rest = lines if len(head) == 1 and lines[0].strip() != title.strip() else rest
+    details = []
+    for line in rest:
+        if line == _SAID_OF_EVERY_SONG[1]:
+            continue
+        if line.endswith(_SAID_OF_EVERY_SONG[0]):
+            line = line[:-len(_SAID_OF_EVERY_SONG[0])]
+        if line.startswith("performance: "):
+            line = line[len("performance: "):]
+        details.append(line)
+    return facts, details[:DETAIL_LINES]
+
+
+def band_parts(layout: list[str], channels: int, echo_of: dict[int, int], master: int | None) -> list[int]:
+    """The channels THE BAND's M and S act on: the named ones that are a part's, not an echo's nor the master volume's."""
+    return [c for c, role in enumerate(layout[:channels]) if not role.startswith("echo.") and c not in echo_of and c != master]
+
+
+def silenced(layout: list[str], channels: int, muted: set[int], soloed: set[int],
+             echo_of: dict[int, int], master: int | None) -> tuple[set[int], bool]:
+    """The channels to silence for THE BAND's M and S. A part's channel is heard if it is soloed, where any is, and
+    otherwise if it is not muted. An echo goes with what it echoes and is never muted or soloed of its own: Classic's
+    returns ("echo.<role>") once none of the role's channels is heard, a written or converted song's repeats with their
+    voice (`echo_of`). Channels past the layout that no voice is named for (a written song from before the echo
+    channels line) are all silenced while any part is, since whose echo is whose cannot be told. The master channel is
+    never silenced: muted, its volume moves and the fade would not be played. Returns (the channels, whether an echo
+    nobody is named for went with them)."""
+    named = layout[:channels]
+    rows = band_parts(layout, channels, echo_of, master)
+    solo = soloed & set(rows)
+    heard = (lambda c: c in solo) if solo else (lambda c: c not in muted)
+    silent = {c for c in rows if not heard(c)}
+    for c, role in enumerate(named):
+        if role.startswith("echo."):
+            voices = [v for v in rows if named[v] == role[5:]]
+            if voices and not any(heard(v) for v in voices):
+                silent.add(c)
+    silent.update(c for c, v in echo_of.items() if v in rows and not heard(v) and 0 <= c < channels)
+    unnamed = [c for c in range(len(named), channels) if c not in echo_of and c != master]
+    echo_off = bool(unnamed) and any(not heard(c) for c in rows)
+    if echo_off:
+        silent.update(unnamed)
+    silent.discard(master)
+    return silent, echo_off
 
 
 def write_channel_volumes(path: str, volumes: list[int]) -> None:
@@ -147,11 +236,24 @@ class Player:
         self.module: Module | None = None
         self.status = "Stopped"
         self.volume = 1.0
+        self.width = 1.0               # the stereo width heard: 1.0 the pans as written, less pulled toward centre (WIDTH)
+        self.level_on = True           # every song played at one common level (LEVEL; level.py)
+        self._level_gain = 1.0         # the loaded song's trim to that level, a gain beside the volume
+        self._level_db = None          # and the level it was measured at (None: not measured, or silent)
+        self._levels_lock = threading.Lock()
+        self._measure_thread = None
+        self._measure_stop = threading.Event()
+        self._closed = False           # shut down: nothing is written after it
         self.auto_generate = False
         self.auto_generate_settings = ""
         self._generating = False
         self._title_cache: dict[str, tuple[float, str]] = {}
         self._live_mix: dict[int, int] = {}
+        self._muted: set[int] = set()        # THE BAND's M and S, for the loaded song only
+        self._soloed: set[int] = set()
+        self._silent: set[int] = set()       # the channels they silence in the module
+        self._echo_off = False
+        self._master: int | None | bool = False   # the loaded module's master volume channel; False until looked for
         self._lock = threading.Lock()
         self._out = None
         self._decode_thread = None
@@ -168,6 +270,12 @@ class Player:
             self.volume = max(0.0, min(VOLUME_MAX, float(saved.get("volume", 1.0))))
         except (TypeError, ValueError):
             pass
+        try:
+            self.width = max(0.0, min(1.0, float(saved.get("width", 1.0))))
+        except (TypeError, ValueError):
+            pass
+        self.level_on = bool(saved.get("level", True))
+        self._levels = leveling.Levels(levels_file())
         self.shuffle = bool(saved.get("shuffle", False))
         self.auto_generate = bool(saved.get("auto_generate", False))
         self.auto_generate_settings = str(saved.get("auto_generate_settings", ""))
@@ -194,7 +302,8 @@ class Player:
             p.parent.mkdir(parents=True, exist_ok=True)
             tmp = str(p) + ".tmp"
             with open(tmp, "w") as fh:
-                json.dump({"volume": round(self.volume, 3), "shuffle": self.shuffle,
+                json.dump({"volume": round(self.volume, 3), "width": round(self.width, 3), "level": self.level_on,
+                           "shuffle": self.shuffle,
                            "auto_generate": self.auto_generate,
                            "auto_generate_settings": self.auto_generate_settings,
                            "check_updates": self.check_updates,
@@ -223,10 +332,12 @@ class Player:
         elif self.current_index >= len(files):
             self.current_index = -1
         self._prune_autogen()
+        self._measure_ahead()
         self._changed()
 
     def set_music_dir(self, path: Path) -> None:
         self.stop()
+        self._halt_measuring()
         with self._lock:
             if self.module:
                 self.module.destroy()
@@ -302,6 +413,8 @@ class Player:
         self.playlist[index] = new_path
         if path in self._title_cache:
             self._title_cache[new_path] = self._title_cache.pop(path)
+        with self._levels_lock:
+            self._levels.moved(path, new_path)
         with self._lock:
             if self.module and self.module.filepath == path:
                 self.module.filepath = new_path
@@ -340,12 +453,18 @@ class Player:
             self.last_error = str(e)
             self.on_log(f"[ERROR] {e}")
             return False
+        new.set_stereo_separation(round(self.width * 100))   # the width the user set, on every module loaded
+        level = self.level_of(path) if self.level_on else None
         with self._lock:
             if self.module:
                 self.module.destroy()
             self.module = new
             self.current_index = index
             self._live_mix = {}
+            self._muted, self._soloed, self._silent, self._echo_off = set(), set(), set(), False   # a new module: every channel heard
+            self._master = False
+            self._level_db = level
+            self._level_gain = leveling.gain_for(level) if self.level_on else 1.0
         self._changed()
         return True
 
@@ -397,8 +516,9 @@ class Player:
                 self.schedule(self._on_track_ended)
                 break
             raw = bytes(self._buf)[:frames * CHANNELS * 2]
-            if self.volume != 1.0:
-                raw = _apply_gain(raw, frames * CHANNELS, self.volume)
+            gain = self.volume * self._level_gain            # the user's GAIN over the song's trim to the common level
+            if gain != 1.0:
+                raw = _apply_gain(raw, frames * CHANNELS, gain)
             if not self._out.write(raw):
                 if not self._stop_event.is_set():
                     self.schedule(self._on_track_ended)
@@ -489,9 +609,90 @@ class Player:
             self._rebuild_shuffle()
         self.persist()
 
+    def set_width(self, width: float) -> None:
+        """The stereo width heard at playback, 0 (mono) to 1 (each voice where the song puts it): libopenmpt's stereo
+        separation on the playing module and on every module loaded after, saved with the settings. A written song's
+        voices sit where its token's game song put them (round 84), by amplitude alone as the SNES pans, which was made
+        for a television's speakers; on headphones a lead at 0.25 held all song sits far to one side. The vocabulary keeps
+        saying where the game put each voice; this is how the player presents it (HEADPHONES: 0.6)."""
+        self.width = max(0.0, min(1.0, float(width)))
+        with self._lock:
+            if self.module:
+                self.module.set_stereo_separation(round(self.width * 100))
+        self._changed()
+
     def set_volume(self, vol: float) -> None:
         self.volume = max(0.0, min(VOLUME_MAX, float(vol)))
         self.persist()
+
+    # ── the common level ──
+    def level_of(self, path: str) -> float | None:
+        """The song's level in dBFS (level.measure), measured once a file and kept. The measuring is done outside the
+        lock, so the song playing, a song just composed and the folder's other songs can be measured side by side."""
+        with self._levels_lock:
+            known, level = self._levels.cached(path)
+        if known:
+            return level
+        level = leveling.measure(path)
+        with self._levels_lock:
+            self._levels.put(path, level)
+        return level
+
+    def set_level(self, on: bool) -> None:
+        """LEVEL: every song played at one common level, or each as it was written. The trim is a gain at playback
+        beside the volume, on the playing song at once and on every song loaded after; no file is changed."""
+        self.level_on = bool(on)
+        path = self.module.filepath if self.module else None
+        level = self.level_of(path) if self.level_on and path else None
+        with self._lock:
+            self._level_db = level
+            self._level_gain = leveling.gain_for(level) if self.level_on else 1.0
+        self.persist()
+        if self.level_on:
+            self._measure_ahead()
+        self._changed()
+
+    def level_trim(self) -> float | None:
+        """The loaded song's trim in dB (under zero: turned down), or None where the level is off or it has none."""
+        if not self.level_on or self._level_db is None or self.module is None:
+            return None
+        return 20.0 * math.log10(self._level_gain)
+
+    def _measure_ahead(self) -> None:
+        """The folder's songs not measured yet, measured in the background so that the first play of each does not
+        wait for it. One pass at a time; a song it has not reached is measured when it loads."""
+        if not self.level_on or (self._measure_thread and self._measure_thread.is_alive()):
+            return
+        with self._levels_lock:
+            todo = [f for f in self.playlist if not self._levels.cached(f)[0]]
+        if not todo:
+            return
+        self._measure_stop.clear()
+        self._measure_thread = threading.Thread(target=self._measure_folder, args=(todo, self._measure_stop), daemon=True)
+        self._measure_thread.start()
+
+    def _measure_folder(self, paths: list[str], stop: threading.Event) -> None:
+        for path in paths:
+            if stop.is_set():
+                return                         # stopped: whoever stopped it saves
+            self.level_of(path)
+        if not stop.is_set():
+            self.schedule(self._save_levels)   # the face's thread writes the file, never this one: a pass that ends as its
+                                               # player's settings folder goes (a second player in one process) writes nothing
+
+    def _save_levels(self) -> None:
+        if self._closed:
+            return
+        with self._levels_lock:
+            self._levels.save()
+
+    def _halt_measuring(self) -> None:
+        self._measure_stop.set()
+        if self._measure_thread:
+            self._measure_thread.join(timeout=MEASURE_JOIN)   # a measure still running is left to end; it saves nothing
+            self._measure_thread = None
+        with self._levels_lock:
+            self._levels.save()
 
     # ── mixer ──
     def _reapply_mix(self) -> None:
@@ -522,6 +723,35 @@ class Player:
                 return []
             return [self.module.channel_vu(ch) for ch in range(self.module.num_channels)]
 
+    def set_band(self, muted, soloed) -> None:
+        """THE BAND's M and S: the named channels muted and the ones soloed (`silenced` says what that silences). For
+        the loaded song only, and never written into the file."""
+        with self._lock:
+            if not self.module:
+                return
+            layout, echo_of, master, converted = self._channels()
+            if self._master is False:
+                # A converted or written module from before the master channel line: the master's is its last channel
+                # where it holds no note (one with no volume move to play is not in the module at all).
+                last = self.module.num_channels - 1
+                self._master = master if master is not None or not converted or self.module.channel_has_notes(last) else last
+            n = self.module.num_channels
+            parts = set(band_parts(layout, n, echo_of, self._master))       # an echo's own row, or the master's, takes neither
+            self._muted, self._soloed = set(muted) & parts, set(soloed) & parts
+            silent, self._echo_off = silenced(layout, n, self._muted, self._soloed, echo_of, self._master)
+            for ch in silent ^ self._silent:
+                self.module.set_channel_muted(ch, ch in silent)
+            self._silent = silent
+        self._changed()
+
+    def band(self) -> dict:
+        """What THE BAND's M and S are set to: {"muted", "soloed", "echoOff" (an echo no voice is named for is
+        silenced with them)}."""
+        with self._lock:
+            if not self.module:
+                return {"muted": [], "soloed": [], "echoOff": False}
+            return {"muted": sorted(self._muted), "soloed": sorted(self._soloed), "echoOff": self._echo_off}
+
     def apply_mix_to_file(self) -> bool:
         """Write the live mix into the loaded file's header so it survives a reload."""
         with self._lock:
@@ -531,23 +761,36 @@ class Player:
             path = self.module.filepath
         try:
             write_channel_volumes(path, vols)
+            with self._levels_lock:
+                self._levels.forget(path)      # the file keeps its time and its size: a new mix is a new level
             return True
         except (OSError, ValueError) as e:
             self.on_log(f"[MIX] {e}")
             return False
 
     # ── what is loaded ──
+    def _channels(self, info: dict | None = None) -> tuple[list[str], dict[int, int], int | None, bool]:
+        """The loaded module's channels, under the lock: (the layout, each echo repeat channel's voice, the master
+        channel where the message names it, whether the module is the SPC converter's: a converted or a written song)."""
+        msg = self.module.message
+        info = info or parse_message(msg)
+        n = self.module.num_channels
+        layout = info["layout"]
+        if layout is None:
+            layout = LEGACY_LAYOUT[:n] if n == 14 and "bitcomposer" in msg.lower() else [f"ch{i + 1}" for i in range(n)]
+        converted = bool(info["lines"]) and info["lines"][-1].startswith("rows ")      # the converter's own last line
+        return layout, info["echo_of"], info["master"], converted
+
     def metadata(self) -> dict:
         with self._lock:
             if not self.module:
                 return {}
-            msg = self.module.message
-            info = parse_message(msg)
+            info = parse_message(self.module.message)
             n = self.module.num_channels
-            layout = info["layout"]
-            if layout is None:
-                layout = LEGACY_LAYOUT[:n] if n == 14 and "bitcomposer" in msg.lower() else [f"ch{i + 1}" for i in range(n)]
-            return {"title": self.module.title, "artist": self.module.artist, "type": self.module.type_name,
+            layout = self._channels(info)[0]
+            facts, details = song_card(info["lines"], self.module.title, info["drew"])
+            return {"facts": facts, "details": details,
+                    "title": self.module.title, "artist": self.module.artist, "type": self.module.type_name,
                     "duration": self.module.duration, "position": self.module.position,
                     "channels": n, "patterns": self.module.num_patterns,
                     "file": os.path.basename(self.module.filepath), "layout": layout,
@@ -584,6 +827,8 @@ class Player:
             self.last_error = f"generation failed: {e}"
         if path is None:
             self.on_log(f"[AUTOGEN] {self.last_error}")
+        elif self.level_on:
+            self.level_of(str(path))           # measured here, in the composing thread, so the song plays without a wait
         self.schedule(lambda: self._generated(path, play, on_done))
 
     def _generated(self, path, play: bool, on_done) -> None:
@@ -617,6 +862,7 @@ class Player:
     def _play_preview(self, path: str, stop: threading.Event) -> None:
         try:
             module = Module(path)
+            module.set_stereo_separation(round(self.width * 100))
         except Exception as e:                      # a preview never takes the player down
             self.on_log(f"[PACKS] cannot play the preview: {e}")
             return
@@ -654,6 +900,8 @@ class Player:
 
     def shutdown(self) -> None:
         self.stop()
+        self._halt_measuring()
+        self._closed = True
         with self._lock:
             if self.module:
                 self.module.destroy()

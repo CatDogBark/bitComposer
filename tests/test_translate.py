@@ -117,6 +117,42 @@ class Bar(unittest.TestCase):
         g = beat.find(onsets(150, 48, 2, accent=(1.0, 0.7, 0.8, 0.7)))
         self.assertFalse(beat.rebar(g, [float(b) for b in range(48)]))
 
+    def test_a_kit_sets_each_sections_bar(self):
+        """Round 105: a kick on one and three under a louder snare on two and four, with a tune that never repeats and
+        holds nothing (no sign for the phase rule): the accents put the bar on the snare; the kit puts it on the kick.
+        A song barred on its kick already is left alone, and a kit without enough hits sets nothing."""
+        b = 0.5
+        r = random.Random(5)
+        tune = [60 + r.choice((0, 2, 4, 5, 7, 9, 11)) for _ in range(64)]
+        song = song_of({
+            0: [(i * b, 0.3, tune[i]) for i in range(64)],
+            1: [((k * 4) * b, 0.05, None) for k in range(16)] + [((k * 4 + 2) * b, 0.05, None) for k in range(16)],   # the kick
+            2: [((k * 4 + 1) * b, 0.05, None) for k in range(16)] + [((k * 4 + 3) * b, 0.05, None) for k in range(16)],   # the snare
+            3: [(i * b, 0.05, None) for i in range(64)],                                                          # a hat on every beat
+        })
+        for p in song.notes:
+            if p.voice == 1:
+                p.sample.piece = "kick"
+                p.level = 0.6
+            elif p.voice == 2:
+                p.sample.piece = "snare"
+                p.level = 1.0
+            elif p.voice == 3:
+                p.sample.piece = "hat"
+                p.level = 0.3
+        g = beat.find([(p.start, p.level, p.voice) for p in song.notes])
+        self.assertEqual((round(g.bpm), g.meter), (120, 4))
+        self.assertAlmostEqual(g.bar_times[0], g.beat_times[1], places=3)      # the accents' one: the loud snare's beat
+        kit = {piece: [g.beats(p.start) for p in song.notes if p.sample.piece == piece] for piece in beat.KIT_SIGNS}
+        self.assertTrue(beat.rebar_kit(g, kit))
+        self.assertAlmostEqual(g.bar_times[0], g.beat_times[0], places=3)      # the kick's
+        self.assertEqual(len(g.bar_times), 16)
+        self.assertFalse(beat.rebar_kit(g, kit))                                 # barred on its kick already
+        self.assertFalse(beat.rebar_kit(g, {"kick": kit["kick"][:3], "snare": kit["snare"][:3], "cymbal": []}))   # too few hits
+        g2 = beat.find([(p.start, p.level, p.voice) for p in song.notes])
+        self.assertFalse(beat.rebar_kit(g2, {"kick": [], "snare": kit["snare"], "cymbal": []}))                 # a snare alone moves nothing
+        self.assertAlmostEqual(g2.bar_times[0], g2.beat_times[1], places=3)
+
     def test_the_bar_s_phase_follows_where_the_song_repeats(self):
         # a four-bar phrase at 120 played four times: a melody a note a beat, a chord held through each bar from
         # its first beat, a drum on every beat and two more on every third, which the accents take for the one
@@ -596,8 +632,9 @@ class Vocab(unittest.TestCase):
                 db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", (sid, a, b, root, "", 0.9))
         db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("quiet", 0, 12, None, "", 0.0))
         db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("quiet", 12, 16, 0, "", 0.9))
-        notes = array("f", [0, 4, 36, 0.5, 0.5, 0, 4, 4, 41, 0.5, 0.5, 0, 8, 4, 43, 0.5, 0.5, 0,
-                            12, float("nan"), 36, 0.5, 0.5, 0])
+        nan = float("nan")                                   # a note is NOTE_FIELDS wide: ..., sample index, rate (round 78)
+        notes = array("f", [0, 4, 36, 0.5, 0.5, 0, nan, 4, 4, 41, 0.5, 0.5, 0, nan, 8, 4, 43, 0.5, 0.5, 0, nan,
+                            12, nan, 36, 0.5, 0.5, 0, nan])
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 0, "bass", None, None, notes.tobytes()))
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 1, "drums", None, None, notes.tobytes()))
         songs, left_out = load(db)
@@ -661,6 +698,198 @@ class Rhythm(unittest.TestCase):
         s.chords = [Span(0, 4, None, "", 0.0), Span(4, 8, 5, "", 0.3)]
         self.assertEqual(list(bass([s]).figures[4]), ["?... ?... ?... ?..."])
 
+    def test_a_tune_on_the_drum_channel_is_a_part(self):
+        """Round 83: a tonal sample the namer called "other" that a drum voice strikes on three pitches or more, no one of them
+        half its notes, is split to a voice of its own (SPLIT_BASE + the channel) and read as a counter-line (a bass where it
+        sits low); the channel keeps its drums. A bell on one note, however many its notes, stays a drum."""
+        from bitcomposer.translate import roles
+        from bitcomposer.translate.events import Played, Sample
+        b = 0.5
+        tune = [72, 74, 76, 77, 79, 77, 76, 74, 72, 71, 72, 74, 76, 74, 72, 67]
+
+        def kit_song(pitches, level=0.6):
+            song = song_of({
+                0: [(i * b, 0.4, tune[i % 16]) for i in range(64)],                    # the melody
+                3: [(i * 2 * b, 2 * b, m) for i, m in enumerate([36, 36, 36, 36, 33, 33, 31, 31] * 4)],  # the bass
+                4: [(i * b / 2, 0.05, None) for i in range(128)],                      # the hat: unpitched, on a drum channel
+            })
+            song.samples[4].piece = "hat"
+            blip = Sample((0x900, 0x900), "blip", 440.0, 100, True, piece="other")
+            song.notes += [Played(4, i * b + b / 4, i * b + b / 4 + 0.1, blip, pitches[i % len(pitches)], level, 0.5, None) for i in range(32)]
+            song.notes.sort(key=lambda x: (x.start, x.voice))
+            return song
+
+        song = kit_song([71, 78, 73, 77, 69, 66, 76, 74])
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        self.assertEqual(roles.split_melodic_pieces(song, g), {104: (4, "blip", 8)})
+        self.assertEqual(sum(1 for x in song.notes if x.voice == 104), 32)
+        self.assertEqual(roles.split_melodic_pieces(song, g), {})                                      # split once
+        parts = {r.voice: r.role for r in roles.assign(song, g)}
+        self.assertEqual((parts[0], parts[3], parts[4], parts[104]), (roles.MELODY, roles.BASS, roles.DRUMS, roles.COUNTER))
+        song = kit_song([71])                                                                          # a bell on one note is a drum
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        self.assertEqual(roles.split_melodic_pieces(song, g), {})
+        self.assertEqual({r.voice: r.role for r in roles.assign(song, g)}[4], roles.DRUMS)
+        song = kit_song([71, 71, 71, 71, 71, 78, 73, 77])                                              # one pitch holds five of eight: a drum
+        self.assertEqual(roles.split_melodic_pieces(song, beat.find([(x.start, x.level) for x in song.notes])), {})
+        song = kit_song([40, 47, 43, 45, 38, 36, 45, 43])                                              # low: a bass
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        roles.split_melodic_pieces(song, g)
+        self.assertEqual({r.voice: r.role for r in roles.assign(song, g)}[104], roles.BASS)
+
+    def test_a_channel_s_second_instrument_in_its_own_register_is_a_part(self):
+        """Round 89: on a channel under the tune (a bass or a chord part) the notes on a second sample carrying a tenth of the
+        channel's pitched notes in a register of its own (medians an octave apart, or no overlap) move to a voice of their
+        own (SECOND_BASE + the channel) and are read as the part they are; a second sample in the same register stays (one
+        line on two instruments); the tune's second instrument is never split (the line changing colour)."""
+        from bitcomposer.translate import roles
+        from bitcomposer.translate.events import Played, Sample
+        b = 0.5
+        tune = [72, 74, 76, 77, 79, 77, 76, 74, 72, 71, 72, 74, 76, 74, 72, 67]
+        bass = [36, 36, 36, 36, 33, 33, 31, 31]
+
+        def song(second, flute_from=10, bass_bars=10):
+            song = song_of({
+                0: [(i * b, 0.4, tune[i % 16]) for i in range(flute_from * 4)],                   # the melody, bars 1-10 on its sample
+                3: [(i * b, 0.8 * b, bass[i % 8]) for i in range(bass_bars * 4)],                 # the bass, a note a beat, bars 1-10
+                4: [(i * b / 2, 0.05, None) for i in range(128)],                                 # the hat, all 16 bars
+            })
+            song.samples[4].piece = "hat"
+            flute = Sample((0x900, 0x900), "flute", 440.0, 100, True, piece="none")             # the tune an octave up on a second sample, bars 11-16
+            song.notes += [Played(0, (flute_from * 4 + i) * b, (flute_from * 4 + i) * b + 0.4, flute, tune[i % 16] + 12, 0.8, 0.5, None) for i in range(24)]
+            other = Sample((0xA00, 0xA00), "second", 440.0, 100, True, piece="none")            # the bass channel's second sample, bars 11-16
+            song.notes += [Played(3, (bass_bars * 4 + i) * b, (bass_bars * 4 + i) * b + 0.3, other, second[i % len(second)], 0.8, 0.5, None) for i in range(24)]
+            song.notes.sort(key=lambda x: (x.start, x.voice))
+            return song
+
+        s = song([60, 64, 67, 64])                                                               # chord stabs two octaves over the bass
+        g = beat.find([(x.start, x.level) for x in s.notes])
+        first = roles.assign(s, g)
+        self.assertEqual({r.voice: r.role for r in first}, {0: roles.MELODY, 3: roles.BASS, 4: roles.DRUMS})
+        self.assertEqual(roles.split_second_instruments(s, first, g), {203: (3, "second", roles.BASS)})
+        self.assertEqual(sum(1 for x in s.notes if x.voice == 203), 24)
+        self.assertEqual(sum(1 for x in s.notes if x.voice == 0), 64)                             # the tune's flute stays on the tune's voice
+        self.assertEqual(roles.split_second_instruments(s, first, g), {})                        # split once
+        parts = {r.voice: r.role for r in roles.assign(s, g)}
+        self.assertEqual(parts, {0: roles.MELODY, 3: roles.BASS, 4: roles.DRUMS, 203: roles.ACCOMP})
+        s = song([36, 33, 31, 33])                                                               # a second bass sample in the bass's register: one line
+        g = beat.find([(x.start, x.level) for x in s.notes])
+        self.assertEqual(roles.split_second_instruments(s, roles.assign(s, g), g), {})
+        self.assertEqual({r.voice: r.role for r in roles.assign(s, g)}[3], roles.BASS)
+
+    def test_a_voice_that_doubles_the_tune_by_stretch_is_the_tunes_layer(self):
+        """Round 90: a voice is read in stretches (runs of notes on one sample, blips folded), each asked what it does beside
+        another voice: a double (its notes start with the other's at the same pitch class), parallel (its onsets are the
+        other's, at one generic interval: thirds alternate 3 and 4 semitones) or its own line. A voice that doubles the tune
+        or runs parallel with it for half its notes or more is a layer of the melody, `of` the tune's voice, its old part in
+        the evidence; one that doubles it for a quarter keeps its part; the bass stays the bass whatever it doubles (the
+        song's floor); a sparse pad whose few notes land on the tune's is no double (it covers nothing of the tune)."""
+        from bitcomposer.translate import roles
+        from bitcomposer.translate.events import Played, Sample
+        tune = [(i * 0.5, 60 + (i % 4) * 2, "a") for i in range(64)]
+        voice = [(i * 0.5, 48 + (i % 4) * 2, "b") for i in range(32)] + [(i * 0.5 + 0.25, 67 + (i % 3), "c") for i in range(32, 64)]
+        sts = roles.stretches_of(voice)
+        self.assertEqual([(s["key"], len(s["notes"]), s["a"]) for s in sts], [("b", 32, 0.0), ("c", 32, 16.25)])
+        self.assertEqual([roles.stretch_relation(s, {0: tune}) for s in sts], [("double", 0, -12), ("own", None, None)])
+        thirds = [(t, m - (3 if i % 2 else 4), "d") for i, (t, m, _) in enumerate(tune)]
+        self.assertEqual(roles.stretch_relation(roles.stretches_of(thirds)[0], {0: tune}), ("parallel", 0, -4))
+        pad = [(i * 8.0, 60, "p") for i in range(4)]                                               # four root notes under sixty-four
+        self.assertEqual(roles.stretch_relation(roles.stretches_of(pad)[0], {0: tune}), ("own", None, None))
+        blips = [(0, 60, "a"), (0.5, 62, "a"), (1.0, 64, "x"), (1.5, 65, "a")] + [(3 + i * 0.5, 60, "a") for i in range(10)]
+        self.assertEqual([(s["key"], len(s["notes"])) for s in roles.stretches_of(blips)], [("a", 14)])
+        self.assertEqual([roles.generic(x) for x in (3, 4, -12, 7, 16)], [2, 2, -7, 4, 9])
+        b = 0.5
+        melody = [72, 74, 76, 77, 79, 77, 76, 74, 72, 71, 72, 74, 76, 74, 72, 67]
+        bass = [36, 36, 36, 36, 33, 33, 31, 31]
+
+        def song(doubled_bars, voice=1, below=12, parallel=False, bass_from=0):
+            """Sixteen bars: the tune a note a beat on voice 0, the bass on 3 (from bar `bass_from`), the hat on 4; on `voice`
+            the tune `below` semitones under (thirds under where `parallel`) for `doubled_bars` bars on one sample, then a
+            pedal of its own, a quarter beat late, on another."""
+            s = song_of({
+                0: [(i * b, 0.4, melody[i % 16]) for i in range(64)],
+                3: [(i * 2 * b, 1.6 * b, bass[i % 8]) for i in range(bass_from * 2, 32)],
+                4: [(i * b / 2, 0.05, None) for i in range(128)],
+            })
+            s.samples[4].piece = "hat"
+            low = Sample((0x900, 0x900), "low", 440.0, 100, True, piece="none")
+            own = Sample((0xA00, 0xA00), "own", 440.0, 100, True, piece="none")
+            n = doubled_bars * 4
+            s.notes += [Played(voice, i * b, i * b + 0.4, low, melody[i % 16] - ((3 if i % 2 else 4) if parallel else below), 0.5, 0.5, None) for i in range(n)]
+            if voice != 3:
+                s.notes += [Played(voice, i * b + 0.125, i * b + 0.3, own, 60, 0.5, 0.5, None) for i in range(n, 64)]
+            s.notes.sort(key=lambda x: (x.start, x.voice))
+            return s
+
+        s = song(12)                                                                             # twelve bars of sixteen under the tune
+        parts = {r.voice: r for r in roles.assign(s, beat.find([(x.start, x.level) for x in s.notes]))}
+        self.assertEqual((parts[1].role, parts[1].of, parts[1].evidence["with_tune"]), (roles.MELODY, 0, 0.75))
+        self.assertIn(parts[1].evidence["was"], (roles.COUNTER, roles.ACCOMP))
+        self.assertEqual((parts[0].role, parts[0].of, parts[3].role, parts[4].role), (roles.MELODY, None, roles.BASS, roles.DRUMS))
+        s = song(4)                                                                              # four bars of sixteen: its own part
+        parts = {r.voice: r for r in roles.assign(s, beat.find([(x.start, x.level) for x in s.notes]))}
+        self.assertNotEqual(parts[1].role, roles.MELODY)
+        self.assertIsNone(parts[1].of)
+        s = song(16, parallel=True)                                                              # thirds under the tune throughout
+        parts = {r.voice: r for r in roles.assign(s, beat.find([(x.start, x.level) for x in s.notes]))}
+        self.assertEqual((parts[1].role, parts[1].of, parts[1].evidence["with_tune"]), (roles.MELODY, 0, 1.0))
+        s = song(8, voice=3, below=24, bass_from=8)                                              # the bass two octaves under the tune for half the song
+        parts = {r.voice: r for r in roles.assign(s, beat.find([(x.start, x.level) for x in s.notes]))}
+        self.assertEqual((parts[3].role, parts[3].of), (roles.BASS, None))
+
+    def test_a_pad_on_a_drum_named_sample_is_no_kit(self):
+        """Round 89: a voice whose samples the namer called drums is a drum voice unless its notes are pitched and held two
+        beats or more at the median (a looping bowed-strings pad the namer took for a kick, played low and alone: The Empire
+        Gestahl, Another World of Beasts); a cymbal held four beats, unpitched, stays a drum."""
+        from bitcomposer.translate import roles
+        b = 0.5
+        tune = [72, 74, 76, 77, 79, 77, 76, 74, 72, 71, 72, 74, 76, 74, 72, 67]
+        song = song_of({
+            0: [(i * b, 0.4, tune[i % 16]) for i in range(64)],                                    # the melody
+            3: [(i * 2 * b, 2 * b, m) for i, m in enumerate([36, 36, 36, 36, 33, 33, 31, 31] * 4)],  # the bass
+            5: [(i * 8 * b, 8 * b, m) for i, m in enumerate([43, 43, 41, 43] * 2)],                 # a pad: pitched, two pitches, held eight beats
+            6: [(i * 4 * b, 4 * b, None) for i in range(16)],                                       # a cymbal: unpitched, held four beats
+        })
+        song.samples[5].piece = "kick"
+        song.samples[6].piece = "cymbal"
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        parts = {r.voice: r.role for r in roles.assign(song, g)}
+        self.assertEqual((parts[5], parts[6]), (roles.HARMONY, roles.DRUMS))
+        song.samples[5].piece = "none"                                                             # an instrument held: never a drum, as before
+        self.assertEqual({r.voice: r.role for r in roles.assign(song, g)}[5], roles.HARMONY)
+
+    def test_a_tom_on_every_beat_over_a_bass_is_a_drum(self):
+        """Round 175: a voice on a tom sample at few pitches that sounds on half the beats or more was read a bass
+        passing for a drum, whatever played under it. It is that only where it can be the song's bass: with an
+        instrument's voice under its lowest note it is the drum the namer called it (Mt. Koltz's toms, three pitches
+        on nine beats in ten over a string bass, were read an accompaniment and the song had no kit). With nothing
+        under it, it is a pitched part as before."""
+        from bitcomposer.translate import roles
+        b = 0.5
+        tune = [72, 74, 76, 77, 79, 77, 76, 74, 72, 71, 72, 74, 76, 74, 72, 67]
+        voices = {
+            0: [(i * b, 0.4, tune[i % 16]) for i in range(64)],                                    # the melody
+            3: [(i * 2 * b, 2 * b, m) for i, m in enumerate([36, 36, 36, 36, 33, 33, 31, 31] * 4)],  # the bass, on an instrument
+            5: [(i * b, 0.2, m) for i, m in enumerate([52, 45, 45, 49, 45, 52, 52, 45] * 8)],       # toms: three pitches, on every beat
+        }
+        song = song_of(voices)
+        song.samples[5].piece = "tom"
+        song.samples[0].piece = song.samples[3].piece = "none"                                     # instruments held, as the namer says
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        feats = {v: roles._features([p for p in song.notes if p.voice == v], g) for v in voices}
+        self.assertGreaterEqual(feats[5]["presence"], roles.SPARSE)                                # on the beats: the old rule's bass
+        self.assertIsNone(roles.drum_clause(feats[5]))                                             # by itself, a bass passing for a drum
+        self.assertLess(roles.under_of(feats, 5), feats[5]["low"])                                 # the bass plays under its lowest note
+        self.assertEqual(roles.drum_clause(feats[5], roles.under_of(feats, 5)), "sound")
+        self.assertEqual({r.voice: r.role for r in roles.assign(song, g)}[5], roles.DRUMS)
+        low = dict(voices)
+        low[5] = [(s, n, m - 24) for s, n, m in voices[5]]                                         # the same voice under everything: it can be the bass
+        song = song_of(low)
+        song.samples[5].piece = "tom"
+        song.samples[0].piece = song.samples[3].piece = "none"
+        g = beat.find([(x.start, x.level) for x in song.notes])
+        self.assertNotEqual({r.voice: r.role for r in roles.assign(song, g)}[5], roles.DRUMS)
+
     def test_drum_sounds_are_named_by_how_they_play(self):
         from bitcomposer.translate.rhythm import Song, drums
         # four bars: a kick on one and three, a snare on two and four, a hat on the eighths
@@ -709,12 +938,17 @@ class Rhythm(unittest.TestCase):
             db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("beat", a, b, root, "", 0.9))
         db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", ("quiet", 0, 16, None, "", 0.0))
         db.execute("INSERT INTO samples VALUES (?,?,?,?,?,?,?,?,?,?)", ("beat", 0, "kickkey", 0, 0, None, 0, 100, 0, None))
-        bass = array("f", [0, 4, 36, 0.5, 0.5, 1, 4, 4, 41, 0.5, 0.5, 1, 6, 1, 43, 0, 0.5, 1, 8, 4, 43, 0.5, 0.5, 1])
-        drum = array("f", [0, 0.5, float("nan"), 0.5, 0.5, 0, 2, 0.5, float("nan"), 0.5, 0.5, -1])
+        nan = float("nan")                                   # seven fields a note since round 78 (the rate as a note)
+        bass = array("f", [0, 4, 36, 0.5, 0.5, 1, nan, 4, 4, 41, 0.5, 0.5, 1, nan, 6, 1, 43, 0, 0.5, 1, nan, 8, 4, 43, 0.5, 0.5, 1, nan])
+        drum = array("f", [0, 0.5, nan, 0.5, 0.5, 0, 48.0, 2, 0.5, nan, 0.5, 0.5, -1, nan])
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 0, "bass", None, None, bass.tobytes()))
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 1, "drums", None, None, drum.tobytes()))
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 2, "melody", None, '{"roll": true}', bass.tobytes()))
         db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 3, "double", 0, None, bass.tobytes()))
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 203, "accompaniment", None, None, bass.tobytes()))   # channel 3's second instrument (round 89)
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 6, "melody", 2, '{"with_tune": 0.75, "was": "counter"}', bass.tobytes()))   # a layer of the tune (round 90)
+        silent = array("f", [0, 4, 60, 0.0, 0.5, 1, nan, 4, 4, 64, 0.0, 0.5, 1, nan])                 # a voice whose notes are all at no level
+        db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", ("beat", 4, "harmony", None, None, silent.tobytes()))
         songs, left_out = load(db)
         self.assertEqual(left_out, {"free time": 1, "mostly silent": 1})
         self.assertEqual([s.title for s in songs], ["beat"])
@@ -725,11 +959,61 @@ class Rhythm(unittest.TestCase):
         self.assertEqual([n[3] for n in s.notes["drums"]], ["kickkey", "noise"])
         self.assertEqual((list(s.rolls), len(s.rolls["melody"])), (["melody"], 2))
         self.assertNotIn("double", s.notes)
+        self.assertNotIn("accompaniment", s.notes)                                        # a second instrument is kept beside the counts, not in them
+        self.assertEqual(s.second_voices, {203: ("accompaniment", [(0, 4, 36, "noise"), (4, 4, 41, "noise")])})
+        self.assertEqual(sorted(v for v, *_ in s.voices), [0, 1, 2, 3, 4, 6])
+        self.assertEqual(s.voice_of, {3: 0, 6: 2})                                             # a double's and a layer's voice followed (round 90)
+        self.assertEqual(s.voice_notes[6][0], "melody")
+        self.assertNotIn("harmony", s.notes)                                              # a voice with no note at a level is no voice
+        self.assertNotIn(4, s.voice_notes)
 
 
 class DrumsBySound(unittest.TestCase):
     """A drum sample named by its sound (drums.py): made-up sounds and the generator's named kits; how the
-    sample is played no longer decides anything (the drum check: it agreed with the ear in 43 % of sounds)."""
+    sample is played no longer decides anything (the drum check: it agreed with the ear in 43 % of sounds), but for one
+    thing since round 102: a looped drum-named sound struck across the chords is an instrument."""
+
+    def test_a_looped_drum_named_sample_struck_across_the_chords_is_an_instrument(self):
+        """Round 102: FFVI's distorted rhythm guitar, noisy and looped with no fundamental, was named a snare and struck on
+        five to thirteen rates following the chords; its real drums sit on one rate. instrument_by_play says which it is,
+        and of_notes renames the sample "other" and gives its notes the rate as their pitch."""
+        from types import SimpleNamespace
+        from unittest import mock
+        from array import array
+        from bitcomposer.spc import brr
+        from bitcomposer.translate import drums, events
+        chug = [0.0] * 8 + [-2.0] * 9 + [-5.0] * 2 + [-4.0] + [3.0] * 2                 # Fanfare's guitar: eight hits on one rate, nine a tone under
+        self.assertTrue(drums.instrument_by_play(chug, True))
+        self.assertFalse(drums.instrument_by_play(chug, False))                         # unlooped: a melodic tom stays a drum
+        self.assertFalse(drums.instrument_by_play([0.0] * 30 + [-1.0, 1.0, 3.0, 5.0], True))   # one rate with ornaments: Techno de Chocobo's hat
+        self.assertFalse(drums.instrument_by_play([0.0, -7.0] * 3, True))               # under eight hits
+        self.assertFalse(drums.instrument_by_play([0.0] * 7 + [-7.0] * 3, True))        # one rate holding 0.7
+        self.assertFalse(drums.instrument_by_play([0.0, 2.0, 4.0] * 4, True))           # a span under five semitones
+        # through of_notes: a noisy sample with body the namer calls a snare, struck on twelve rates across a fifth
+        pcm = array("h", [int(v) for v in tone(300, 0.25, noise=2.0, decay=0.06)])
+        looped = brr.Sample(pcm, 4000, len(pcm), True, 0x1000, 0x1200, len(pcm) // 16)
+        one_shot = brr.Sample(pcm, None, None, True, 0x1000, 0x1200, len(pcm) // 16)
+        pitches = [0x1000, 0x1000, 0xE00, 0xE00, 0xC00, 0xC00, 0xB00, 0xB00, 0xAB0, 0xAB0, 0x1000, 0xC00]   # 0, -2, -5, -6, -7 semitones
+        found = [SimpleNamespace(voice=4, start=0.5 * i, end=0.5 * i + 0.3, brr=(0x1000, 0x1200), pitch=p, volume=(60, 60), noise=False)
+                 for i, p in enumerate(pitches)]
+        with mock.patch.object(events.tuning, "fundamental", lambda s: None), mock.patch.object(events.drums_mod, "name", lambda s, profile=None: "snare"), \
+             mock.patch.object(events.tuning, "rough_fundamental", lambda s: None):
+            song = events.of_notes(found, lambda addr: looped, lambda addr: "guitar", 6.0)   # the namer's verdict pinned: a snare by sound
+            self.assertEqual(song.samples[(0x1000, 0x1200)].piece, "other")
+            self.assertTrue(song.samples[(0x1000, 0x1200)].by_play)
+            self.assertEqual([round(p.midi) for p in song.notes[:5]], [60, 60, 58, 58, 55])              # no rough fundamental: the rate as the note
+        with mock.patch.object(events.tuning, "fundamental", lambda s: None), mock.patch.object(events.drums_mod, "name", lambda s, profile=None: "snare"):
+            loud = array("h", [int(v) for v in tone(100, 0.4, noise=0.8, seed=5)])                       # a rough 100 Hz loop: a register for the instrument
+            looped_tone = brr.Sample(loud, 1600, len(loud), True, 0x1000, 0x1200, len(loud) // 16)
+            f0 = events.tuning.rough_fundamental(looped_tone)
+            self.assertIsNotNone(f0); self.assertAlmostEqual(f0, 100.0, delta=6.0)
+            song3 = events.of_notes(found, lambda addr: looped_tone, lambda addr: "guitar", 6.0)
+            self.assertTrue(song3.samples[(0x1000, 0x1200)].by_play)
+            self.assertAlmostEqual(song3.notes[0].midi, 43.35, delta=1.2)                                  # 100 Hz at the recording's rate: near G2
+            self.assertIsNone(events.tuning.rough_fundamental(one_shot))
+            song2 = events.of_notes(found, lambda addr: one_shot, lambda addr: "snare", 6.0)
+            self.assertEqual(song2.samples[(0x1000, 0x1200)].piece, "snare")
+            self.assertTrue(all(p.midi is None for p in song2.notes))                                    # a one-shot drum: unpitched
 
     def test_made_up_sounds_are_named_by_what_they_are(self):
         from bitcomposer.translate import drums
@@ -818,16 +1102,16 @@ class Games(unittest.TestCase):
             for bar, root in enumerate((36, 41, 43, 36)):
                 pitches = (root, root + 2, root + 4, root + 5) if walking else (root, root + 12, root, root + 12)
                 for beat, m in enumerate(pitches):
-                    bass.extend((bar * 4 + beat, 1, m, 0.5, 0.5, -1))
+                    bass.extend((bar * 4 + beat, 1, m, 0.5, 0.5, -1, nan))
             db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 0, "bass", None, None, bass.tobytes()))
             tune = array("f")                                                       # eighths by step, C D E F G A B C
             for i, m in enumerate((60, 62, 64, 65, 67, 69, 71, 72) * 4):
-                tune.extend((i / 2, 0.5, m, 0.8, 0.5, -1))
+                tune.extend((i / 2, 0.5, m, 0.8, 0.5, -1, nan))
             db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 1, "melody", None, None, tune.tobytes()))
             if drums:
                 hits = array("f")
                 for beat in range(16):
-                    hits.extend((beat, 0.2, nan, 0.5, 0.5, -1))
+                    hits.extend((beat, 0.2, nan, 0.5, 0.5, -1, nan))
                 db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 2, "drums", None, None, hits.tobytes()))
         # Alpha and Beta share a driver and a composer; Gamma and Delta share the other driver
         song("a1", "Alpha", "A. Composer", "one", "major", 120.0, 0.5, True, True, False)
@@ -1055,7 +1339,8 @@ class Phrases(unittest.TestCase):
                                                            array("d", [0.0, 2.0, 4.0, 6.0]).tobytes()))
             for a, b, root in ((0, 4, 0), (4, 8, 5), (8, 12, 7), (12, 16, 0)):
                 db.execute("INSERT INTO chords VALUES (?,?,?,?,?,?)", (sid, a, b, root, "", 0.9))
-            tune = array("f", [0, 1, 60, 0.8, 0.5, -1, 1, 1, 64, 0.8, 0.5, -1, 2, 1, 67, 0.8, 0.5, -1, 9, 1, 72, 0.8, 0.5, -1])
+            nan = float("nan")
+            tune = array("f", [0, 1, 60, 0.8, 0.5, -1, nan, 1, 1, 64, 0.8, 0.5, -1, nan, 2, 1, 67, 0.8, 0.5, -1, nan, 9, 1, 72, 0.8, 0.5, -1, nan])
             db.execute("INSERT INTO voices VALUES (?,?,?,?,?,?)", (sid, 0, "melody", None, None, tune.tobytes()))
         db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", ("form", 0, "A", 0, 2, 0.0, None, "part"))
         db.execute("INSERT INTO form VALUES (?,?,?,?,?,?,?,?)", ("form", 1, "A", 2, 2, 4.0, 0, "part"))

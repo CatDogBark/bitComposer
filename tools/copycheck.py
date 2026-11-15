@@ -1,6 +1,6 @@
 """The tune-copy check on songs written from a vocabulary, as the product writes them (no reference set at hand, so no
 phrase is drawn again): every four-bar window of each tune, from every bar, against the games' four-bar phrases
-(translate/reference.py, the reference set kept outside the repository: ~/diags/bitcomposer/idiom/phase3/reference/).
+(translate/reference.py, the reference set kept outside the repository: its path is `translate.harness.REFERENCE`).
 
     python tools/copycheck.py --seeds 1-100 [--reference PATH] [--pack ffvi]
 

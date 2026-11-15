@@ -99,8 +99,8 @@ send at the delay nearest the generator's up to the chip's 240 ms (the
 generator's dotted eighths and quarters ran to 450 ms), the generator's
 feedback, a gentle low-pass. The chip and Genesis sounds keep their path;
 `--score` on the CLI renders a song this way; a snapshot's module stays
-byte for byte. Six songs rendered both ways sit in
-`~/Music/bitComposer-dev/score-check` for a listen: the score versions
+byte for byte. Six songs rendered both ways sit outside the repository
+for a listen: the score versions
 come out within 0.6 dB of the old ones in loudness and darker (the
 spectral centroid about halved: the chip's interpolation colouring on the
 presets, and the echo's filter), with 13 to 43 channels each with the
@@ -136,7 +136,7 @@ rendered through the same back end and read by the same readers.
 **The listen, and what it decided (2026-10-22).** Six whole songs rendered
 both ways, and two substitutions. The whole songs answered nothing about
 the back end: the music going in is the old generator's, and bad notes
-render faithfully; the listener found them a muffled copy of something
+render faithfully; by ear they were a muffled copy of something
 already poor and the comparison with real SNES music unfair to make. The
 substitutions answered the real question: Hyrule Field with a generated
 melody holds up, so the rendering is sound when the notes are; Terra with
@@ -145,11 +145,11 @@ the generator's problem and phase 3's work. Decided:
 - The old SNES path stays the shipped default; the "release of its own"
   question is closed, not deferred. The score path is the development
   path for the new generator, and ships when the new music beats the old
-  by the listener's ear and the measures.
+  by ear and by the measures.
 - Listening tests for phases 3 and 4 are substitutions, one generated
   voice inside a real song against the original; whole generated songs
   come back when phase 4 has slices worth hearing. A whole song of the
-  old generator asks the listener to project the aim onto it, which is
+  old generator asks the ear to project the aim onto it, which is
   too much to ask.
 - The tempo question is withdrawn: the reader hearing the old songs at
   half tempo says they are half as dense as a game's, which the readings

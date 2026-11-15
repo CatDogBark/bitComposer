@@ -298,6 +298,43 @@ def voice_of(key: str) -> str:
     return "s" + key[:10]
 
 
+def tonal_reading(f0: float | None, rate: int, loop, frames: int) -> dict | None:
+    """A kit voice's reading as a pitched instrument, the pack file's `tonal` field (round 119): the MIDI note the recording
+    sounds at the rate its file is written at (`f0`: the readings' pitch for the sample at RATE; a kit voice's file is written
+    at the rate the game strikes it), and its loop in frames where the SNES chip loops it. None without a pitch. Final Fantasy
+    VI plays its rhythm guitar as a pitched voice in five songs and strikes it as a drum in others; the pack held the kit voice
+    alone, and a song given it as its riff's line played it by the kit's convention, a minor third flat and unlooped."""
+    if not f0 or f0 <= 0 or rate <= 0:
+        return None
+    out = {"note": round(69 + 12 * math.log2(f0 * rate / RATE / 440), 2)}
+    if loop and 0 <= loop[0] < loop[1] <= frames:
+        out["loop"] = [int(loop[0]), int(loop[1])]
+    return out
+
+
+def played_as_pitched(g: "Gathered", k: str) -> bool:
+    """Whether the game plays the sample as a pitched voice in some song (any part but the drums)."""
+    return any(c.get(k, 0) for role, c in g.uses.items() if role != R.DRUMS)
+
+
+def add_tonal_readings(data: dict, rates: dict, readings: dict) -> list:
+    """An existing pack file's data given its kit voices' tonal readings (round 119): `readings` {voice: (f0 at RATE, loop
+    (start, end) in frames or None, the sample's frames)} for the samples the game plays as pitched voices, `rates` {voice: (its
+    file's rate, its file's frames)}. Each percussion entry among them gains its `tonal` field (the loop only where the file
+    holds the sample whole). Returns the voices changed."""
+    changed = []
+    for v, spec in (data.get("samples") or {}).items():
+        if not spec.get("percussion") or v not in readings or v not in rates:
+            continue
+        f0, loop, frames = readings[v]
+        rate, file_frames = rates[v]
+        t = tonal_reading(f0, rate, loop if file_frames == frames else None, file_frames)
+        if t is not None and spec.get("tonal") != t:
+            spec["tonal"] = t
+            changed.append(v)
+    return changed
+
+
 def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dict, dict]:
     """The pack file's data, and its samples to write: {voice: (pcm, rate)}.
     decode(key) gives a sample's (pcm, loop (start, end) or None) as the SNES
@@ -346,6 +383,9 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
             if envelope_of(g, k):
                 samples[v]["envelope"] = envelope_of(g, k)
             files[v] = sounds[k][:2]
+            reading = tonal_reading(g.f0.get(k), sounds[k][1], sounds[k][2], len(sounds[k][0])) if played_as_pitched(g, k) else None
+            if reading:                                     # the game also plays it as a pitched voice (round 119)
+                samples[v]["tonal"] = reading
         drums[piece] = v
     uses = g.uses.get(R.DRUMS, Counter())                   # every drum the game plays as one and the namer could name (round 63): a song's
     for k, n in uses.most_common():                         # own kit rides its balance token, so the pack holds the game's kits, not one
@@ -360,6 +400,9 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
             if envelope_of(g, k):
                 samples[v]["envelope"] = envelope_of(g, k)
             files[v] = sounds[k][:2]
+            reading = tonal_reading(g.f0.get(k), sounds[k][1], sounds[k][2], len(sounds[k][0])) if played_as_pitched(g, k) else None
+            if reading:                                     # the game also plays it as a pitched voice (round 119)
+                samples[v]["tonal"] = reading
         samples[v]["piece"] = name_
     voices = dict(chosen)
     if drums:
@@ -372,7 +415,7 @@ def build(g: Gathered, decode, name: str, label: str | None = None) -> tuple[dic
 def why(g: Gathered, data: dict) -> dict:
     """Why each of the pack's samples is where it is: the parts the readings
     found it playing, in how many songs and how many notes, most first.
-    {voice: [[part, songs, notes], ...]}; the player's PACKS panel shows it."""
+    {voice: [[part, songs, notes], ...]}; the player's SOUNDS screen shows it."""
     key_of = {voice_of(k): k for k in g.where}
     out = {}
     for v in data["samples"]:
@@ -430,14 +473,25 @@ def _read(path):
         return RuntimeError(f"{path}: {type(e).__name__}: {e}"), None
 
 
+# The stages of an import, in the order make() goes through them. A stage
+# that counts songs (the reading, the lead pass) says progress(done, total)
+# from nothing again; the others say only that they began.
+UNPACKING, READING, HEARING, COUNTING_GAME, COUNTING_LIBRARY = STAGES = (
+    "unpacking the set", "reading the songs", "hearing which voice leads",
+    "counting the game's vocabulary", "counting the library's vocabulary")
+
+
 def make(paths, out, name: str | None = None, workers: int | None = None, say=print, progress=None, stage=None) -> Path:
     """Read a game's SPC files (folders read whole, archives unpacked:
     archives.py) and write a thin pack of them into `out`: pack.json, its
     samples' WAVs and why each is where it is (WHY). Returns the pack file.
-    progress(done, total) after each song; stage(words) as each stage of the
-    import begins (the player's LIBRARY screen shows it)."""
+    stage(words) as each stage of the import begins (STAGES), and
+    progress(done, total) after each song of a stage that counts them, the
+    count starting again with the stage (the player's LIBRARY screen shows
+    both). `workers` processes read the songs and render them for the lead
+    pass (default: all the machine's cores but one)."""
     stage = stage or (lambda words: None)
-    stage("unpacking the set")
+    stage(UNPACKING)
     with tempfile.TemporaryDirectory(prefix="bitcomposer-spc-") as unpack:
         return _make(archives.spc_files(paths, Path(unpack)), paths, out, name, workers, say, progress, stage)
 
@@ -450,7 +504,9 @@ def _make(files, paths, out, name, workers, say, progress, stage=lambda words: N
     if not files:
         raise ValueError("no SPC files to read")
     readings, snaps = [], []
-    stage("reading the songs")
+    stage(READING)
+    if progress:
+        progress(0, len(files))
     with Pool(workers or max(1, (os.cpu_count() or 2) - 1)) as pool:
         for i, (r, snap) in enumerate(pool.imap(_read, [str(f) for f in files])):
             if progress:
@@ -496,18 +552,18 @@ def _make(files, paths, out, name, workers, say, progress, stage=lambda words: N
         progress(len(files), len(files))
     try:                                                    # the lead by what is heard (round 64): each voice rendered alone, the melody label moved
         from . import lead                                  # where another voice carries the tune; before the tables, which count on the lead
-        stage("hearing which voice leads")
+        stage(HEARING)
         folder = os.path.commonpath([os.path.dirname(os.path.abspath(str(f))) for f in files])
-        heard = lead.run(db, game, folder, say=say)
+        heard = lead.run(db, game, folder, say=say, progress=progress, workers=workers)
         _note_lead(path.parent / WHY, heard)
     except Exception as e:                                  # the readings stand as read; the error is said, not raised
         say(f"  the lead pass did not run: {type(e).__name__}: {e}")
     try:                                                    # the game's vocabulary beside its samples (format 2), then the library's over everything
         from . import packtables
         from .. import vocabularies
-        stage("counting the game's vocabulary")
+        stage(COUNTING_GAME)
         packtables.into(db, game, path, say=say)
-        stage("counting the library's vocabulary")
+        stage(COUNTING_LIBRARY)
         vocabularies.refit_library(db, say=say)
     except Exception as e:                                  # the pack stands without its tables; the error is said, not raised
         say(f"  the vocabulary was not counted: {type(e).__name__}: {e}")

@@ -28,6 +28,12 @@ DISCOUNT = None                      # Witten-Bell for every table a pack carrie
                                      # rounds 1 to 3, docs/idiom/phase-4-writing.md)
 FIGURE = ("part", "meter", "tempo", "habit", "feel", "previous")   # the figure tables' shape: the tempo class (round 61), the habit, then the song's feel, before the chain (writer.SHAPE);
                                                            # a floor stepping down from a one-song context lets the feel go first and keeps the habit
+DRUM_FIGURE = ("part", "meter", "classes", "tempo", "feel", "previous")   # a single-letter drum limb's: its slot's strike class (round 81) before the tempo class, so a draw
+                                                           # keeps the class while the tempo and the feel go; the class says the density, so the habit is not in the shape
+                                                           # (it drives the recall urn, and the cap of a kit written without classes): a one-song habit level under the
+                                                           # class had rested in 0.87 of its bars and silenced the hat
+LIMB_FIGURE = ("part", "meter", "limb1", "limb2", "limb3", "tempo", "feel", "previous")   # the kick-snare-tom limb's: a field a letter, the densest slot's first
+                                                           # (readings.limb_order), so a draw lets the sparser letters' classes go and keeps the backbone's
 
 # name -> (where the units come from, the builder, its keyword arguments, the shape, on the cell floor, as the song's
 # mixture, what the table says), in the record's order
@@ -37,11 +43,11 @@ KEPT = {
     "habits": ("rhythm", "rhythm_habit_units", {}, ("part", "tempo", "weight"), False, False, "a part's density and repetition habit, drawn once a song given the tempo and the part's weight in the band"),
     "bass": ("rhythm", "bass_units", {}, FIGURE, True, True, "the bass's bar as a figure: positions with chord-tone marks"),
     "bass_habits": ("rhythm", "bass_habit_units", {}, ("part", "tempo", "weight"), False, False, "the bass's habit (density, tones, octaves), drawn once a song given the tempo and its weight"),
-    "drums": ("rhythm", "drum_units", {}, ("part", "meter", "kit", "tempo", "habit", "feel", "previous"), True, True, "the kit's bar as one figure, every piece, under the pieces the song's kit strikes, then the tempo class (round 61), before its habit and feel (round 58: a draw backing off past the kit had landed on every kit's bars, none on this kit's pieces, and left the bar silent): what a song written whole repeats and varies as a kit does"),
-    "drums-KSt": ("rhythm", "drum_group_units", {"letters": ("K", "S", "t")}, FIGURE, True, True, "the kick, snare and toms' bar"),
-    "drums-h": ("rhythm", "drum_group_units", {"letters": ("h",)}, FIGURE, True, True, "the hat's bar"),
-    "drums-c": ("rhythm", "drum_group_units", {"letters": ("c",)}, FIGURE, True, True, "the cymbals' bar"),
-    "drums-o": ("rhythm", "drum_group_units", {"letters": ("o",)}, FIGURE, True, True, "the other drum sounds' bar"),
+    "drums": ("rhythm", "drum_units", {}, ("part", "meter", "kit", "tempo", "habit", "feel", "previous"), True, True, "the kit's bar as one figure, every piece on its slot's sample (round 81), under the pieces the song's kit strikes, then the tempo class (round 61), before its habit and feel (round 58: a draw backing off past the kit had landed on every kit's bars, none on this kit's pieces, and left the bar silent): what a song written whole repeats and varies as a kit does; a kit whose token carries strike classes is written from its limbs instead (round 81)"),
+    "drums-KSt": ("rhythm", "drum_group_units", {"letters": ("K", "S", "t")}, LIMB_FIGURE, True, True, "the kick, snare and toms' bar, under the three slots' strike classes, the densest slot's first (round 81: each slot's sample's hits a bar in its song, rare under half, an accent under one, sparse to two, medium to six, dense over)"),
+    "drums-h": ("rhythm", "drum_group_units", {"letters": ("h",)}, DRUM_FIGURE, True, True, "the hat's bar, under the hat slot's strike class (round 81: Strago's click on beat two is an accent, a ride in eighths is dense)"),
+    "drums-c": ("rhythm", "drum_group_units", {"letters": ("c",)}, DRUM_FIGURE, True, True, "the cymbals' bar, under the cymbal slot's strike class (round 81)"),
+    "drums-o": ("rhythm", "drum_group_units", {"letters": ("o",)}, DRUM_FIGURE, True, True, "the other drum sounds' bar, under the slot's strike class (round 81: Wild West's pitched blip, two a bar, is medium)"),
     "drum_habits": ("rhythm", "drum_habit_units", {}, ("part",), False, False, "the drums' density habit, drawn once a song"),
     "kit_pieces": ("rhythm", "kit_piece_units", {}, ("part", "habit"), False, False, "the kit pieces a song's drums strike (letters: kick, snare, hat, tom, cymbal, other), by the kit's habit tier, drawn once a song"),
     "voicings": ("rhythm", "voicing_units", {}, ("part", "shape", "habit"), False, True, "which chord tones an upper part holds in a span"),
@@ -52,6 +58,7 @@ KEPT = {
     "changes": ("rhythm", "change_units", {}, ("part", "meter", "habit"), False, False, "where in the bar the chord changes, by the song's motion"),
     "cadences": ("rhythm", "cadence_units", {}, ("part", "mode", "length"), False, False, "how a part's progression ends"),
     "loops": ("rhythm", "loop_units", {}, ("part",), False, False, "the chord the loop returns to"),
+    "loop_parts": ("rhythm", "loop_part_units", {}, ("part", "intro"), False, False, "the form's part the loop returns to (0 the first, 1 the second), by whether the song opens with an intro the form never comes back to; drawn once a song on an own stream (round 98)"),
     "form": ("rhythm", "form_units", {}, ("part", "meter", "index"), False, False, "a part of the form: new, again or back, by its index"),
     "lengths": ("rhythm", "length_units", {}, ("part", "meter", "habit"), False, False, "a part's length in bars, by the song's habit"),
     "letters": ("rhythm", "letters_units", {}, ("part",), False, False, "a song's form as its parts' letters in order (A B A B C), drawn whole"),
@@ -81,9 +88,9 @@ KEPT = {
     "layer_sounds": ("rhythm", "layer_sound_units", {}, ("part", "voice"), False, False, "the share of its gap a note sounds for a layered part's line and for its second voice"),
     "periods": ("rhythm", "period_units", {}, ("part", "length", "tempo"), False, False, "a backing part's period inside a part of the form: the lag in bars at which its bars repeat (1, 2, 4, 8) or none, by the part's length and the tempo"),
     "period_holds": ("rhythm", "period_hold_units", {}, ("part", "period"), False, False, "inside a backing part's period, a bar playing the bar a period before again (held) or not (varied)"),
-    "second_figures": ("rhythm", "second_figure_units", {}, ("part", "layer", "feel", "tempo", "onsets", "line"), False, False, "a layered part's second line, under its voices' note share over the line (sparse, half, full; round 65) (an upper part's pattern, the bass's figure) under the line's own bar, by the song's feel and tempo band, where the part holds two voices or more"),
+    "second_figures": ("rhythm", "second_figure_units", {}, ("part", "layer", "feel", "tempo", "onsets", "line"), False, False, "a layered part's second line, under its voices' note share over the line (sparse, half, full; round 65) (an upper part's pattern, the bass's figure, the counter's bar beside its line since round 76) under the line's own bar, by the song's feel and tempo band, where the part holds two voices or more"),
     "layer_samples": ("rhythm", "layer_sample_units", {}, ("part",), False, False, "the samples a layered part's line and its second voice play, as a pair, drawn once a song"),
-    "voice_intervals": ("rhythm", "voice_interval_units", {}, ("part", "kind", "line", "previous"), False, False, "a voice beside the line's interval to the line's note where they strike together, in scale steps (7 an octave) where the line's note is on the scale and in semitones (s-4) where it is off it, by the part, the relation (the counter-line's: same sample as the tune, or other), the line note's state (scale, altered) and its interval before"),
+    "voice_intervals": ("rhythm", "voice_interval_units", {}, ("part", "kind", "line", "previous"), False, False, "a voice beside the line's interval to the line's note where they strike together, in scale steps (7 an octave) where the line's note is on the scale and in semitones (s-4) where it is off it, by the part, the relation (apart or alternating; the counter-line's beside the tune: same sample as the tune, or other), the line note's state (scale, altered) and its interval before"),
     "voice_moves": ("rhythm", "voice_move_units", {}, ("part", "kind", "place"), False, False, "a voice beside the line's move from its own last note, in scale steps, by the part, the relation and whether it strikes with the line or alone"),
     "counter_figures": ("rhythm", "counter_figure_units", {}, ("part", "weight", "feel", "tempo", "onsets", "line"), False, False, "the counter-line's bar as a mask over the tune's bar: which of the tune's onsets it strikes with and its own, by the counter's weight in the band, the song's feel and tempo band, the tune's onset count and pattern (its own onsets alone where the tune rests)"),
     "counter_samples": ("rhythm", "counter_sample_units", {}, ("part",), False, False, "whether a song's counter-line plays the tune's sample (same) or another (other), drawn once a song: the kind its interval and move words are drawn under, and its sample at the rendering"),
@@ -93,6 +100,7 @@ KEPT = {
     "sample_speeds": ("rhythm", "sample_speed_units", {}, ("part",), False, False, "the fastest bars a sample is played in (notes a second, a class), by the sample: weighed in its choice for a part"),
     "cell_handoffs": ("rhythm", "cell_handoff_units", {}, ("part", "habit", "place"), False, False, "a tune's half-bar cell taken up by another part in a later bar: which part and how many bars on, by the song's echo habit and the cell's place (theme or other)"),
     "half_recall": ("rhythm", "half_recall_units", {}, ("part", "habit"), False, False, "what a tune's half-bar cell is to the tune so far (same, earlier, new), by the song's echo habit: the tune writer's urn at the half bar"),
+    "recall_moves": ("rhythm", "recall_move_units", {}, ("part", "recall", "chord"), False, False, "how far a recalled tune cell sits from its last occurrence (at pitch, with the chord root, or by semitones), by whether it is the bar before's cell and whether the chord under it is the one under its source: the tune's echoes land as the game's do"),
     "recall_continues": ("rhythm", "recall_continue_units", {}, ("part", "habit"), False, False, "whether a passage the tune recalls goes on with the bar after its source (yes, no), by the song's echo habit"),
     "pair_recall": ("rhythm", "pair_recall_units", {}, ("part", "habit"), False, False, "what a two-bar group of the tune is to the tune so far (same, earlier, new), by the song's echo habit: the tune writer's urn at the pair"),
     "pair_bar_recall": ("rhythm", "pair_bar_recall_units", {}, ("part", "habit"), False, False, "what a bar inside a new pair is to the tune so far (same, earlier, new), by the song's echo habit: the bar urn inside a new pair"),
@@ -104,7 +112,8 @@ KEPT = {
     "weights": ("rhythm", "weight_units", {}, ("part",), False, False, "a part's weight in the band (minor, half, main)"),
     "sizes": ("rhythm", "form_size_units", {}, ("part",), False, False, "how many parts a song's form has"),
     "length_habits": ("rhythm", "length_habit_units", {}, ("part",), False, False, "a song's part-length habit (short, medium, long), drawn once a song"),
-    "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) and, for the counter, whether it plays the tune's sample (same/other) in it, drawn once a song as one unit"),
+    "balance": ("rhythm", "balance_units", {}, ("part",), False, False, "a song's band with each part's weight, register, sounded share, voices, level (a share of the loudest part's, in tenths) and, for a layered part, each voice beyond the line's level over the line's (in tenths, the busiest first) and, for the counter, whether it plays the tune's sample (same/other) in it, each pitched part's voices' pans (the right side's share, the line first; round 84), the song's key (key=9:minor), and the drums' kit (each piece's sample, level, struck note (a tonal piece's as a degree of the key, d9; a drum piece's the chip's rate as a note, r48 an octave under, r63t where the game tunes it), hold, strike class (round 81: its sample's hits a bar in the song, x/a/s/m/d) and echo mark (round 82: an e where the game sends the sample's channel to echo)), and the song's echo word (round 82, echo=0.20:80:0.78:sends:dry, as the echo table counts it), drawn once a song as one unit"),
+    "tune_sounds": ("rhythm", "tune_sound_units", {}, ("part", "note"), False, False, "the share of its gap a tune's or counter-line's note sounds, its held notes and its detached ones apart (the values word says which a note is), the median to a tenth, drawn once a song a part on its own streams (round 98)"),
     "sounds": ("rhythm", "sound_units", {}, ("part",), False, False, "the share of its gap a part's note sounds"),
     "gap_sounds": ("rhythm", "gap_sound_units", {}, ("part", "voice", "speed", "gap"), False, False, "the share of its gap a note sounds, by the voice, the part's speed class (its fastest bar: slow, medium, fast) and the gap's length (under a beat, one to two, two to four, a bar or more)"),
     "bass_locks": ("rhythm", "bass_lock_units", {}, ("part",), False, False, "the share of the kit's accents (two pieces together) the bass strikes with, in tenths"),
@@ -116,13 +125,26 @@ KEPT = {
     "summit": ("phrases", "summit_units", {}, ("part",), False, False, "how far the tune's highest note sits above its register's top"),
     "ranges": ("rhythm", "sample_range_units", {}, ("part", "role"), False, False, "the register a sample is played in, by the sample and the part playing it"),
     "sample_ambitus": ("rhythm", "sample_ambitus_units", {}, ("part",), False, False, "the whole range a sample is played in, lowest note to highest, by the sample: the tune's bound"),
+    "kit_seconds": ("rhythm", "kit_second_units", {}, ("part", "place"), False, False, "whether a kit letter's hit takes the slot's second sample (the letter's other sample, struck eight times or more in the song) or the slot's own, by the letter and the hit's place in the beat (on the beat, an eighth, a sixteenth, a triplet, finer); the writer draws it a hit for a letter whose token carries a second, holding the letter's hits to the token's share for it (round 99)"),
+    "kit_rates": ("rhythm", "kit_rate_units", {}, ("part", "piece"), False, False, "the rate a percussion kit sample is struck at, as a note (60 as recorded), by the sample and the piece: the wall a tuned slot's moved rate stays inside"),
     "part_samples": ("rhythm", "part_sample_units", {}, ("part", "speed"), False, False, "the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing"),
     "articulation": ("rhythm", "habit_units", {}, ("part",), False, False, "the tune's articulation habit (detached, mixed, held), drawn once a song"),
     "part_textures": ("rhythm", "part_texture_units", {}, ("part", "habit", "form", "previous"), False, False, "the texture a part of the form keeps (which parts sound), by the kit's density tier (round 59; NO_TIER without drums), its place in the form and the part before's"),
     "section_levels": ("rhythm", "section_level_units", {}, ("part", "form"), False, False, "a part's level in a section over its level in the whole song, in tenths, by the part and the section's place in the form: dynamics by section"),
+    "section_fills": ("rhythm", "section_fill_units", {}, ("part", "voice", "place"), False, False, "what a voice does in a section's last bar against the section's bars before (fuller, the same, thinner), by its part, whether it is the line or a voice beside it, and the section's place in the form: the flourish into the next section"),
+    "section_densities": ("rhythm", "section_density_units", {}, ("part", "step"), False, False, "a part's density tier in a section against its song density (denser, the same, sparser), by the step the section's level makes: a level step rides a figure change as the game's does"),
     "part_entries": ("rhythm", "part_entry_units", {}, ("part", "habit", "form", "length"), False, False, "where inside a section a part present in it enters and leaves (so many bars after its start, so many before its end, or whole), by the part, for the drums the kit's density tier (round 59), the section's place in the form and its length class"),
-    "drum_group_habits": ("rhythm", "drum_group_habit_units", {}, ("part", "habit"), False, False, "a drum group's own habit given the kit's, drawn once a song"),
-    "chord_tones": ("rhythm", "chord_tone_habit_units", {}, ("part",), False, False, "the share of the tune's notes on a beat that are chord tones, drawn once a song"),
+    "drum_group_habits": ("rhythm", "drum_group_habit_units", {}, ("part", "classes", "habit"), False, False, "a drum group's own habit given its backbone slot's strike class (round 81: the densest of the kick, snare and toms for their limb) and the kit's habit, drawn once a song on its own stream"),
+    "chord_tones": ("rhythm", "chord_tone_habit_units", {}, ("part",), False, False, "the share of a line's notes on a beat that are chord tones, for the tune and (since round 96) the counter-line, each drawn once a song and held by its writer"),
+    "off_scale": ("rhythm", "off_scale_units", {}, ("part", "mode", "place"), False, False, "the share of a part's notes off the song's natural scale, by the part, the mode and the beat (strong, weak); the tune's drawn once a song and held in place of a ban"),
+    "clashes": ("rhythm", "clash_units", {}, ("part", "place"), False, False, "a part's share of onsets under a sounding note of a part written before it (the bass, then the chord parts, then the tune, then the counter) that sit a semitone from it, by the beat; each writer holds its draw"),
+    "voice_keeps": ("rhythm", "voice_keep_units", {}, ("sample",), False, False, "the share of a voice's strikes, where its chord part's line keeps its note, on which the voice keeps its own, by whether the voice plays the line's sample; drawn once a voice, on an own stream, for a voice its balance token gives no share (round 167)"),
+    "song_answers": ("rhythm", "own_units", {}, ("song", "word", "context"), False, False, "each song's own answer to the once-a-song words (the list rhythm.OWN), by the song, the word and the word's context; not drawn: the plan looks the balance token's song up in it and draws the pooled word where that song has no answer (round 172)"),
+    "chord_follows": ("rhythm", "chord_follow_units", {}, ("part",), False, False, "of a tune's or a counter-line's notes on a tone a chord has off the key or on the key's tone a semitone over it, the share on the chord's tone, and the same against the key's tone a semitone under it; drawn once a line, on an own stream, for a line its balance token gives no shares (round 171)"),
+    "parallel_intervals": ("rhythm", "parallel_interval_units", {}, ("interval", "tone", "part", "previous"), False, False, "where a parallel voice's note sits against the chord at each shared onset (the chord tone it lands on, or its semitones from the line's note off the chord), by the stretch's nominal interval in scale steps, the tone class of the line's note against the chord, the part and the landing before: the writer's parallel voice lands where the game's does, on the chord, instead of the line again in the scale (round 97)"),
+    "tone_tiers": ("rhythm", "tone_tier_units", {}, ("part",), False, False, "how much of a chord part's line leaves the chord over the song (rare: under a tenth of its onsets, some: under 0.3, many), drawn once a song a part on an own stream: the tier its tone figures are drawn under (round 96)"),
+    "tone_figures": ("rhythm", "tone_figure_units", {}, ("part", "tier", "onsets", "line"), False, False, "a chord part's line bar as its onsets' tone classes against the chord sounding (c a tone of the chord, x a tone off it), by the part, the song's tier, the onset count and the line's own pattern: where the line leaves the chord, drawn a bar under the line's bar by the upper writer (round 96)"),
+    "tone_degrees": ("rhythm", "tone_degree_units", {}, ("part", "shape", "previous"), False, False, "the degree a chord part's line plays where it leaves the chord, as semitones from the chord's root (2 a ninth, 5 a fourth, 9 a sixth), by the part, the chord's shape and the bar's previous off-chord degree; drawn an off-chord onset, which takes the degree nearest the voicing tone it replaces (round 96)"),
     "contour_sizes": ("phrases", "contour_size_units", {}, ("part", "mode", "contour"), False, False, "how far a phrase's contour goes, in semitones, by its shape"),
     "phrase_shifts": ("phrases", "phrase_shift_units", {}, ("part", "mode", "relation"), False, False, "how far a phrase sits above or below the one before, in semitones, by its relation to it"),
     "repeat_rates": ("phrases", "repeat_rate_units", {}, ("part",), False, False, "the share of the tune's moves that repeat the note, drawn once a song"),
@@ -132,6 +154,17 @@ KEPT = {
     "vibrato": ("rhythm", "vibrato_units", {}, ("part",), False, False, "a part's vibrato on its held notes: the share carrying it in each length class (0.35-0.5 s, 0.5-1, 1-2, 2 and over), its depth in cents, its rate in Hz and its onset in seconds, drawn once a song a part by the player's performance on its own stream (round 72)"),
 }
 MODULES = {"rhythm": rhythm, "phrases": phrases}
+OWN_TABLE = "song_answers"            # the table of every song's own answers to the once-a-song words (rhythm.own)
+DOUBLE_TIME = ("drums", "drums-KSt", "drums-h", "drums-c", "drums-o")   # the kit's bar tables, kept a second time (round 145) with a song the
+                                      # reading has at half its speed counted in double time, as its balance token has been since round 131
+                                      # (rhythm.token_song): Locke's snare strikes 28 times a bar at 70 beats a minute, bars the tables leave
+                                      # out as rolls under the slow class; at 140 they are a march's sixteenths, fourteen to the bar, a fast
+                                      # song's bars. A song written on such a song's token takes its kit's bars from these (plan.write);
+                                      # every other song's from the tables as read, so its kit stands (the tables themselves counted so
+                                      # moved the kit in 23 of the 68 Song Check 100 songs and, through the bass that strikes with it,
+                                      # the tune in 9)
+KEPT.update({name + rhythm.DOUBLE_TABLE: KEPT[name][:6] + (f"the `{name}` table with a song the reading has at half its speed counted in double time, for a song written on "
+                                                           "such a song's token (round 145)",) for name in DOUBLE_TIME})
 
 
 def fit(name: str, units) -> dict | None:
@@ -153,16 +186,34 @@ def fit(name: str, units) -> dict | None:
             "songs": len({u.song for u in units}), "model": model.to_json()}
 
 
+def songs_for(name: str, songs: list) -> list:
+    """The songs a table is counted on (round 145): for a kit bar table kept in double time (its name ends in
+    rhythm.DOUBLE_TABLE) each as its balance token counts it, in double time where the reading has it at half its speed
+    (rhythm.token_song); for every other table as read."""
+    return [rhythm.token_song(s) for s in songs] if name.endswith(rhythm.DOUBLE_TABLE) else songs
+
+
 def build(db, game: str | None, say=lambda *a: None) -> dict:
     """The tables for one game from its readings (None: every game's songs together, the library's vocabulary):
     {"source": ..., "tables": {name: entry}}."""
+    from . import lead
     songs = {"rhythm": rhythm.load(db, game)[0], "phrases": phrases.load(db, game)[0]}
+    heard = lead.passed(db, game)                           # the tune's voice by ear (round 64): a game read again loses it, and its tables count the label
     out = {"source": {"game": game or "library", "songs": len(songs["rhythm"]), "version": VERSION,
-                      "votes": VOTES, "discount": DISCOUNT}, "tables": {}}
+                      "votes": VOTES, "discount": DISCOUNT, "lead": heard}, "tables": {}}
+    say(f"  the lead pass: {heard['heard']} songs heard voice by voice, {heard['relabelled']} with the tune moved" if heard["heard"]
+        else "  the lead pass has not run on these readings: every tune is the reader's label (python -m bitcomposer.translate.lead)")
     for name, (module, builder, kwargs, *_) in KEPT.items():
-        entry = fit(name, getattr(MODULES[module], builder)(songs[module], **kwargs))
+        units = getattr(MODULES[module], builder)(songs_for(name, songs[module]), **kwargs)   # the kit's bars in double time (round 145)
+        if name == OWN_TABLE:                               # every song's own answers (round 172): the words counted on the phrases' songs too (round 173)
+            units = list(units) + rhythm.own_units(songs["phrases"], "phrases", phrases)
+        entry = fit(name, units)
         if entry is None:
             say(f"  {name}: no units, left out")
+            continue
+        base = out["tables"].get(name[:-len(rhythm.DOUBLE_TABLE)]) if name.endswith(rhythm.DOUBLE_TABLE) else None
+        if base is not None and base["model"] == entry["model"]:   # no half-speed song strikes the group: the table as read is the table
+            say(f"  {name}: as the table as read, left out")
             continue
         out["tables"][name] = entry
         say(f"  {name}: {entry['units']} units of {entry['songs']} songs")

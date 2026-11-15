@@ -47,6 +47,7 @@ class Backend(QObject):
     levelsChanged = Signal()
     playlistChanged = Signal()
     channelVolumesChanged = Signal()
+    bandChanged = Signal()
     screenChanged = Signal()
     noticeChanged = Signal()
     updateChanged = Signal()
@@ -77,6 +78,7 @@ class Backend(QObject):
         self._playlist = []
         self._playlist_sig = None
         self._channel_volumes = []
+        self._band = {"muted": [], "soloed": [], "echoOff": False}
         self._file = None
         self._screen = [0, 0]
         self._notice = ""
@@ -87,7 +89,7 @@ class Backend(QObject):
         self._upd_log = []
         self._upd_progress = -1.0           # 0..1, or -1 while it cannot be known
         # What the update screen is doing: "" (an update to a newer release)
-        # or "emulator" (PACKS' GET THE EMULATOR: this version again, with
+        # or "emulator" (LIBRARY's GET THE EMULATOR: this version again, with
         # the import extra), and the release-like record it runs.
         self._purpose = ""
         self._emu_release = None
@@ -103,7 +105,8 @@ class Backend(QObject):
         # waiting for "replace?", and where voice previews are written.
         self._packs = []
         self._import = None
-        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": "", "stage": ""}
+        # "bar": how far the import's stage is through its songs, 0..1, or -1 while it has nothing to count
+        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": "", "stage": "", "step": 0, "steps": 0, "bar": -1.0}
         self._levels = []
         self._pending_add = ""
         self._pending_name = ""
@@ -140,7 +143,8 @@ class Backend(QObject):
         m = p.metadata()
         st = {
             "status": p.status, "shuffle": p.shuffle, "autoGenerate": p.auto_generate,
-            "volume": p.volume, "currentIndex": p.current_index, "generating": p._generating,
+            "volume": p.volume, "width": p.width, "level": p.level_on, "levelTrim": p.level_trim(),
+            "currentIndex": p.current_index, "generating": p._generating,
             "musicDir": str(p.music_dir), "shortDir": _short(p.music_dir),
         }
         if m:
@@ -150,6 +154,8 @@ class Backend(QObject):
                 # The widget's line: key and tempo, sound and form, the voices.
                 "message": "  /  ".join(m["blurb"].split("  /  ")[:3]) if m["blurb"] else "",
                 "voices": m["voices"], "drew": m["drew"], "layout": m["layout"], "autogen": m["autogen"],
+                # The deck's line beside the title (key, tempo, form) and what MORE opens.
+                "facts": m["facts"], "details": m["details"],
             })
         old_title = self._state.get("title", "")
         self._state = st
@@ -168,6 +174,10 @@ class Backend(QObject):
             self._file = f
             self._channel_volumes = p.channel_volumes()
             self.channelVolumesChanged.emit()
+        band = p.band()
+        if band != self._band:
+            self._band = band
+            self.bandChanged.emit()
         self._update_position()
         if p.status == "Playing":
             self._tick.start()
@@ -201,6 +211,17 @@ class Backend(QObject):
 
     def _get_channel_volumes(self): return self._channel_volumes
     channelVolumes = Property("QVariantList", _get_channel_volumes, notify=channelVolumesChanged)
+
+    # THE BAND's M and S: the channels muted, the channels soloed, and whether an echo the file names no voice for is
+    # silenced with them. The engine keeps them, for the loaded song only.
+    def _get_muted(self): return self._band["muted"]
+    mutedChannels = Property("QVariantList", _get_muted, notify=bandChanged)
+
+    def _get_soloed(self): return self._band["soloed"]
+    soloChannels = Property("QVariantList", _get_soloed, notify=bandChanged)
+
+    def _get_band_echo_off(self): return self._band["echoOff"]
+    bandEchoOff = Property(bool, _get_band_echo_off, notify=bandChanged)
 
     def _get_screen(self): return self._screen
     screenAvail = Property("QVariantList", _get_screen, notify=screenChanged)
@@ -405,6 +426,18 @@ class Backend(QObject):
         self.player.set_volume(gain)
         self._refresh()
 
+    @Slot(float)
+    def setWidth(self, width):
+        self.player.set_width(width)
+        self._refresh()
+
+    @Slot(bool)
+    def setLevel(self, on):
+        """SET > LEVEL: every song played at one common level (player/level.py), or each as it was written."""
+        self.player.set_level(on)
+        self._set_notice("plays every song at one level" if on else "plays each song at the level it was written at")
+        self._refresh()
+
     @Slot(int)
     def playIndex(self, idx): self.player.play(idx)
 
@@ -449,6 +482,10 @@ class Backend(QObject):
 
     @Slot(int, int)
     def setChannelVolume(self, ch, vol): self.player.set_channel_volume(ch, vol)
+
+    @Slot("QVariantList", "QVariantList")
+    def setBand(self, muted, soloed):
+        self.player.set_band([int(c) for c in muted], [int(c) for c in soloed])
 
     @Slot(result=bool)
     def applyMix(self):
@@ -598,23 +635,28 @@ class Backend(QObject):
             self._set_notice(str(e))
             return
         self._import = job
-        self._import_state = {"busy": True, "done": 0, "total": 0, "name": job.name, "error": "", "stage": ""}
+        self._import_state = {"busy": True, "done": 0, "total": 0, "name": job.name, "error": "", "stage": "", "step": 0, "steps": 0, "bar": -1.0}
         self._set_notice(f"importing {Path(source).name}…")
         self.packsChanged.emit()
 
     def _import_progress(self, done, total):
-        self._import_state = dict(self._import_state, done=done, total=total)
+        self._import_state = dict(self._import_state, done=done, total=total, bar=done / total if total else -1.0)
         self.packsChanged.emit()
 
     def _import_stage(self, text):
-        self._import_state = dict(self._import_state, stage=text)
+        # Each stage has the bar to itself: nothing to count until the
+        # stage says its first progress, and some stages never do.
+        from ..translate.pack import STAGES
+        step = STAGES.index(text) + 1 if text in STAGES else 0
+        self._import_state = dict(self._import_state, stage=text, step=step, steps=len(STAGES) if step else 0,
+                                  done=0, total=0, bar=-1.0)
         self.packsChanged.emit()
 
     def _import_done(self, name, error):
         job, self._import = self._import, None
-        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": error or "", "stage": ""}
+        self._import_state = {"busy": False, "done": 0, "total": 0, "name": "", "error": error or "", "stage": "", "step": 0, "steps": 0, "bar": -1.0}
         if name:
-            self._set_notice(f"imported {name}: {job.done} songs read")
+            self._set_notice(f"imported {name}: {job.songs} songs read")
         else:
             self._set_notice(f"import stopped: {error}")
         self._load_packs()

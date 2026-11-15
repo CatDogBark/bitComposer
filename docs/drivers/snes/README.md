@@ -98,7 +98,7 @@ exposed each (`../../SPC-IMPORT.md` has the details):
   volume near full is held at 64 (where the master leaves room, the global
   volume takes up the rest). Uniracers' 3rd Race, whose loudest voices need
   125 under a full master, plays at 0.63 of its level; no other song of the
-  1108 is held below 0.85 by it.
+  first 1108 is held below 0.85 by it.
 - **The noise generator's position** is not in an SPC file: noise matches in
   level and colour, not sample for sample.
 
@@ -109,8 +109,8 @@ games' SPC files before the emulator existed: their habits come from the
 SNES chip's registers as each snapshot left them. Played, the drivers set
 the SNES chip as they go, and some habits are not what the snapshots
 showed. Each difference found is listed here, for when a pack is re-measured
-or made by the importer; the packs themselves are unchanged (they are what
-the generator plays, and a change to one is a change to the songs).
+or made by the importer; the packs themselves are unchanged (since 2.0
+they are Classic's sets, and a change to one is a change to the songs).
 
 | Pack | Habit | The pack's notes (snapshot registers) | Measured in play |
 |---|---|---|---|

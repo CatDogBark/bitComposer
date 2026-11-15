@@ -226,7 +226,7 @@ class Intros(unittest.TestCase):
 
 
 class Sound(unittest.TestCase):
-    """One axis for the listener: a palette or a pack."""
+    """One axis for the user: a palette or a pack."""
 
     def test_resolve_sound(self):
         from bitcomposer.composer import resolve_sound, SOUNDS

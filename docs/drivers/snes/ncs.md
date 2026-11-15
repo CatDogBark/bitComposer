@@ -32,7 +32,7 @@ NCS's sound driver, in Cybernator.
   second.
 - **Envelopes**: ADSR at key-on, rewritten as notes sound (4.0 writes a note).
 - **Echo**: off in 9 of 15 songs; else 96 to 112 ms at 0.23 feedback.
-- **Density**: 1378 notes in a song's first minute, a note 0.14 s.
+- **Density**: 1384 notes in a song's first minute, a note 0.14 s.
 
 ## Scores
 

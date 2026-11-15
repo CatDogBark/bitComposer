@@ -32,7 +32,7 @@ Hudson's sound driver, in Super Bomberman 4.
   modules use 100 rows a second.
 - **Envelopes**: ADSR at key-on, rewritten as notes sound (3.0 writes a note).
 - **Echo**: set per song, 16 to 128 ms, off in six.
-- **Density**: 1183 notes in a song's first minute, a note 0.11 s.
+- **Density**: 1186 notes in a song's first minute, a note 0.13 s.
 
 ## Scores
 

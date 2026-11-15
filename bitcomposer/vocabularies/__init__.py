@@ -5,10 +5,10 @@ is put together and none of its samples.
 Three kinds, one namespace (`names()`):
 - shipped: one gzipped JSON file beside this module, the `tables` of a format
   2 pack file (`packs/packfile.py`); `default` is what GENERATE writes from
-  (its `source` says what it was fitted on: Final Fantasy VI's 67 songs, as
+  (its `source` says what it was fitted on: Final Fantasy VI's 68 songs, as
   far as the writing has gone; the window and a song's message call it
   bitComposer's own, the README says where it was learned);
-- `library`: fitted over every song the listener has imported, all games
+- `library`: fitted over every song the user has imported, all games
   together, kept as `vocabularies/library.json` in the data folder and
   counted again after each import;
 - `pack:<name>`: an imported pack's own tables (a format 2 pack), the game's

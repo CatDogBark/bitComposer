@@ -76,7 +76,7 @@ import statistics
 import sys
 from array import array
 from collections import Counter, defaultdict
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
 from .. import drums as drums_mod, roles as R, store, tables, vocab
@@ -91,6 +91,7 @@ PARTS = (R.BASS, R.HARMONY, R.ACCOMP, R.ARP, R.COUNTER, R.MELODY, R.DRUMS)
 PITCHED = PARTS[:-1]
 DENSE = 6                            # hits a bar a drum sound plays, where it plays, to be the hat
 PIECES = ("kick", "snare", "hat", "tom", "cymbal", "other")     # drums.PIECES; a sample named "none" is no drum
+PERCUSSION = frozenset(PIECES[:-1])   # the pieces that are percussion samples: their struck "note" is the chip's rate, not a tuning (round 78)
 LETTERS = dict(zip(PIECES, "KShtco"))
 SHORT = 0.75                         # a melody note sounding less of its length than this is detached
 TONE_MARKS = {"root": "R", "third": "3", "sus": "s", "fifth": "5", "seventh": "7", "other": "+"}
@@ -142,8 +143,12 @@ class Song:
     mode: str = "major"
     loop_bar: int | None = None                   # the bar number the loop returns to
     voices: list = field(default_factory=list)    # every voice the role reader named: (voice, role, of, evidence dict)
+    voice_of: dict = field(default_factory=dict)   # voice -> the voice it follows (Role.of): the melody's layers point at the heard tune (round 90)
     bass_voices: dict = field(default_factory=dict)   # voice -> its notes, where the bass role holds two voices or more
     voice_notes: dict = field(default_factory=dict)   # voice -> (role, its notes), every part's voice (rolls left out)
+    second_voices: dict = field(default_factory=dict)   # voice -> (role, its notes): a channel's second instrument in its own register, split
+                                      # to a voice of its own by the role reader (roles.split_second_instruments, round 89; voice >= roles.SECOND_BASE,
+                                      # its channel (voice - 200) % 10), kept beside the counts and out of them until its word
     copies: dict = field(default_factory=dict)        # a planned song: role -> [(first bar, bars, the bar copied from)], the band
                                                       # coming back with the theme (the writers copy their own earlier bars there)
     periods: dict = field(default_factory=dict)       # a planned song: role -> {bar index: the lag in bars whose bar it plays again}
@@ -154,14 +159,68 @@ class Song:
     note_levels: dict = field(default_factory=dict)   # role -> [(start, level)] for every note the readings heard (section_levels, round 48)
     kit_levels: dict = field(default_factory=dict)    # a drum sample's key -> the median level of the notes struck on it (round 68: the kit's
                                       # level a piece, the part's one median being the hat's where the hat is the most frequent piece)
+    kit_holds: dict = field(default_factory=dict)     # a drum sample's key -> the median length in beats the song keys it for (round 77: a
+                                                      # kit piece on a tonal sample is a drone or a tap, not a one-beat hit)
+    kit_rates: dict = field(default_factory=dict)     # a drum sample's key -> the rate the chip strikes it at most, as a note (round 78: 60 as
+                                                      # recorded, 48 an octave under), for a piece the namer called a drum (PERCUSSION)
+    kit_pitches: dict = field(default_factory=dict)   # a drum sample's key -> the note the song strikes it at most (round 75: a kit piece on a
+                                      # tonal sample plays at the game's pitch, not the kit's one note)
+    voice_pans: dict = field(default_factory=dict)    # voice -> the median pan of its notes, the right side's share 0 (left) to 1 (right)
+                                      # (round 84: the balance token carries each part's voices' pans, so a song's stereo picture is its own)
+    kit_pans: dict = field(default_factory=dict)      # a drum sample's key -> the median pan of the hits struck on it (round 84: a kit slot's pan)
+    kit_hit_rates: dict = field(default_factory=dict)   # a percussion sample's key -> [(the hit's onset, the rate the chip strikes it at, as a
+                                      # note)], every hit (round 176: a piece struck at several rates, by its place in the bar)
+    voice_pan_moves: dict = field(default_factory=dict)   # voice -> (A, bars at A, B, bars at B or None) where the voice sits in two places,
+                                      # staying a bar or more in each (round 85, pan_moves); absent for a voice in one place
     loudness: float | None = None                    # the song's rendered loudness, RMS dBFS over its first minute through the player (the
                                       # readings' feature render/loudness_dbfs, round 59); None where it was not measured
     echo: tuple | None = None                        # the song's echo as the chip had it (round 70; the readings' features of source "echo",
                                       # reading.echo_of_notes): (volume of full, delay in ms, feedback); None where never read
     echo_sends: dict = field(default_factory=dict)   # voice -> the share of its notes that send to the echo
+    echo_sample_sends: dict = field(default_factory=dict)   # sample key -> the share of its notes that send (round 82: the chip toggles echo note by note)
+    beat: int = 1                                    # 2 for a song counted in double time (round 131, double_time): its bars are half the reading's
     vibrato: dict = field(default_factory=dict)      # voice -> its vibrato on its held notes (round 72; the readings' features of source
                                       # "vibrato", reading.vibrato_of_notes): {"held": [by length class], "vib": [by class], "depth",
                                       # "rate", "onset" (the last three where it carries any)}; empty where never read
+
+
+def double_time(s: Song) -> Song:
+    """The song as it reads at twice its tempo (round 131): every time in beats doubled, so a note falls where it fell
+    and lasts as long in seconds; a bar of the song's meter two bars (a shorter bar, a pickup or the reader's odd bar,
+    stays one, twice as many beats long); the bars numbered on, with the form's parts, its sections and the loop's bar
+    moved with them; the grid's division halved, so a grid step is the step it was. The song is not changed: a new Song,
+    for what is counted by the bar or by the tempo of a song the reading has at half its speed (arrangement.half_time)."""
+    def doubled(notes: list) -> list:
+        return [(2 * n[0], 2 * n[1]) + tuple(n[2:]) for n in notes]
+
+    numbers = s.numbers or list(range(len(s.bars)))
+    pieces = {}                                             # a bar's number -> the bars it becomes
+    for (a, b), k in zip(s.bars, numbers):
+        pieces[k] = [(2 * a, a + b), (a + b, 2 * b)] if b - a >= s.meter - NEAR else [(2 * a, 2 * b)]
+    top = max(numbers, default=-1)
+    starts, at = {}, 0                                      # a bar's number -> its first bar's number in double time: a number the reading
+    for k in range(top + 2):                                # kept no bar for (under a beat long) keeps its one place
+        starts[k] = at
+        at += len(pieces.get(k, [None]))
+
+    def start_of(k: int) -> int:
+        return starts[k] if k in starts else starts[top + 1] + 2 * (k - top - 1)
+
+    def moved(parts: list) -> list:
+        return [(start_of(bar), start_of(bar + n) - start_of(bar), of, label) for bar, n, of, label in parts]
+
+    return replace(
+        s, beat=2 * s.beat, bpm=2 * s.bpm, division=s.division // 2 if s.division % 2 == 0 else s.division,
+        bars=[x for k in numbers for x in pieces[k]], numbers=[start_of(k) + i for k in numbers for i in range(len(pieces[k]))],
+        parts=moved(s.parts), sections=moved(s.sections), loop_bar=None if s.loop_bar is None else start_of(s.loop_bar),
+        chords=[Span(2 * c.start, 2 * c.end, c.root, c.shape, c.fit) for c in s.chords],
+        notes={role: doubled(ns) for role, ns in s.notes.items()}, rolls={role: doubled(ns) for role, ns in s.rolls.items()},
+        bass_voices={v: doubled(ns) for v, ns in s.bass_voices.items()},
+        voice_notes={v: (role, doubled(ns)) for v, (role, ns) in s.voice_notes.items()},
+        second_voices={v: (role, doubled(ns)) for v, (role, ns) in s.second_voices.items()},
+        note_levels={role: [(2 * t, level) for t, level in rows] for role, rows in s.note_levels.items()},
+        kit_holds={key: 2 * beats for key, beats in s.kit_holds.items()},
+        voice_pan_moves={v: (a, 2 * bars_a, b, None if bars_b is None else 2 * bars_b) for v, (a, bars_a, b, bars_b) in s.voice_pan_moves.items()})
 
 
 LOUDNESS_REF = 0.25                  # -12 dBFS: the loudness a level of 1.0 means, a sample's loop body at RMS (the pack's median; round 56)
@@ -281,22 +340,37 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
             keys[idx] = key
             song.pieces[key] = piece
         basses = {}
-        level_rows, kit_rows = {}, {}
+        level_rows, kit_rows, kit_pitch_rows, kit_rate_rows, kit_hold_rows, kit_pan_rows = {}, {}, {}, {}, {}, {}
         for voice, role, of, evidence, blob in db.execute("SELECT voice, role, [of], evidence, notes FROM voices WHERE song = ?", (sid,)):
+            if voice >= R.SECOND_BASE:                    # a channel's second instrument, a voice of its own (round 89): kept beside the counts,
+                rows = [r for r in store.unpack(blob) if r[0] < end and r[3] > 0 and not math.isnan(r[2])]   # not in them, until its word
+                song.second_voices[voice] = (role, [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i, *_ in rows])
+                continue
             try:
                 song.voices.append((voice, role, of, json.loads(evidence) if evidence else {}))
             except ValueError:
                 song.voices.append((voice, role, of, {}))
+            if of is not None:
+                song.voice_of[voice] = of
             if role in PARTS:
                 into = song.rolls if evidence and '"roll"' in evidence else song.notes
                 rows = [r for r in store.unpack(blob) if r[0] < end and r[3] > 0 and (role == R.DRUMS or not math.isnan(r[2]))]
                 if SAMPLE_LOUDNESS:                         # a level as loudness: the voice volume times its sample's own (round 56; the drums' too, round 63)
                     secs = 60.0 / (bpm or 120.0)                # the note's length in seconds: its strike, then its body (round 65)
-                    rows = [(s, length, m, level * loudness_factor(keys.get(int(i), "noise"), length * secs), pan, i) for s, length, m, level, pan, i in rows]
-                mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i in rows]
+                    rows = [(s, length, m, level * loudness_factor(keys.get(int(i), "noise"), length * secs), pan, i, *rest) for s, length, m, level, pan, i, *rest in rows]
+                mine = [(s, length, m, keys.get(int(i), "noise")) for s, length, m, level, _, i, *_ in rows]
+                if not mine:                                # a voice with no note at a level once through is no voice (round 89: Quiet
+                    continue                                # Beach's silent pad had counted as a kit channel, then as a harmony voice)
                 into.setdefault(role, []).extend(mine)
                 if into is song.notes:
                     song.voice_notes[voice] = (role, mine)
+                    pans_ = [r[4] for r in rows if not math.isnan(r[4])]   # where the voice sits in the stereo field (round 84)
+                    if pans_:
+                        song.voice_pans[voice] = statistics.median(pans_)
+                        if role != R.DRUMS:
+                            moves = pan_moves(rows, meter)      # and whether it sits in two places in turn (round 85)
+                            if moves is not None:
+                                song.voice_pan_moves[voice] = moves
                     finite = [r[3] for r in rows if not math.isnan(r[3])]   # a kit's unread levels (NaN) are notes, not levels: a
                     if finite:                                                   # median over them was NaN, and three FFVI balance tokens
                         song.voice_levels[voice] = statistics.median(finite)   # carried "nan" for the drums, which a written song
@@ -306,21 +380,78 @@ def load(db, game: str | None = None) -> tuple[list[Song], dict]:
                         for r in rows:                      # frequent piece's, the hat's in a kick-snare-hat kit, and the kick plays near full
                             if not math.isnan(r[3]):
                                 kit_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(r[3])
+                            key = keys.get(int(r[5]), "noise")
+                            if song.pieces.get(key) in PERCUSSION:   # a piece the namer called a drum: the rate the chip strikes it at
+                                if len(r) > 6 and not math.isnan(r[6]):   # (round 78: 60 as recorded, 48 an octave under)
+                                    kit_rate_rows.setdefault(key, []).append(int(round(r[6])))
+                                    song.kit_hit_rates.setdefault(key, []).append((r[0], int(round(r[6]))))   # hit by hit (round 176)
+                            elif not math.isnan(r[2]):      # a tonal piece: the note it is struck at (round 75)
+                                kit_pitch_rows.setdefault(key, []).append(int(round(r[2])))
+                            if not math.isnan(r[1]) and r[1] > 0:   # how long the piece is keyed for (round 77)
+                                kit_hold_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(r[1])
+                            if not math.isnan(r[4]):                # where the piece sits in the stereo field (round 84)
+                                kit_pan_rows.setdefault(keys.get(int(r[5]), "noise"), []).append(r[4])
                 if role == R.BASS and into is song.notes:
                     basses[voice] = mine
         if len(basses) >= 2:
             song.bass_voices = basses
         song.levels = part_levels(song, {role: statistics.median(ls) for role, ls in level_rows.items()})
         song.kit_levels = {key: statistics.median(ls) for key, ls in kit_rows.items()}
+        song.kit_pitches = {key: max(Counter(ps).items(), key=lambda kv: (kv[1], -kv[0]))[0] for key, ps in kit_pitch_rows.items()}   # the most struck note, the lower on a tie
+        song.kit_rates = {key: max(Counter(ps).items(), key=lambda kv: (kv[1], -kv[0]))[0] for key, ps in kit_rate_rows.items()}
+        song.kit_holds = {key: statistics.median(ls) for key, ls in kit_hold_rows.items()}
+        song.kit_pans = {key: statistics.median(ps) for key, ps in kit_pan_rows.items()}   # a kit slot's pan (round 84)
         row = db.execute("SELECT value FROM features WHERE song = ? AND source = 'render' AND name = 'loudness_dbfs'", (sid,)).fetchone()
         song.loudness = float(row[0]) if row else None   # the song's rendered loudness (round 59)
         echo = dict(db.execute("SELECT name, value FROM features WHERE song = ? AND source = 'echo'", (sid,)).fetchall())   # the chip's echo
         if all(k in echo for k in ("volume", "delay_ms", "feedback")):                                                      # (round 70)
             song.echo = (float(echo["volume"]), float(echo["delay_ms"]), float(echo["feedback"]))
             song.echo_sends = {int(k[6:]): float(v) for k, v in echo.items() if k.startswith("voice_")}
+            song.echo_sample_sends = {k[7:]: float(v) for k, v in echo.items() if k.startswith("sample_")}   # by the sample's key
         song.vibrato = vibrato_of_features(dict(db.execute("SELECT name, value FROM features WHERE song = ? AND source = 'vibrato'", (sid,)).fetchall()))
         songs.append(song)
     return songs, dict(out)
+
+
+PAN_BIN = 0.05                        # a pan, the right side's share, kept to twentieths (rounds 84 and 85)
+PAN_APART = 0.1                       # two places are two when this far apart or more (round 85): a pan on a bin's edge wobbles between
+                                      # neighbouring twentieths note by note, and a stay on each side of the edge is no move
+
+
+def pan_moves(rows, meter: int) -> tuple | None:
+    """A voice in two places (round 85): its notes' pans kept to PAN_BIN make runs; a run of a bar or more is a stay;
+    where the stays visit exactly two places PAN_APART or more apart, (A, bars at A, B, bars at B), A the first place, each count the median
+    stay there in bars, or (A, bars at A, B, None) where the voice moved once and stayed. None for a voice in one place
+    (its stays, if any, all there) or in three or more. FFVI holds 428 of 498 voices within 0.05 all song; 57 of its 406
+    pitched voices sit in two places a bar or more each, in 31 of 68 songs, stays of 8 bars at the median (quartiles 4
+    to 18), 25 of them moving once and 32 back and forth; per-note jitter under a bar and the ten sweeping voices are
+    left to the median. `rows` are the store's (start, length, midi, level, pan, ...)."""
+    runs = []
+    for r in rows:
+        if math.isnan(r[4]) or r[3] <= 0:
+            continue
+        p = round(round(r[4] / PAN_BIN) * PAN_BIN, 2)
+        if runs and abs(runs[-1][0] - p) < 1e-9:
+            runs[-1][2] = r[0]
+            runs[-1][3] = r[0] + (r[1] if not math.isnan(r[1]) else 0.0)
+        else:
+            runs.append([p, r[0], r[0], r[0] + (r[1] if not math.isnan(r[1]) else 0.0)])
+    stays = [(p, a, end) for p, a, _, end in runs if end - a >= meter - 0.1]
+    places = []
+    for p, a, end in stays:
+        if places and abs(places[-1][0] - p) < 1e-9:
+            places[-1][2] = end
+        else:
+            places.append([p, a, end])
+    if len(places) < 2 or len({p for p, _, _ in places}) != 2 or abs(places[0][0] - places[1][0]) < PAN_APART - 1e-9:
+        return None
+    for k in range(len(places) - 1):                        # a stay lasts until the voice moves
+        places[k][2] = places[k + 1][1]
+    a_, b_ = places[0][0], places[1][0]
+    bars = lambda p: max(1, round(statistics.median((end - a) / meter for q, a, end in places if abs(q - p) < 1e-9)))   # noqa: E731
+    if len(places) == 2:
+        return (a_, bars(a_), b_, None)
+    return (a_, bars(a_), b_, bars(b_))
 
 
 def vibrato_of_features(rows: dict) -> dict:
@@ -355,7 +486,7 @@ def part_levels(song: Song, pooled: dict) -> dict:
         voices = cells_mod.part_voices(song, role)
         if len(voices) < 2:
             continue
-        level = song.voice_levels.get(cells_mod.line_voice(voices, role))
+        level = song.voice_levels.get(cells_mod.line_voice(voices, role, song))
         if level is not None and math.isfinite(level):
             out[role] = level
     return out
@@ -394,6 +525,20 @@ def draw(positions, beats: int, marks: dict | None = None) -> str:
 def band(bpm: float) -> str:
     """The tempo band a tempo is in (BANDS)."""
     return next(name for top, name in BANDS if bpm < top)
+
+
+def within_band(bpm: float, name: str) -> float:
+    """The tempo inside the class `name`, moved to the class's edge where it sits outside (round 75): the tempos word
+    rounds a song's tempo to five beats a minute, so a slow song at 83 BPM is counted as 85, which band() calls medium,
+    and a written song drawn under the token's class had then played in the next class; 85 under slow plays at 84,
+    130 under medium at 129."""
+    tops = [top for top, _ in BANDS]
+    k = next((i for i, (_, n) in enumerate(BANDS) if n == name), None)
+    if k is None:
+        return bpm
+    low = tops[k - 1] if k else 0.0
+    high = tops[k]
+    return float(min(max(bpm, low), high - 1.0 if high < 1e8 else bpm))
 
 
 def pattern(positions) -> str:
@@ -546,8 +691,173 @@ def bass_units(songs) -> list:
 HABITS = ((1 / 3, "detached"), (2 / 3, "mixed"), (2, "held"))   # a song's share of held notes -> its habit
 REPEATS = ((1 / 3, "varied"), (2 / 3, "mixed"), (2, "repeating"))   # its share of bars repeating the one before
 DENSITIES = ((2, "sparse"), (6, "medium"), (1e9, "dense"))        # its onsets a bar
+SLOT_CLASSES = ((0.5, "x"), (1, "a"), (2, "s"), (6, "m"), (1e9, "d"))   # a kit slot's strike class (round 81): its sample's hits a bar of the
+                                                                    # song's meter, rests counted: rare under half a hit a bar (a crash once in
+                                                                    # ten bars), an accent under one, sparse to two, medium to six (DENSITIES'
+                                                                    # edges), dense over. FFVI's 124 kit pieces: 14 / 21 / 21 / 38 / 30
+SLOT_NAMES = {"x": "rare", "a": "an accent", "s": "sparse", "m": "medium", "d": "dense"}
+SLOT_SHARE = 0.2                     # a sample struck this share of a piece letter's hits or more is in the running for the letter's
+                                     # slot (round 80); the loudest of those takes it
+SLOT_TIE_DB = 1.0                    # two samples within this of each other are as loud (the ear's step); the most struck of them
+                                     # takes the slot
+
+
+def kit_slot_samples(counts: Counter, levels: dict) -> dict:
+    """The sample each piece letter's slot takes (round 80): of the samples the song strikes the letter on, the loudest
+    (its median level, kit_levels) among those with SLOT_SHARE of the letter's hits or more, the most struck among samples
+    within SLOT_TIE_DB of the loudest; the most struck where no level is known. Round 63 had taken the most struck: FFVI
+    strikes 20 of its kit letters on two samples or more, and in 9 the most struck is not the loudest (Battle Theme's snare
+    slot took its sixteenth-note rattle, 269 hits at 0.12, over the backbeat snare, 82 hits at 0.31; the other 11 are the
+    same sample's hits split with a second at the same level, or a tie to the third decimal, and keep the most struck).
+    `counts`: {(letter, sample key): hits}."""
+    by_letter = {}
+    for (letter, key), n in counts.items():
+        by_letter.setdefault(letter, {})[key] = n
+    out = {}
+    for letter, keys in by_letter.items():
+        total = sum(keys.values())
+        running = [k for k, n in keys.items() if n >= SLOT_SHARE * total] or list(keys)
+        known = [k for k in running if levels.get(k) is not None and math.isfinite(levels[k])]
+        if known:
+            top = max(levels[k] for k in known)
+            tied = [k for k in known if top <= 0 or levels[k] >= top * 10 ** (-SLOT_TIE_DB / 20)]
+            out[letter] = max(tied, key=lambda k: (keys[k], k))
+        else:
+            out[letter] = max(running, key=lambda k: (keys[k], k))
+    return out
+
+
+def kit_slots(song: "Song") -> dict:
+    """The sample each kit letter's slot takes in the song (kit_slot_samples on its drum hits and kit levels): {letter:
+    sample key}; {} without drums. The written kit has one voice a letter, on this sample."""
+    counts = Counter()
+    for n in song.notes.get(R.DRUMS, []):
+        key = n[3] if isinstance(n[3], str) else None
+        piece = (song.pieces or {}).get(key)
+        if key and piece in LETTERS:
+            counts[(LETTERS[piece], key)] += 1
+    return kit_slot_samples(counts, getattr(song, "kit_levels", None) or {})
+
+
+SECOND_HITS = 8                      # a kit letter's second sample is struck this many times or more in the song (round 99)
+
+
+def kit_second_samples(song: "Song") -> dict:
+    """The second sample of each kit letter the song strikes on two samples (round 99): the most struck of the letter's
+    samples other than its slot's (kit_slots), with SECOND_HITS hits or more; {letter: sample key}, {} where no letter has
+    one. FFVI: 19 letters in 15 of its 46 kits, the hat in 12 of the 16 kits that have one (a closed hat beside a longer
+    open one, the open one off the beat in most), the snare in 4 of 30 (the Battle Theme's sixteenth-note rattle beside
+    its backbeat snare); the written kit had played one sample a letter (round 80's pick)."""
+    slots = kit_slots(song)
+    counts = Counter()
+    for n in song.notes.get(R.DRUMS, []):
+        key = n[3] if isinstance(n[3], str) else None
+        piece = (song.pieces or {}).get(key)
+        if key and piece in LETTERS:
+            counts[(LETTERS[piece], key)] += 1
+    out = {}
+    for letter, key in slots.items():
+        others = [(k, c) for (l, k), c in counts.items() if l == letter and k != key and c >= SECOND_HITS]
+        if others:
+            out[letter] = max(others, key=lambda kc: (kc[1], kc[0]))[0]
+    return out
+
+
+def kit_classes(song: "Song") -> dict:
+    """Each kit slot's strike class (round 81): the slot's sample's hits a bar of the song's meter, every bar counted as
+    DENSITIES counts a part's density, as SLOT_CLASSES' letter: {letter: class}. Wild West strikes its pitched blip 57
+    times in 26 bars (m) and its hat 193 (d); Strago its click 17 times in 20 bars, every one on beat two (a); Returners
+    its crash 3 times in 29 bars (x)."""
+    slots = kit_slots(song)
+    if not slots:
+        return {}
+    bars = sum(1 for _ in numbered_bars_of(song, R.DRUMS)) or len(song.bars) or 1
+    hits = Counter(n[3] for n in song.notes.get(R.DRUMS, []) if isinstance(n[3], str))
+    seconds = kit_second_samples(song)                      # the letter's second sample's hits count too (round 99): the writer's figure
+    return {letter: habit_of((hits[key] + (hits[seconds[letter]] if letter in seconds else 0)) / bars, SLOT_CLASSES) for letter, key in slots.items()}   # gives both their hits
+
+
+def classes_value(classes: dict, letters) -> str:
+    """A kit's strike classes as a table value ("Km Sd ha", the letters in LETTERS' order; "-" with none): a group's
+    letters' for its limb table (the single-letter limbs), the kit's in the drum units."""
+    return " ".join(f"{x}{classes[x]}" for x in LETTERS.values() if x in letters and x in classes) or "-"
+
+
+LIMB = ("K", "S", "t")               # the kick-snare-tom limb's letters; its fields (limb1, limb2, limb3) hold their classes in the order
+                                     # of the slots' density, the densest first (the limb's backbone: Shadow's kick at four a bar over its
+                                     # five snare hits; Wild West's tom line over its kick), ties in this order, so a draw lets the sparser
+                                     # letters' classes go first and keeps the backbone's
+
+
+def limb_order(classes: dict, letters) -> list:
+    """The limb's letters the kit has, the densest class first (SLOT_CLASSES' rank), ties by LIMB's order."""
+    rank = {name: i for i, (_, name) in enumerate(SLOT_CLASSES)}
+    return sorted((x for x in LIMB if x in letters), key=lambda x: (-rank.get(classes.get(x, ""), -1), LIMB.index(x)))
+
+
+def class_values(classes: dict, letters) -> dict:
+    """A group's strike classes as a figure draw's values (round 81): the kick-snare-tom limb a field a letter in limb_order
+    (limb1, limb2, limb3: "Km", "Sa", "-"; "-" for a letter the kit lacks, a condition too: a kit with no toms draws tomless
+    bars), a single-letter limb its one field (classes)."""
+    letters = set(letters)
+    if letters & set(LIMB):
+        order = limb_order(classes, letters)
+        return {f"limb{i + 1}": (f"{order[i]}{classes[order[i]]}" if i < len(order) and order[i] in classes else "-") for i in range(3)}
+    return {"classes": classes_value(classes, letters)}
+
+
+def habit_class(classes: dict, letters) -> str:
+    """The class a group's habit is drawn under (round 81): the kick-snare-tom limb's backbone letter's (limb_order), a
+    single-letter limb's own; "-" with none."""
+    letters = set(letters)
+    if letters & set(LIMB):
+        order = [x for x in limb_order(classes, letters) if x in classes]
+        return f"{order[0]}{classes[order[0]]}" if order else "-"
+    return classes_value(classes, letters)
+
+
+def classes_of(value: str) -> dict:
+    """classes_value back to {letter: class}."""
+    return {t[0]: t[1:] for t in value.split() if t != "-"}
 TONES = ((0.8, "roots", "Rr"), (0.8, "root-fifth", "Rr5"), (0, "walking", ""))   # the share of its bass notes on these marks
 OCTAVES = 0.2                        # the share of a bass's notes an octave up (r) for it to play octaves
+
+
+DENSITY_STEP = 1.5                   # a section's level or density over the part's song median counts as a step up at this, down at
+                                     # its inverse (round 101: section_densities)
+DENSITY_TYPICAL = {"sparse": 1.0, "medium": 4.0, "dense": 8.0}   # a pitched part's notes a bar at its density tier's median in FFVI (the bass,
+                                                                  # the counter and the melody; the melody's dense tier 10): what a tier shift is measured from
+
+
+def density_bounds(habit, shift: int, typical=None):
+    """The onsets a bar a section's figures keep to under a density tier shift (round 101, section_densities): a tier denser,
+    DENSITY_STEP times the part's typical onsets or more; a tier sparser, the typical over DENSITY_STEP or fewer; None
+    without a shift or a tier. `typical`: the part's own onsets a bar so far in its unshifted bars (the writer's running
+    median, the word's own measure), else its tier's FFVI median (DENSITY_TYPICAL: a dense part's 8, so 12 or more; a
+    medium one's 4, so 6; a sparse one's 1, so 2). The shifted habit alone had capped at the dense tier, so a dense
+    accompaniment drawn denser had stayed as it was; the tier's typical alone had left a part already over it unmoved."""
+    if not shift or not isinstance(habit, str) or not habit.split():
+        return None
+    if typical is None or not typical > 0:
+        typical = DENSITY_TYPICAL.get(habit.split()[0])
+    if typical is None:
+        return None
+    if shift > 0:
+        return (math.ceil(DENSITY_STEP * typical), 64)
+    return (0, max(1, math.floor(typical / DENSITY_STEP)))
+
+
+def shift_habit(habit, delta: int):
+    """A part's habit with its density tier moved `delta` tiers along DENSITIES (sparse, medium, dense), the rest of the habit
+    kept ("medium mixed" a tier up is "dense mixed"); the ends stay (round 101: a section's density against the part's)."""
+    if not habit or not delta or not isinstance(habit, str):
+        return habit
+    words = habit.split()
+    tiers = [name for _, name in DENSITIES]
+    if not words or words[0] not in tiers:
+        return habit
+    i = max(0, min(len(tiers) - 1, tiers.index(words[0]) + delta))
+    return " ".join([tiers[i]] + words[1:])
 
 
 def habit_of(share: float, scale=HABITS) -> str:
@@ -645,15 +955,29 @@ def tune_grain_units(songs) -> list:
     return out
 
 
-def drum_figure(struck, song: Song) -> str:
+def drum_figure(struck, song: Song, slots: dict | None = None, seconds: dict | None = None) -> str:
     """A drum bar's figure as a table's outcome: each hit's position and
     its piece's letter (LETTERS; a sample the reading named no drum, o),
     "position:letter" tokens, two pieces struck together two tokens; a
-    bar rested through "-"."""
+    bar rested through "-". Since round 81 a letter's hits are its slot's
+    sample's (`slots`, kit_slots: the sample the song's kit leans on for
+    the letter, the one the written kit plays) and since round 99 its
+    second sample's too (`seconds`, kit_second_samples: the written kit
+    plays both, the second's hits by the kit_seconds word): a hit on any
+    other sample of the letter is left out, as the written kit has no voice
+    for it (Battle Theme's rattle in sixteenths beside its backbeat snare
+    had made the written snare a sixteenth-note part when the kit played
+    one sample a letter); a letter without a slot (a sample the namer
+    called no drum, o) keeps every hit."""
+    slots = kit_slots(song) if slots is None else slots
+    seconds = kit_second_samples(song) if seconds is None else seconds
     tokens = set()
     for p, ns in struck:
         for n in ns:
-            tokens.add((p, LETTERS.get(song.pieces.get(n[3]), "o")))
+            letter = LETTERS.get(song.pieces.get(n[3]), "o")
+            if letter in slots and n[3] != slots[letter] and n[3] != seconds.get(letter):
+                continue
+            tokens.add((p, letter))
     return " ".join(f"{p}:{letter}" for p, letter in sorted(tokens)) or "-"
 
 
@@ -668,17 +992,21 @@ def drum_units(songs) -> list:
     figure by piece (drum_figure()); its values the part, the meter, the
     tempo band, the bar's place in its part of the form (fills land on the
     last), the figure before it (START where none), the kit (which pieces
-    the song strikes at all) and the song's habit (_rhythm_habit: density
-    and repetition)."""
+    the song strikes at all), the kit's strike classes (round 81,
+    classes_value: each slot's hits a bar as a class, "Km Sd ha") and the
+    song's habit (_rhythm_habit: density and repetition). The figures count
+    each letter's slot's sample and its second (drum_figure)."""
     out = []
     for s in songs:
         if R.DRUMS not in s.notes:
             continue
         tempo, previous, last, mine = band(s.bpm), START, None, []
+        slots, seconds = kit_slots(s), kit_second_samples(s)
+        classes = classes_value(kit_classes(s), LETTERS.values())
         for k, a, struck in numbered_bars_of(s, R.DRUMS):
             if last is not None and k != last + 1:
                 previous = START
-            drawn = drum_figure(struck, s)
+            drawn = drum_figure(struck, s, slots, seconds)
             mine.append(tables.Unit(s.sid, s.game, drawn, {
                 "part": R.DRUMS, "meter": s.meter, "tempo": tempo, "place": place_in_part(s, k), "previous": previous, "feel": cells_mod.song_feel(s)}))
             previous, last = drawn, k
@@ -687,6 +1015,7 @@ def drum_units(songs) -> list:
             _give_habit(mine, _rhythm_habit(mine))
             for u in mine:
                 u.values["kit"] = kit
+                u.values["classes"] = classes
             out += mine
     return out
 
@@ -828,7 +1157,8 @@ def drum_group(figure: str, letters) -> str:
 
 def drum_group_units(songs, letters) -> list:
     """drum_units for one group of pieces: each bar's figure on those pieces alone (its part "drums-" + the
-    letters), with the group's own habit; a song without the group has no units."""
+    letters), with the group's own habit and the group's letters' strike classes (round 81, "Km Sd" for the
+    kick-snare-tom limb); a song without the group has no units."""
     name = "drums-" + "".join(letters)
     out = []
     by_song = {}
@@ -841,6 +1171,10 @@ def drum_group_units(songs, letters) -> list:
             figure = drum_group(u.outcome, letters)
             values = dict(u.values)
             values["part"] = name
+            kit_classes = classes_of(u.values.get("classes", "-"))
+            values["classes"] = classes_value(kit_classes, letters)
+            values.update(class_values(kit_classes, letters))   # the limb's graded fields (limb1, limb2, limb3) for the kick-snare-tom limb
+            values["habit_class"] = habit_class(kit_classes, letters)
             values["previous"] = previous if u.values["previous"] != START else START
             mine.append(tables.Unit(u.song, u.game, figure, values))
             previous = figure
@@ -877,7 +1211,7 @@ def kit_piece_units(songs) -> list:
 def drum_group_habit_units(songs) -> list:
     """Each drum group of each song as a unit: its outcome the group's own
     habit (the density and repetition of its bars, rests counted), its
-    values the group (part) and the kit's habit. A kit written free draws
+    values the group (part), its slots' strike classes (round 81) and the kit's habit. A kit written free draws
     each group's habit given the kit's: the cymbals and the other sounds
     are sparse under a dense kit (the readings, 2026-10-23), and a group's
     rest rate follows its own habit (sparse groups rest in six bars of ten)."""
@@ -889,7 +1223,8 @@ def drum_group_habit_units(songs) -> list:
             if u.song in seen:
                 continue
             seen.add(u.song)
-            out.append(tables.Unit(u.song, u.game, u.values["habit"], {"part": u.values["part"], "habit": kit.get(u.song, "medium mixed")}))
+            out.append(tables.Unit(u.song, u.game, u.values["habit"], {"part": u.values["part"], "classes": u.values.get("habit_class", "-"),
+                                                                        "habit": kit.get(u.song, "medium mixed")}))   # the group's leading class (round 81)
     return out
 
 
