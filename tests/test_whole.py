@@ -6693,7 +6693,7 @@ class ChordPartVoicesTests(unittest.TestCase):
         balance = vocabularies.load("default")["balance"]
         outcomes = {o for votes in getattr(balance, "table", balance).votes.values() for o in votes}
         said = [o for o in outcomes if " turns=" in o]
-        self.assertEqual(len(said), 12)                                                            # twelve of the 68 songs have a block line
+        self.assertEqual(len(said), 13)                                                            # thirteen of the 68 songs have a block line (Mt. Koltz since round 175)
         for o in said:
             tail = [w for w in o.split() if w.startswith(self.LATER[1:])]                          # the last word, but for the later rounds'
             self.assertEqual(o.split()[-len(tail):], tail, o[-60:])
@@ -6764,7 +6764,7 @@ class ChordPartVoicesTests(unittest.TestCase):
         balance = vocabularies.load("default")["balance"]
         outcomes = {o for votes in getattr(balance, "table", balance).votes.values() for o in votes}
         said = [next(w for w in o.split() if w.startswith("turns=")) for o in outcomes if " turns=" in o]
-        self.assertEqual(len(said), 12)
+        self.assertEqual(len(said), 13)
         for w in said:
             moves = whole.line_turn_moves_of(w[6:])
             self.assertTrue(moves and all(move for bars in moves.values() for bar in bars for _, move in bar), w[:60])   # every turn says its move
@@ -6856,7 +6856,7 @@ class ChordPartVoicesTests(unittest.TestCase):
         balance = vocabularies.load("default")["balance"]
         outcomes = {o for votes in getattr(balance, "table", balance).votes.values() for o in votes}
         said = [o for o in outcomes if " pulse=" in o]
-        self.assertEqual(len(said), 35)                                                            # 35 of the 68 songs have a moving line with a pulse
+        self.assertEqual(len(said), 34)                                                            # 34 of the 68 songs have a moving line with a pulse (not Mt. Koltz, whose was its toms: round 175)
         for o in said:
             tail = [w for w in o.split() if w.startswith(self.LATER[2:])]                          # the last word, but for the later rounds':
             self.assertEqual(o.split()[-len(tail):], tail, o[-60:])                                # no token's place moved

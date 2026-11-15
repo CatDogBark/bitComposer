@@ -166,6 +166,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 172 | 2026-11-14 | a song's own answers to the once-a-song words, before the pool: the mode, the clashes, the off-scale share, the chord tones | - |
 | 173 | 2026-11-14 | thirteen more words by the song: the tune's manner and note lengths, the voices, the voicing, the kit's limbs | - |
 | 174 | 2026-11-14 | the voices' note lengths by the gap and the vibrato by the song; a word a song answers many times gives its middle answer | - |
+| 175 | 2026-11-14 | the role reader: a tom on the beats over a bass is a drum (Mt. Koltz reads with its kit); the game read again | - |
 
 ## Goal
 
@@ -12416,5 +12417,73 @@ The counter-line's masks (which of the tune's notes it strikes with)
 are still the pooled word; they belong with the counter-line's
 relation to the tune by part of the form. The token's thirty-one
 fields of text can move into the same table.
+
+**Heard.** Not yet.
+
+### Round 175: a tom on the beats over a bass is a drum (2026-11-14, the second of the rest of round 172's plan)
+
+**Why.** Songs written on Mt. Koltz's token failed the tuning
+measure on a voice of the accompaniment and were kept out of two
+listening sets (the roadmap's item of that day); asked for with the
+plan: "that issue needs to be addressed as well".
+
+**Found.** That voice is the game's toms. Mt. Koltz strikes the
+kit's tom sample (the tom of four other songs' kits) 279 times at
+three rates, on nine beats in ten, over a string bass. The role
+reader makes a voice on drum-named samples a drum voice, but not one
+on kick or tom samples that sounds on half the beats or more: "a
+bass on a low sample passes for a tom" (phase 3's record). So the
+toms were read an accompaniment, the song had no kit, a song written
+on it played a chord line on a tom, and the tuning measure, which
+cannot hear one pitch in a drum, read that line two semitones off
+wherever enough of its notes fell in the octave it can judge (three
+of the token's eight songs in 400 seeds). The clause catches 14
+voices in 7 of FFVI's songs; ten are drums all the same by how they
+play; the four it made pitched parts are Mt. Koltz's toms, two of
+Fanatics' and one of Troops March on's. Over the 1,836 songs of the
+40 games on hand it catches 420 voices and makes 151 pitched parts,
+98 of them basses.
+
+**Built.** The clause keeps its reason and loses its reach: a kick
+or tom sample on the beats is a bass passing for a drum only where
+it can be the song's bass. Where an instrument's voice (the namer's
+"none" on BY_SOUND of its notes) has its median note under the
+voice's lowest note, the voice is the drum the namer called it
+(`roles.under_of`, `roles.drum_clause`'s `under`). A reading fault
+put right; no constant added. FFVI was read again and the lead pass
+run on it.
+
+**Measured.** Suite 639 tests, 1 skipped. The reader over the 1,836 songs,
+before and after: 8 songs change a voice's part, none a bass, none
+its beat or its bars (Mt. Koltz; Chrono Trigger's Primitive
+Mountain; EarthBound's Title Screen, Whoa!, What a Great Picture!
+and Teleportation End; Kirby Super Star's Cocoa Cave; Romancing SaGa
+3's Byunei's Nest). FFVI read again: Mt. Koltz's rows alone differ
+from the readings before; the lead pass ends as it did (57 labels
+kept, 9 relabelled, 2 with no melody). Mt. Koltz now has a kit (a
+tom, 6.5 hits a bar), an accompaniment of two voices, and reads in G
+minor (A minor before, the toms' three readings being its triad; the
+fit 0.74 from 0.71). The tables: 62 of 118 differ. Four balance
+tokens differ: Mt. Koltz's, and three whose tom gains the tuned mark
+(Dancing Mad (part 5), Wild West and the song titled "??": with Mt.
+Koltz's hits counted the game strikes that sample at enough rates in
+enough songs to read as tuned to the key). Over 400 seeds (1000 to
+1399, the player's asking), against round 174: a note changes in 384
+songs (the tune in 354), every one on the token it was on: one
+song's units moved in the pooled tables and every draw from them
+moved. The tuning measure on the eight songs on Mt. Koltz's token: 0
+off pitch (3 before). The tune battery over the 68 test songs: notes
+a bar 4.07 (4.18, FFVI 4.44); a note held or cut as the note before
+0.69 (0.69, 0.87); bars of seven notes or more 321 (309, 433); the
+bar before again 38 of 1,633 bars (43 of 1,635); one bar four times
+running in no song (2).
+
+**Open.** A re-read makes nearly every song another song of its
+kind: nothing in the measures moved, but no song heard before this
+round is note for note what it was. The written kit strikes Mt.
+Koltz's tom at one rate where the game's are three drums (round
+176). Fanatics' and Troops March on's toms have nothing under them
+and stay pitched parts. The seven songs of other games are in no
+shipped vocabulary and were not heard.
 
 **Heard.** Not yet.

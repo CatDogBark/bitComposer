@@ -200,7 +200,9 @@ and plays each sample at FEW_PITCHES (4) or fewer is a drum voice; one on
 kick and tom samples only (LOW_PIECES) is a drum voice by sound only where
 it sounds on under SPARSE (0.5) of the beats, as fills do, and a voice
 playing on is left to the other rules, since a bass on a low sample passes
-for a tom. What the two guards cost to learn: the first version made 728
+for a tom (since round 175 of phase 4 only where it can be the bass: with
+an instrument's voice under its lowest note it is a drum voice, as Mt.
+Koltz's toms are). What the two guards cost to learn: the first version made 728
 bass voices drums and lost Psycho Spin's bass, its three chord changes
 with it (chord check held-out 0.83 to 0.67); the pitch cap left 224; the
 playing-on guard 128.
