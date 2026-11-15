@@ -421,7 +421,7 @@ and the hit-or-miss part. Two steps, in order.
   and the default player's sound in 2.0.0rc3, the parts' attack class in
   2.0.0, released 2026-11-01: `docs/idiom/phase-6-generator.md`; since
   then on `dev`, the kit's pieces in rounds 74 to 83 and the writer's
-  rounds through 175, recorded in `docs/idiom/phase-4-writing.md`, with
+  rounds through 176, recorded in `docs/idiom/phase-4-writing.md`, with
   what stays open in `docs/LIMITS.md`).** The idiom's plan took
   this over from the translator's stages 3 and 4 on 2026-10-20: the
   readers scored on ground truth (phase 1), one score of voices through
