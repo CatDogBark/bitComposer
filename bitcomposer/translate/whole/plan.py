@@ -55,6 +55,11 @@ from ..vocab import Span
 from . import render as render_mod   # noqa: E402  the package's other sections
 from . import own as own_mod         # noqa: E402
 from . import token as token_mod     # noqa: E402  the balance token's reading
+from .token import (                 # noqa: E402,F401  the token's readers, a field or a word each: used here and by the modules that import them from here
+    follow_pair, form_of, kit_onsets_of, layer_of, lengths_of, line_pulse_of, line_stretch_list, line_turn_moves_of, line_turns_of, loops_of,
+    onsets_of, quals_of, RELATION_PARTS, relation_stretches, section_levels_of, shape_profile_of, spans_of, step_profile_of, struck_places_of,
+    struck_values_of, tone_profile_of, voice_places_of, voice_rubs_of, WHOLE_SONG,
+)
 
 
 METER = 4                             # beats a bar: the form and texture tables were kept at one meter (FFVI: 64 of its 69 metered songs)
@@ -589,30 +594,8 @@ def _maybe(models: dict, name: str, context: tuple, rng: random.Random, own: str
     return float(_draw(models, name, context, rng, own=own)) if name in models else None
 
 
-def form_of(text: str) -> list | None:
-    """The balance token's `form=` field read (round 113, arrangement.form_field): "A2B8C9B8D14" -> [("A", 2), ("B", 8), ("C", 9),
-    ("B", 8), ("D", 14)]; None where it cannot be read or has fewer than FORM_PARTS parts."""
-    if not re.fullmatch(r"(?:[A-Za-z]\d+)+", text):
-        return None
-    form = [(m.group(1).upper(), int(m.group(2))) for m in re.finditer(r"([A-Za-z])(\d+)", text)]
-    return form if len(form) >= rhythm.FORM_PARTS and all(n > 0 for _, n in form) else None
-
-
 LOOP_CHORDS = "cycle"                 # the harmony's key among a plan's loops (round 121): the balance token's `cycle=` word
 FIGURE_TRIES = 20                     # draws for a figure's other chord where the chain drew its part on one root (round 156)
-
-
-def loops_of(text: str) -> dict:
-    """A voice's loops read from the balance token (round 121, arrangement.loops_text): "B1~75!3.7+D2~100" -> {"B": (1, 0.75,
-    (3, 7)), "D": (2, 1.0, ())}, by the form's letter the figure's bars, the share of the voice's bars on it and the bars off
-    it counted from the part's first; {} where it cannot be read."""
-    out = {}
-    for item in text.split("+"):
-        m = re.fullmatch(r"([A-Za-z])(\d+)~(\d+)(?:!(\d+(?:\.\d+)*))?", item)
-        if not m or int(m.group(2)) < 1:
-            return {}
-        out[m.group(1).upper()] = (int(m.group(2)), int(m.group(3)) / 100, tuple(int(x) for x in m.group(4).split(".")) if m.group(4) else ())
-    return out
 
 
 def looped_parts(parts: list, spec: dict | None) -> list:
@@ -624,19 +607,6 @@ def looped_parts(parts: list, spec: dict | None) -> list:
         got = (spec or {}).get(label)
         if got and n >= 2 * got[0]:
             out.append((bar, n, got[0], {bar + j for j in got[2] if j < n}))
-    return out
-
-
-def spans_of(text: str) -> dict:
-    """The parts of the form a part sounds in, read from the balance token (round 124, arrangement.part_spans_field):
-    "A+B2.0+D0.4" -> {"A": (0, 0), "B": (2, 0), "D": (0, 4)}, by the form's letter the bars after the part's start it
-    enters and the bars before its end it leaves; {} where it cannot be read."""
-    out = {}
-    for item in text.split("+"):
-        m = re.fullmatch(r"([A-Za-z])(?:(\d+)\.(\d+))?", item)
-        if not m:
-            return {}
-        out[m.group(1).upper()] = (int(m.group(2) or 0), int(m.group(3) or 0))
     return out
 
 
@@ -668,45 +638,6 @@ def token_textures(parts: list, band: list, spans: dict, log: list) -> tuple[lis
     if cuts:
         log.append("entrances from the balance's song (round 124): " + "; ".join(cuts))
     return textures, plays
-
-
-WHOLE_SONG = ""                       # onsets_of's key for a song with no letters: its onsets a bar the whole song through (round 153)
-
-
-def onsets_of(text: str) -> dict:
-    """A voice's onsets a bar by the form's letters, read from the balance token (round 125, arrangement.section_onsets_text):
-    "A6+B2!1+C4.5!7" -> {"A": (6.0, None), "B": (2.0, 1), "C": (4.5, 7)}, by the letter the median of its onsets a bar there
-    and its onsets in the part's last bar where that is a fill or a thinning; a song with no letters says one number
-    (round 153), "4" -> {WHOLE_SONG: (4.0, None)}; {} where it cannot be read."""
-    whole = re.fullmatch(r"\d+(?:\.\d)?", text)
-    if whole:
-        return {WHOLE_SONG: (float(text), None)} if float(text) > 0 else {}
-    out = {}
-    for item in text.split("+"):
-        m = re.fullmatch(r"([A-Za-z])(\d+(?:\.\d)?)(?:!(\d+))?", item)
-        if not m or float(m.group(2)) <= 0:
-            return {}
-        out[m.group(1).upper()] = (float(m.group(2)), int(m.group(3)) if m.group(3) is not None else None)
-    return out
-
-
-def kit_onsets_of(text: str) -> dict:
-    """The kit's pieces' hits a bar by the form's letters, read from the balance token (round 125, arrangement.kit_onsets_field):
-    "AS28.5@100,c1@50+BS20@75" -> {"A": {"S": (28.5, 1.0), "c": (1.0, 0.5)}, "B": {"S": (20.0, 0.75)}}, by the letter each
-    piece's median hits a bar over the bars it plays there and the share of the part's bars it plays in; {} where it cannot
-    be read."""
-    out = {}
-    for item in text.split("+"):
-        if not item or not (item[0].isalpha() or item[0] == rhythm.WHOLE_KIT):
-            return {}
-        pieces = {}
-        for piece in item[1:].split(","):
-            m = re.fullmatch(r"([A-Za-z])(\d+(?:\.\d)?)@(\d+)", piece)
-            if not m:
-                return {}
-            pieces[m.group(1)] = (float(m.group(2)), int(m.group(3)) / 100)
-        out[WHOLE_SONG if item[0] == rhythm.WHOLE_KIT else item[0].upper()] = pieces   # a song with no letters (round 155): "*K1@50" -> {WHOLE_SONG: ...}
-    return out
 
 
 KIT_THROUGH = 0.75                    # a kit piece the token song plays in this share of a part of the form's bars or more plays in every bar of it
@@ -1053,19 +984,6 @@ SHAPE_MARGIN = 0.05                   # how far over its share of the token song
                                       # changing chord takes the quality most under its share (round 112)
 
 
-def shape_profile_of(text: str) -> dict | None:
-    """The balance token's `shapes=` field read (round 112, arrangement.chord_shape_profile): "maj7:45/5:17/maj:3" -> {"maj7":
-    0.45, "5": 0.17, "": 0.03}; None where it cannot be read."""
-    out = {}
-    for part in text.split("/"):
-        name, _, pct = part.partition(":")
-        shape = "" if name == "maj" else name
-        if shape not in harmony.SHAPES or not pct.isdigit():
-            return None
-        out[shape] = int(pct) / 100
-    return out or None
-
-
 def with_shape(name: str, shape: str) -> str:
     """A numeral with another quality on the same degree (round 112): "IV" with "maj7" is "IVmaj7", "V7" with "m" is "v", as
     vocab.numeral spells them (a minor-family shape a lower-case numeral with its m dropped)."""
@@ -1114,20 +1032,6 @@ def chord_third(name: str, tonic: int, mode: str) -> str | None:
     scale = {(tonic + i) % 12 for i in harmony.MODES["major" if mode == "major" else "natural_minor"]} | ({(tonic + 11) % 12} if mode != "major" else set())
     minor, major = (root + 3) % 12 in scale, (root + 4) % 12 in scale
     return "m" if minor and not major else "M" if major and not minor else None
-
-
-def quals_of(text: str) -> dict:
-    """The balance token's `quals=` field read (round 127, arrangement.chord_degree_shapes): "1~maj7:86+0~5:45/sus4:25" ->
-    {1: [("maj7", 0.86)], 0: [("5", 0.45), ("sus4", 0.25)]}, by a degree's semitones over the tonic the qualities its song
-    gives it with their share of the degree's beats, the most heard first; {} where it cannot be read."""
-    out = {}
-    for item in text.split("+"):
-        offset, _, shapes = item.partition("~")
-        pairs = [x.partition(":") for x in shapes.split("/")] if shapes else []
-        if not offset.isdigit() or not 0 <= int(offset) < 12 or not pairs or any((n != "maj" and n not in harmony.SHAPES) or not pct.isdigit() for n, _, pct in pairs):
-            return {}
-        out[int(offset)] = [("" if n == "maj" else n, int(pct) / 100) for n, _, pct in pairs]
-    return out
 
 
 DEGREE_OWN = 0.6                      # a quality a degree has on this share of its beats or more in the token song is the degree's own (round 127)
@@ -1442,21 +1346,6 @@ def plan_section_levels(models: dict, parts: list, band: list, plays: dict, rng:
     return out
 
 
-def section_levels_of(text: str) -> list:
-    """A part's level in each part of its song's form, read from the balance token (round 150, arrangement.section_levels_field):
-    "vA1.0+B0.4+C-" -> [("A", 1.0), ("B", 0.4), ("C", None)], the form's own parts in its order, None where the song's part
-    has no count; [] where it cannot be read."""
-    if not text.startswith("v"):
-        return []
-    out = []
-    for item in text[1:].split("+"):
-        m = re.fullmatch(r"([A-Za-z])(\d\.\d|-)", item)
-        if not m:
-            return []
-        out.append((m.group(1).upper(), None if m.group(2) == "-" else float(m.group(2))))
-    return out
-
-
 def tokens_say_levels(balance) -> bool:
     """Whether a vocabulary's balance tokens say their songs' parts' levels by section (round 150): one of them at least
     carries the field (arrangement.section_levels_field), so a part whose token carries none has no section of its own
@@ -1603,26 +1492,6 @@ def envelope_at_for(plan, role: str, habit=None):
     return lambda k, typical=None: rhythm.density_bounds(base, shifts[k] if 0 <= k < len(shifts) else 0, typical)
 
 
-def lengths_of(text: str) -> dict:
-    """A tune's note lengths as its token's twenty-sixth field carries them (round 141, rhythm.tune_lengths_field, without
-    the "h"): {rhythm.LENGTH_WHOLE or a gap class: (the share of the notes held, the share of its gap a held note sounds, a
-    detached one; None where the line has none of the kind)}, a class the field leaves out ("-") left out; {} where the
-    text is not the field's."""
-    names = [rhythm.LENGTH_WHOLE] + [name for _, name in rhythm.GAP_CLASSES]
-    entries = text.split("/")
-    if len(entries) != len(names):
-        return {}
-    out = {}
-    for name, e in zip(names, entries):
-        if e == "-":
-            continue
-        m = re.fullmatch(r"(\d+)~([\d.]+|-)~([\d.]+|-)", e)
-        if not m:
-            return {}
-        out[name] = (int(m.group(1)) / 100, None if m.group(2) == "-" else float(m.group(2)), None if m.group(3) == "-" else float(m.group(3)))
-    return out if rhythm.LENGTH_WHOLE in out else {}
-
-
 def own_lengths(plan, role: str) -> dict | None:
     """How the token song's tune sounds its notes (round 141, Plan.tune_lengths), for the tune's writer; None where the
     token carries none."""
@@ -1708,18 +1577,6 @@ def layers_of(plan: "Plan", role: str) -> list:
 
 BASS_LAYER_KINDS = ("apart", "doubling")   # what the bass writer writes of a second voice: a line of its own, the line again at an interval
                                            # (round 126); a bass whose voices alternate (one of FFVI's fifteen, Fanfare's) keeps the layers draw
-
-
-def layer_of(extras: dict) -> tuple:
-    """A part's second voice as the plan drew it: ("apart", offset, density), ("doubling", interval) or ("alternating",)."""
-    words = (extras or {}).get("layer", "").split()
-    if not words:
-        return ("stack",)
-    if words[0] == "apart" and len(words) >= 3:
-        return ("apart", int(words[1]), words[2])
-    if words[0] == "doubling" and len(words) >= 2:
-        return ("doubling", int(words[1]))
-    return (words[0],)
 
 
 def diatonic(notes: list, interval: int, scale: set, voice: int) -> list:
@@ -1826,33 +1683,10 @@ def parallel(notes: list, interval: int, scale: set, voice: int, song=None, role
     return out
 
 
-RELATION_PARTS = {"m": R.MELODY, "c": R.COUNTER, "a": R.ACCOMP, "h": R.HARMONY, "r": R.ARP, "b": R.BASS}   # the token's relation letters
-
-
 def relation_word(plan: "Plan", role: str, v: int) -> str | None:
     """The balance token's relation word for a part's voice v beside the line (round 90), None without one."""
     words = plan.layer_relations.get(role) or []
     return words[v - 1] if 0 < v <= len(words) else None
-
-
-def struck_values_of(text: str) -> dict | None:
-    """The balance token's struck sub-field (round 108, arrangement._struck_text) read: "w0.82~0.2~0.3~1.0~0.6~-~4.9~0.53" ->
-    {"share": 0.82, "sounds": {gap class: share, or None where the token lacks it}, "longest": 4.9 beats, or None, "sounding":
-    0.53 (round 115: the beats the voice sounds over the beats of the bars it strikes in), or None, "cell": 0.72 (round 116: of
-    its notes with a note at the same position of the bar before, the share on that note's pitch again), or None}; None where
-    it cannot be read."""
-    parts = text.split("~")
-    n = len(rhythm.GAP_CLASSES)
-    if len(parts) not in (2 + n, 3 + n, 4 + n) or not parts[0].startswith("w"):
-        return None
-    try:
-        share, longest = float(parts[0][1:]), float(parts[1 + n])
-        sounds = {name: (float(x) if x != "-" else None) for (_, name), x in zip(rhythm.GAP_CLASSES, parts[1:1 + n])}
-        sounding = float(parts[2 + n]) if len(parts) >= 3 + n and parts[2 + n] != "-" else None   # the voice's sounding share (round 115)
-        cell = float(parts[3 + n]) if len(parts) >= 4 + n and parts[3 + n] != "-" else None       # its cell's repeats (round 116)
-    except ValueError:
-        return None
-    return {"share": share, "sounds": sounds, "longest": longest if longest > 0 else None, "sounding": sounding, "cell": cell}
 
 
 def bass_places(plan) -> tuple | None:
@@ -1867,170 +1701,10 @@ def bass_places(plan) -> tuple | None:
     return tuple(share if kind == rhythm.FINE_PLACES[-1] else None for kind, share in zip(rhythm.FINE_PLACES, places))
 
 
-def struck_places_of(text: str) -> dict:
-    """The balance token's `struck=` word (round 159, arrangement.struck_places_field) read: "a3~45:A-+B0.6.18.24" ->
-    {the accompaniment: {2: (0.45, {"A": [], "B": [0, 6, 18, 24]})}}: a chord part's voice beside its line (the part's
-    relation letter and the voice's number, the line 1; here by the writer's index, the line 0), its median note length
-    in beats, and for each letter of the token song's form the places it strikes at in its usual bar there, in twelfths
-    of a beat from the bar's start, none where it rests. A voice that cannot be read is left out."""
-    out = {}
-    for entry in (text or "").split(","):
-        head, _, body = entry.partition(":")
-        who, _, length = head.partition("~")
-        role = RELATION_PARTS.get(who[:1])
-        try:
-            v, beats = int(who[1:]) - 1, int(length) / 100
-            letters = {w[:1]: ([] if w[1:].partition("/")[0] == "-" else [int(x) for x in w[1:].partition("/")[0].split(".")])
-                       for w in body.split("+") if w}       # the usual bar; what follows a "/" is voice_places_of's (round 166)
-        except ValueError:
-            continue
-        if role and v > 0 and beats > 0 and letters and all(k.isalpha() for k in letters):
-            out.setdefault(role, {})[v] = (beats, letters)
-    return out
-
-
-def voice_rubs_of(text: str) -> dict:
-    """The balance token's `rubs=` word (round 165, arrangement.voice_rubs_field) read: "a2~25,a3~0" -> {the
-    accompaniment: {1: 0.25, 2: 0.0}}: for a chord part's voice beside its line (the part's relation letter and the
-    voice's number, the line 1; here by the writer's index, the line 0), the share of its token voice's notes that sit
-    a semitone from a voice of its own part before it. A voice that cannot be read is left out. The `keeps=` word
-    (round 167, arrangement.voice_keeps_field) is written the same way and read here too: the share of a voice's
-    strikes, where the line keeps its note, on which the voice keeps its own."""
-    out = {}
-    for entry in (text or "").split(","):
-        who, _, share = entry.partition("~")
-        role = RELATION_PARTS.get(who[:1])
-        try:
-            v, got = int(who[1:]) - 1, int(share) / 100
-        except ValueError:
-            continue
-        if role and v > 0 and 0 <= got <= 1:
-            out.setdefault(role, {})[v] = got
-    return out
-
-
-def voice_places_of(text: str) -> dict:
-    """The places a voice beside a line plays at, from the balance token's `struck=` word (round 166): "a3~45:A-+B0.6,
-    a2~30:A-/0.24" -> {the accompaniment: {2: {"B": [0, 6]}, 1: {"A": [0, 24]}}}: for a chord part's voice (by the
-    writer's index, the line 0) and each letter of the token song's form, the places of the bar it plays there, in
-    twelfths of a beat: its usual bar, or where that is a rest the bar after the "/"; a part it rests through is left
-    out. A song with no form says one bar with no letter, kept under WHOLE_SONG. A voice that cannot be read is left
-    out."""
-    out = {}
-    for entry in (text or "").split(","):
-        head, _, body = entry.partition(":")
-        role = RELATION_PARTS.get(head[:1])
-        try:
-            v = int(head.partition("~")[0][1:]) - 1
-            letters = {}
-            for w in body.split("+"):
-                letter, rest = (w[:1], w[1:]) if w[:1].isalpha() else (WHOLE_SONG, w)
-                bar = rest.partition("/")[2] or rest
-                if bar and bar != "-":
-                    letters[letter] = [int(x) for x in bar.split(".")]
-        except ValueError:
-            continue
-        if role and v > 0 and letters:
-            out.setdefault(role, {})[v] = letters
-    return out
-
-
-def line_pulse_of(text: str) -> dict:
-    """The balance token's `pulse=` word (round 161, arrangement.line_pulse_field) read: "a6~73~70~26/68/7" -> {the
-    accompaniment: (6, 0.73, 0.70, {"same": 0.26, "step": 0.68, "leap": 0.07})}: a chord part's moving line's pulse (its
-    grid in twelfths of a beat), the share of its notes off the pulse that are their bar's one pitch, how often that
-    pitch is the bar before's, and the step profile of its notes on the pulse; None for one the word leaves out ("-").
-    A part that cannot be read is left out."""
-    out = {}
-    for entry in (text or "").split(","):
-        role, fields = RELATION_PARTS.get(entry[:1]), entry[1:].split("~")
-        if not role or len(fields) != 4:
-            continue
-        try:
-            grid = int(fields[0])
-            pedal, carry = (None if x == "-" else int(x) / 100 for x in fields[1:3])
-            profile = None if fields[3] == "-" else {k: int(x) / 100 for k, x in zip(rhythm.STEP_CLASSES, fields[3].split("/"), strict=True)}
-        except ValueError:
-            continue
-        if grid > 0 and (pedal is not None or profile is not None):
-            out[role] = (grid, pedal, carry, profile)
-    return out
-
-
-def line_turns_of(text: str) -> dict:
-    """The balance token's `turns=` word (round 160, arrangement.line_turns_field) read: "a-/24/12.42" -> {the
-    accompaniment: [[], [24], [12, 42]]}: for a chord part's block line, bar by bar in the token song's order, the
-    places at which its note changes, in twelfths of a beat from the bar's start. Since round 168 a place carries the
-    move made there ("24+3": line_turn_moves_of reads those); here the places alone. A part that cannot be read is
-    left out."""
-    return {role: [[place for place, _ in bar] for bar in bars] for role, bars in line_turn_moves_of(text).items()}
-
-
-def line_turn_moves_of(text: str) -> dict:
-    """The balance token's `turns=` word with its moves (round 168): "a-/24+3/12-2.42+2" -> {the accompaniment: [[],
-    [(24, 3)], [(12, -2), (42, 2)]]}: for a chord part's block line, bar by bar in the token song's order, the places
-    at which its note changes and the move it makes there in semitones; None for a place with no move said (a
-    vocabulary counted before the round: "24"). A part that cannot be read is left out."""
-    out = {}
-    for entry in (text or "").split(","):
-        role = RELATION_PARTS.get(entry[:1])
-        bars = []
-        for w in (entry[1:].split("/") if entry[1:] else []):
-            got = [re.fullmatch(r"(\d+)([+-]\d+)?", x) for x in w.split(".")] if w != "-" else []
-            if not all(got):
-                bars = []
-                break
-            bars.append([(int(m.group(1)), int(m.group(2)) if m.group(2) else None) for m in got])
-        if role and bars:
-            out[role] = bars
-    return out
-
-
-def step_profile_of(text: str) -> dict | None:
-    """The balance token's step profile field (round 117, arrangement.line_step_profile) read: "j63/24/13" -> {"same": 0.63,
-    "step": 0.24, "leap": 0.13}; None where it cannot be read."""
-    m = re.fullmatch(r"j(\d+)/(\d+)/(\d+)", text or "")
-    if not m:
-        m = re.fullmatch(r"j(\d+)/(\d+)/(\d+)/(\d+)", text or "")   # a tune's, of four classes (round 130, arrangement.tune_step_profile)
-        return {k: int(v) / 100 for k, v in zip(rhythm.TUNE_MOVES, m.groups())} if m else None
-    return {k: int(v) / 100 for k, v in zip(rhythm.STEP_CLASSES, m.groups())}
-
-
-def tone_profile_of(text: str) -> dict | None:
-    """The balance token's chord-tone profile field (round 111, arrangement.line_tone_profile) read: "t45/2/9/30/2/12" -> {"root":
-    0.45, "third": 0.02, "fifth": 0.09, "seventh": 0.30, "sus": 0.02, "other": 0.12}; None where it cannot be read."""
-    m = re.fullmatch(r"t(\d+)/(\d+)/(\d+)/(\d+)/(\d+)/(\d+)", text)
-    if not m:
-        return None
-    return {k: int(x) / 100 for k, x in zip(rhythm.TONE_PROFILE_CLASSES, m.groups())}
-
-
 def struck_values(plan: "Plan", role: str, v: int) -> dict | None:
     """The token song's struck facts for a part's voice v beside the line (round 108), None without them."""
     xs = plan.layer_struck.get(role) or []
     return xs[v - 1] if 0 < v <= len(xs) else None
-
-
-def relation_stretches(word: str) -> list:
-    """A layer voice's relation word (round 90) as stretches: "ox9>dm-12x14>o" -> [("own", None, None, 9), ("double",
-    melody, -12, 14), ("own", None, None, None)]: the kind, the part followed, the semitones, the bars (None: to the end).
-    A stretch the writer cannot read is its own."""
-    out = []
-    for part in word.split(">"):
-        body, _, n = part.partition("x")
-        bars = int(n) if n.isdigit() else None
-        kind = {"d": "double", "p": "parallel", "w": "with"}.get(body[:1])
-        target = RELATION_PARTS.get(body[1:2])
-        if body[1:2] == "l":                                # the part's own line (round 107)
-            target = ("line",)
-        elif body[1:2].isdigit():                           # a sibling voice, by its rank among the part's voices beside the line (round 107)
-            target = ("voice", int(body[1:2]))
-        try:
-            semi = int(body[2:])
-        except ValueError:
-            semi = None
-        out.append((kind, target, semi, bars) if kind and target and semi is not None else ("own", None, None, bars))
-    return out
 
 
 STRUCK_TRIES = 6                      # draws of the second_figures mask for a bar whose mask thins nothing while the struck voice is over
@@ -2211,25 +1885,6 @@ def late_stretch_notes(plan: "Plan", song, role: str, v: int, own: list, word: s
     late = [(a, b) for kind, target, _, a, b in spans if kind in ("double", "parallel") and not isinstance(target, tuple)]
     inside = lambda t: any(a * song.meter - rhythm.NEAR <= t < b * song.meter - rhythm.NEAR for a, b in late)   # noqa: E731
     return sorted([n for n in got if not inside(n[0])] + fold_voice(plan, role, v, [n for n in got if inside(n[0])], song.meter), key=lambda n: n[0])
-
-
-def line_stretch_list(word: str) -> list:
-    """The balance token's eleventh field (round 91) as stretches: "s77ca10e2568@52-64x6>sf89f5aedfd@60-80" ->
-    [("s77ca10e2568", (52, 64), 6), ("sf89f5aedfd", (60, 80), None)]: each stretch's sample, the range it is played over
-    (None unknown), its bars (None: to the end)."""
-    out = []
-    for part in word.split(">"):
-        body, _, n = part.partition("x")
-        sid, _, rng = body.partition("@")
-        played = None
-        if "-" in rng:
-            try:
-                lo, hi = (int(x) for x in rng.split("-"))
-                played = (lo, hi)
-            except ValueError:
-                played = None
-        out.append((sid, played, int(n) if n.isdigit() else None))
-    return out
 
 
 def stretch_bars(stretches: list, bars: int) -> list:
@@ -4330,19 +3985,6 @@ def voices_onsets(token: dict, own_form: bool) -> dict:
         if kept:
             out[role] = kept
     return out
-
-
-def follow_pair(text: str, scale: float = 1.0) -> tuple | None:
-    """The chord_follows word's two shares read (round 171): "85/60" -> (0.85, 0.60) with `scale` 100, "0.85/-" ->
-    (0.85, None); None where it cannot be read or says neither."""
-    parts = text.split("/")
-    if len(parts) != 2:
-        return None
-    try:
-        pair = tuple(None if x == "-" else float(x) / scale for x in parts)
-    except ValueError:
-        return None
-    return pair if any(x is not None for x in pair) and all(x is None or 0 <= x <= 1 for x in pair) else None
 
 
 def doubling_own_of(text: str) -> tuple:
