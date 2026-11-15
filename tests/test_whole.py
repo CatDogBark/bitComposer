@@ -3993,6 +3993,32 @@ class SongsOwnAnswersTests(unittest.TestCase):
                                      and sorted(token.read_token(o, []).band) == sorted(plan.band)), [])
         self.assertEqual(sorted(said.band), sorted(plan.band))
 
+    def test_a_parts_fields_go_by_name_on_both_sides(self):
+        """The refactor's second stage: a part's fields of the balance token have names, in one list (rhythm.PART_FIELDS);
+        the builder writes them by name (part_fields_text) and the reader takes them by name (PartFields). The text is
+        what it was: in the list's order, a field a song lacks left off the end."""
+        self.assertEqual(len(rhythm.PART_FIELDS), 31)
+        self.assertEqual(rhythm.PART_FIELDS[:3] + rhythm.PART_FIELDS[-1:], ("weight", "register", "sounds", "section_levels"))
+        self.assertEqual(rhythm.part_fields_text(weight="half", register="36-44", level="0.9"), "half:36-44:::0.9")
+        self.assertEqual(rhythm.part_fields_text(), "")                                            # nothing said: nothing written
+        self.assertEqual(rhythm.part_fields_text(voices="KS|h", level="0.5", habit="dense+varied"), ":::KS|h:0.5::::dense+varied")   # a kit: no weight
+        with self.assertRaises(TypeError):
+            rhythm.part_fields_text(wieght="half")                                                 # a name that is no field
+        f = rhythm.PartFields("half:36-44:0.9@0.8/0.9:2:0.7")
+        self.assertEqual((f.weight, f.register, f.sounds, f.voices, f.level), ("half", "36-44", "0.9@0.8/0.9", "2", "0.7"))
+        self.assertEqual((f.layers, f.section_levels), ("", ""))                                   # past the token's end: empty
+        from bitcomposer import vocabularies
+        balance = getattr(vocabularies.load("default")["balance"], "table", vocabularies.load("default")["balance"])
+        seen = 0
+        for text in sorted({o for votes in balance.votes.values() for o in votes}):                # every part of every shipped token: read by name and
+            for word in text.split():                                                              # written again by name, it is the same text
+                role, eq, rest = word.partition("=")
+                if eq and role in ("melody", "counter", "harmony", "arp", "accompaniment", "bass", "drums"):
+                    got = rhythm.PartFields(rest)
+                    self.assertEqual(rhythm.part_fields_text(**{name: getattr(got, name) for name in rhythm.PART_FIELDS}), rest)
+                    seen += 1
+        self.assertGreater(seen, 200)                                                              # a few parts a token, 68 songs
+
     def test_the_plan_takes_its_token_songs_mode_and_answers(self):
         token = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium key=9:minor song=song1"
         keys = tables.Table(("part",), "keys").fit([tables.Unit(f"k{i}", "g", "0 major", {"part": "song"}) for i in range(3)])
