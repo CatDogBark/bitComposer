@@ -202,21 +202,23 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   semitone from a note another voice sounds is 0.17 of a written song's
   notes at the median, 0.09 of its game song's, before the round and
   after it.
-- **About fifteen words of the song as a whole are still drawn from
-  the pool.** Since round 172 the plan asks its token song for its own
-  answer to a once-a-song word before drawing the pooled one (the `song_answers`
-  table, `rhythm.OWN`), and four go by it: the mode, a part's clashes,
-  the tune's and the counter-line's share off the key and of chord
-  tones. Still pooled, each another song's answer more often than not:
-  the tune's and the counter-line's manner (articulation, echo, steps,
-  repeats, grain) and their notes' lengths, what a voice beside a line
-  does on its own, the voicing's richness, a part's sample's speed, the
-  kit's limbs' habits, a riff's periods, the vibrato; the counter-line's
-  masks and the voices' note lengths, drawn many times a song, need the
-  song's own answers drawn among. The tonic, the tempo inside its class,
-  the tune's shape and the theme's returns are pooled on purpose. A song
-  too short for a share has no answer and keeps the draw. Songs on one
-  token are more alike for it.
+- **A few words of the song as a whole are still drawn from the
+  pool.** Since round 172 the plan asks its token song for its own
+  answer to a once-a-song word before drawing the pooled one (the
+  `song_answers` table, `rhythm.OWN`), and sixteen words go by it since
+  round 173: the mode, a part's clashes, the tune's and the
+  counter-line's share off the key and of chord tones, their manner and
+  held notes' lengths, what a voice beside a line does and how long it
+  sounds, the voicing, a part's sample's speed, the kit's limbs' habits
+  and the bass's lock. Still pooled: a riff's periods and their holds,
+  the voices' note lengths by the gap and the counter-line's masks (many
+  answers a song: to be drawn among, not looked up), and the vibrato.
+  The tonic, the tempo inside its class, the tune's shape and the
+  theme's returns are pooled on purpose. A song too short for a share
+  has no answer and keeps the draw. Songs on one token are more alike
+  for it, and a song is its game song's kind of song with that song's
+  roughness: a rag's voices rub more than they did, and one song's own
+  voicing can rub more than the pooled draw's did (The Day After).
 - **The counter is more diatonic than FFVI's.** A counter by the voice
   words takes scale steps from the tune's note, so it leaves the scale
   only where the tune does: 0.06 to 0.08 of its line's notes against

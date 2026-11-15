@@ -12,13 +12,28 @@ count). Which words go by the song is the list OWN.
 from __future__ import annotations
 
 from .. import tables
-from . import arrangement as arrangement_mod
 
 OWN_SHAPE = ("song", "word", "context")   # the song_answers table's shape: the song's id, the word's table, its context joined (own_context)
-OWN = {                               # the once-a-song words answered by the token's song first: table -> (its units' builder, its shape)
-    "clashes": ("clash_units", ("part", "place")),
-    "off_scale": ("off_scale_units", ("part", "mode", "place")),
-    "chord_tones": ("chord_tone_habit_units", ("part",)),
+OWN = {                               # the once-a-song words answered by the token's song first: table -> (the module its units are
+    "clashes": ("rhythm", "clash_units", ("part", "place")),   # counted in, their builder, the table's shape), as packtables.KEPT has them
+    "off_scale": ("rhythm", "off_scale_units", ("part", "mode", "place")),
+    "chord_tones": ("rhythm", "chord_tone_habit_units", ("part",)),
+    # round 173: the tune's and the counter-line's manner and their notes' lengths
+    "articulation": ("rhythm", "habit_units", ("part",)),
+    "echo_habits": ("rhythm", "echo_habit_units", ("part", "tempo", "weight")),
+    "step_habits": ("phrases", "step_habit_units", ("part",)),
+    "repeat_habits": ("phrases", "repeat_habit_units", ("part",)),
+    "repeat_rates": ("phrases", "repeat_rate_units", ("part",)),
+    "tune_grain": ("rhythm", "tune_grain_units", ("part", "habit")),
+    "tune_sounds": ("rhythm", "tune_sound_units", ("part", "note")),
+    # and the band's: what a voice beside a line does and how long its notes sound, the voicing, the samples' speed, the kit's
+    # limbs' habits, how far the bass locks to the kit
+    "layers": ("rhythm", "layer_units", ("part", "rank")),
+    "layer_sounds": ("rhythm", "layer_sound_units", ("part", "voice")),
+    "voicing_habits": ("rhythm", "voicing_habit_units", ("part",)),
+    "part_speeds": ("rhythm", "part_speed_units", ("part", "habit")),
+    "drum_group_habits": ("rhythm", "drum_group_habit_units", ("part", "classes", "habit")),
+    "bass_locks": ("rhythm", "bass_lock_units", ("part",)),
 }
 
 
@@ -27,12 +42,22 @@ def own_context(values) -> str:
     return "|".join(str(v) for v in values)
 
 
-def own_units(songs) -> list:
-    """Every song's own answer to each of the OWN words under each context it has one for, as a unit of the
-    `song_answers` table: its outcome the answer, its values the song's id, the word and the context. A song with no unit of a word
-    under a context (too few notes for a share) has no answer there, and a written song draws the pooled word."""
+def _package():
+    """This package, whose sections' builders its names are (looked up when asked: it is not whole while this loads)."""
+    import importlib
+    return importlib.import_module(__package__)
+
+
+def own_units(songs, module: str = "rhythm", builders=None) -> list:
+    """Every song's own answer to each of the OWN words counted in `module` under each context it has one for, as a
+    unit of the `song_answers` table: its outcome the answer, its values the song's id, the word and the context. A
+    song with no unit of a word under a context (too few notes for a share) has no answer there, and a written song
+    draws the pooled word. `builders`: the module the words' builders are in (this package's by default; the phrases
+    words' are the phrases module's, and packtables counts those with the phrases' songs)."""
     out = []
-    for word, (builder, shape) in OWN.items():
-        for u in getattr(arrangement_mod, builder)(songs):
+    for word, (where, builder, shape) in OWN.items():
+        if where != module:
+            continue
+        for u in getattr(builders if builders is not None else _package(), builder)(songs):
             out.append(tables.Unit(u.song, u.game, u.outcome, {"song": u.song, "word": word, "context": own_context(u.values[c] for c in shape)}))
     return out

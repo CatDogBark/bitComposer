@@ -164,6 +164,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 170 | 2026-11-14 | a bass keeps its token song's bass's share of notes on the half beat, in a triple feel | - |
 | 171 | 2026-11-14 | a tune and a counter-line go with a chord that leaves the key | - |
 | 172 | 2026-11-14 | a song's own answers to the once-a-song words, before the pool: the mode, the clashes, the off-scale share, the chord tones | - |
+| 173 | 2026-11-14 | thirteen more words by the song: the tune's manner and note lengths, the voices, the voicing, the kit's limbs | - |
 
 ## Goal
 
@@ -12296,5 +12297,63 @@ pooled: they are the new song. The token's own thirty-one fields
 are still text; they can move into the same table. The semitone
 meetings are where they were: what a part does against the parts
 written after it is held by no word.
+
+**Heard.** Not yet.
+
+### Round 173: thirteen more words by the song (2026-11-14, the second step of round 172's)
+
+**Why.** The second of the two steps agreed (round 172's Why), on
+the first being heard: "everything sounds good, go ahead and
+proceed".
+
+**Found.** Of the words still drawn from the pool, thirteen are one
+answer a song under a context, as round 172's three are: the tune's
+and the counter-line's articulation, echo habit, step and repeat
+habits, repeat rate, grain and held notes' lengths; what a voice
+beside a line does (the layers word) and how long its notes sound;
+the voicing's richness; a part's sample's speed; the kit's limbs'
+habits; how far the bass locks to the kit. Three are in the phrases'
+tables, counted on the phrases' songs. Three more are many answers
+a song (a riff's periods and their holds, the voices' note lengths
+by the gap) and are not looked up; the vibrato is drawn where the
+song is rendered.
+
+**Built.** The draw asks the song. `plan._draw` takes the balance
+token's song (`own`): it makes the pooled draw as before and returns
+that song's own answer under the context where the `song_answers`
+table has one. Round 172's three words go by it too (their songs are
+the same note for note), and the pass that put the answers over a
+part's draws is gone. `rhythm.OWN` lists sixteen words, each with
+the module its units are counted in; `packtables.build` counts the
+phrases' words on the phrases' songs.
+
+**Measured.** Suite 637 tests, OK. The vocabulary: 118 tables; the
+`song_answers` table has 2,289 answers of all 68 songs (871 of 65
+before); no other table differs. Over 400 seeds (1000 to 1399, the
+player's asking), against round 172: a note changes in 394 songs,
+every one on the token it was on. An own answer is taken over
+another draw, song by song: a part's sample's speed in 368 songs,
+the layers word in 382, the held notes' lengths in 358, the repeat
+habit in 322, the step habit in 298, the articulation in 270, the
+grain in 261, the voicing in 255, the echo habit in 212, the kit's
+limbs in 148, the bass's lock in 166. A song's share of notes struck
+a semitone from a note another voice sounds is within 0.05 of its
+own game song's in 167 songs (154 after round 172, 131 before it);
+with the layers and the voicing words' answers switched off, 149.
+The tune battery over the 68 test songs: a note held or cut as the
+note before 0.69 of the tune's (0.67, FFVI 0.87); tunes with more
+leaps of a fourth than their game song's by a tenth, 9 (11); bars of
+seven notes or more 307 (325, FFVI 433). One song moved the wrong
+way: the tune on Troops March on's token stands on one bar five bars
+running (none before; its game song's never does).
+
+**Open.** A song's own answers make it its game song's kind of song
+more than before, the rough with the smooth: the song on The Day
+After's token is at 0.17 of its notes a semitone from a sounding
+voice (0.10 after round 172, 0.23 before it, the game's 0.08), by
+its own layers and voicing. The periods, the voices' note lengths by
+the gap and the counter-line's masks are still pooled: many answers
+a song, to be drawn among. The vibrato is. The token's thirty-one
+fields of text can move into the same table.
 
 **Heard.** Not yet.

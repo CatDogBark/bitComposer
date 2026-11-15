@@ -2460,14 +2460,19 @@ The words are grouped by where the writing draws them, in the order the song is 
   *`voice_keeps`: shape (sample); drawn in settle_chord_parts; conditions nothing.*
 - **song_answers** — each song's own answer to the once-a-song words, by the
   song, the word and the word's context (round 172). The words are the
-  list `rhythm.OWN` (`clashes`, `off_scale`, `chord_tones`); a unit is
+  list `rhythm.OWN`: `clashes`, `off_scale` and `chord_tones` since
+  round 172, and since round 173 `articulation`, `echo_habits`,
+  `step_habits`, `repeat_habits`, `repeat_rates`, `tune_grain`,
+  `tune_sounds`, `layers`, `layer_sounds`, `voicing_habits`,
+  `part_speeds`, `drum_group_habits` and `bass_locks`. A unit is
   one of those tables' own units, kept under its song's id, the table's
   name and its context joined by `|` (`melody|major|strong`). It is not
-  drawn: a plan looks its balance token's song up in it
-  (`whole.own.answer`) and takes the answer over the pooled table's
-  draw, which is made all the same so that no stream moves; a song with
-  no unit under a context (too few notes for a share) has no answer and
-  the draw stands. FFVI's songs give 871 answers, 65 of the 68 songs.
+  drawn: the plan's draw of such a word is given its balance token's
+  song (`plan._draw`, `own`), makes the pooled draw all the same so
+  that no stream moves, and returns that song's answer where it has one
+  (`whole.own.answer`); a song with no unit under a context (too few
+  notes for a share) has none and the draw stands. FFVI's songs give
+  2,289 answers, every one of the 68 songs some.
   A pooled draw is another song's kind of answer three times in four
   (the commonest answer under a context is 0.28 of the songs' for the
   clashes, 0.24 for the off-scale share). A word of the song as a whole

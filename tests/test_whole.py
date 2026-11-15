@@ -3777,9 +3777,10 @@ class SongsOwnAnswersTests(unittest.TestCase):
 
     def test_the_tables_keep_each_songs_own_answers(self):
         from bitcomposer.translate import packtables
-        for word, (builder, shape) in rhythm.OWN.items():
-            self.assertEqual(packtables.KEPT[word][1], builder)                                    # the pooled table's own builder and shape
-            self.assertEqual(tuple(packtables.KEPT[word][3]), shape)
+        for word, (module, builder, shape) in rhythm.OWN.items():
+            self.assertEqual(packtables.KEPT[word][:2], (module, builder), word)                   # the pooled table's own module, builder and shape
+            self.assertEqual(tuple(packtables.KEPT[word][3]), shape, word)
+        self.assertEqual(len(rhythm.OWN), 16)                                                      # three in round 172, thirteen more in round 173
         self.assertEqual(tuple(packtables.KEPT["song_answers"][3]), rhythm.OWN_SHAPE)
         self.assertEqual(rhythm.own_context(("melody", "major", "strong")), "melody|major|strong")
         units = rhythm.own_units([self._song()])
@@ -3796,16 +3797,22 @@ class SongsOwnAnswersTests(unittest.TestCase):
         self.assertIsNone(whole.own_answer(models, "another", "clashes", ("melody", "strong")))    # another song: none
         self.assertIsNone(whole.own_answer({}, "song1", "clashes", ("melody", "strong")))          # a vocabulary before the round: none
         self.assertIsNone(whole.own_answer(models, "", "clashes", ("melody", "strong")))
-        x = {"clashes": {"strong": 0.0, "weak": 0.1}, "off_scale": {"strong": 0.0, "weak": 0.0}, "chord_tones": 0.3}
+        import importlib
+        P = importlib.import_module("bitcomposer.translate.whole.plan")
+        pooled = tables.Table(("part", "place"), "clashes", votes=tables.SHARES).fit(
+            [tables.Unit(f"s{i}", "g", "0.10", {"part": part, "place": "strong"}) for i in range(3) for part in ("melody", "counter")])
+        both = {"song_answers": own, "clashes": pooled}
         log = []
-        whole.take_own(models, "song1", "melody", x, "major", log)
-        self.assertEqual((x["clashes"]["strong"], x["off_scale"]["strong"]), (0.24, 0.25))         # the song's own over the draws
-        self.assertRegex(log[0], r"^melody: the balance's song's own answers \(round 172\): clashes strong 0\.24 \(the draw 0\.00\), ")
-        y = {"clashes": {"strong": 0.5, "weak": 0.1}, "off_scale": None}
-        whole.take_own(models, "song1", "counter", y, "major", log)                                # a part the song has no answer for keeps its draws
-        self.assertEqual(y, {"clashes": {"strong": 0.5, "weak": 0.1}, "off_scale": None})
-        whole.take_own({}, "song1", "melody", y, "major", log)
+        draw = lambda part, song, models=both: P._draw(models, "clashes", (part, "strong"), random.Random(1), log, own=song)   # noqa: E731
+        self.assertEqual(draw("melody", "song1"), "0.24")                                          # round 173: the draw itself asks the song first
+        self.assertEqual(log, ["clashes (melody, strong): the balance's song's own, 0.24 (the draw 0.10)"])
+        self.assertEqual(draw("counter", "song1"), "0.10")                                         # a part the song has no answer for: the draw
+        self.assertEqual(draw("melody", None), "0.10")                                             # no song said: the draw
+        self.assertEqual(draw("melody", "song1", {"clashes": pooled}), "0.10")                     # a vocabulary before the round: the draw
         self.assertEqual(len(log), 1)
+        state = random.Random(1); mine = random.Random(1)
+        P._draw(both, "clashes", ("melody", "strong"), mine, own="song1"); P._draw(both, "clashes", ("melody", "strong"), state)
+        self.assertEqual(mine.random(), state.random())                                            # the draw is made all the same: the stream stands
 
     def test_the_plan_takes_its_token_songs_mode_and_answers(self):
         token = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium key=9:minor song=song1"
@@ -3814,12 +3821,18 @@ class SongsOwnAnswersTests(unittest.TestCase):
         clashes = tables.Table(("part", "place"), "clashes", votes=tables.SHARES).fit(
             [tables.Unit(f"s{i}", "g", "0.10", {"part": "melody", "place": pl}) for i in range(3) for pl in ("strong", "weak")])
         own = tables.Table(rhythm.OWN_SHAPE, "song_answers", votes=tables.SHARES).fit(
-            [tables.Unit("song1", "g", "0.30", {"song": "song1", "word": "clashes", "context": "melody|strong"})])
+            [tables.Unit("song1", "g", "0.30", {"song": "song1", "word": "clashes", "context": "melody|strong"}),
+             tables.Unit("song1", "g", "detached", {"song": "song1", "word": "articulation", "context": "melody"})])
         p = whole.plan({"balance": balance, "keys": keys, "clashes": clashes, "song_answers": own}, 7, "g")
         self.assertEqual((p.token_song, p.mode, p.tonic), ("song1", "minor", 0))                   # the token song's mode; the tonic is the draw's
         self.assertIn("the song's mode from the balance (round 172): minor (the draw major); the tonic is the draw's", p.log)
         self.assertEqual(p.extras[R.MELODY]["clashes"], {"strong": 0.3, "weak": 0.1})             # its own answer where it has one, the draw else
+        self.assertIn("clashes (melody, strong): the balance's song's own, 0.30 (the draw 0.10)", p.log)
         self.assertNotIn("song", p.band)
+        held = tables.Table(("part",), "articulation").fit([tables.Unit(f"a{i}", "g", "held", {"part": "melody"}) for i in range(3)])
+        r = whole.plan({"balance": balance, "keys": keys, "clashes": clashes, "articulation": held, "song_answers": own}, 7, "g")
+        self.assertEqual(r.extras[R.MELODY]["articulation"], "detached")                           # round 173: the tune's manner is its token song's
+        self.assertEqual(whole.plan({"balance": balance, "keys": keys, "articulation": held}, 7, "g").extras[R.MELODY]["articulation"], "held")
         q = whole.plan({"balance": balance, "keys": keys, "clashes": clashes}, 7, "g")             # no such table: the pooled draws, as before
         self.assertEqual((q.mode, q.extras[R.MELODY]["clashes"]), ("major", {"strong": 0.1, "weak": 0.1}))
 
@@ -3832,10 +3845,10 @@ class SongsOwnAnswersTests(unittest.TestCase):
         self.assertEqual(len({o.split()[-1] for o in outcomes}), 68)
         own = getattr(vocabulary["song_answers"], "table", vocabulary["song_answers"])
         answers = [k for k in own.votes if len(k) == 3]
-        self.assertEqual(len(answers), 871)
+        self.assertEqual(len(answers), 2289)
         self.assertEqual({k[1] for k in answers}, set(rhythm.OWN))
         self.assertTrue(all(len(own.votes[k]) == 1 for k in answers))                              # one answer a song, a word and a context
-        self.assertEqual(len({k[0] for k in answers}), 65)                                         # three songs too short for any of the words
+        self.assertEqual(len({k[0] for k in answers}), 68)                                         # every song answers some of the sixteen
         self.assertTrue({k[0] for k in answers} <= {o.split()[-1][5:] for o in outcomes})
 
 
