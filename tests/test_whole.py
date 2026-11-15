@@ -802,6 +802,39 @@ class TokenWithTests(unittest.TestCase):
         s.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4, 3: 0.3, 4: 0.3}; s.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
         return s
 
+    def test_a_voice_is_struck_with_another_parts_line(self):
+        """Round 178: a chord part's voice beside its line whose stretch reads its own, and is struck with neither a
+        sibling nor its line, is asked of the other parts' lines: "wb+7", struck with the bass. The plan reads the word,
+        writes the voice on that part's line as written where the part is written before it, and never doubles it."""
+        from bitcomposer.translate.vocab import Span
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        riff = [(4.0 * k + x, 0.9, 60.0, "g") for k in range(8) for x in range(4)]                             # the line: on the beats
+        bass = [(4.0 * k + x + 0.5, 0.4, 36.0, "b") for k in range(8) for x in range(4)]                       # the bass: off them
+        over = [(t, 0.2, 36.0 + 12 + (7, 5, 9)[i % 3], "s") for i, (t, _, _, _) in enumerate(bass)]            # a voice on the bass's notes, a fifth, a fourth, a sixth over
+        tune = [(4.0 * k + x + 0.25, 0.2, 84.0, "m") for k in range(8) for x in (0.0, 2.0)]
+        song = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"accompaniment": riff + over, "bass": bass, "melody": tune}, sid="s", game="g",
+                           numbers=list(range(8)), parts=[(0, 8, None, "A")], tonic=0, mode="major")
+        song.voice_notes = {0: ("accompaniment", riff), 1: ("bass", bass), 2: ("melody", tune), 3: ("accompaniment", over)}
+        song.voice_levels = {0: 0.3, 1: 0.5, 2: 0.4, 3: 0.3}; song.levels = {"accompaniment": 0.3, "bass": 0.5, "melody": 0.4}
+        self.assertEqual(rhythm.relation_words(song).get(3), "wb+19")                              # with the bass, at the commonest of its intervals
+        tok = rhythm.balance_units([song])[0].outcome
+        self.assertIn("@wb+19@", next(f for f in tok.split() if f.startswith("accompaniment=")))   # and the token carries it, with how it strikes
+        song.voice_notes[3] = ("bass", over)                                                       # a voice of the bass itself: not asked of other parts
+        self.assertEqual(rhythm.relation_words(song).get(3), "wl+19")                              # its own line then, as before
+        self.assertEqual(whole.relation_stretches("wb+19x4>o"), [("with", "bass", 19, 4), ("own", None, None, None)])
+        own = [(float(t), float(t) + 0.5, 67, 1) for t in range(16)]
+        written = {"bass": whole.Part("bass", [(float(t), float(t) + 0.9, 36, 0) for t in range(16)], [], [])}
+        got = whole.stretched_notes(1, own, [("with", "bass", 19, 0, 4)], written, {0, 2, 4, 5, 7, 9, 11}, 4, [])
+        self.assertEqual(got, own)                                                                 # a struck stretch is written in place: never the line doubled
+        from bitcomposer import written as written_mod
+        out = written_mod.compose_written(seed=42)                                                 # a song on Dancing Mad (part 5)'s token
+        self.assertEqual(out["plan"].token_song, "3b5f8b7c0e3c11a4bf37")
+        part = out["written"]["accompaniment"]
+        self.assertTrue(any(l.startswith("voice 2 struck with the bass's line at +5 in bars 1-18") for l in part.log), part.log[-6:])
+        at = {round(n[0] * 12) for n in out["written"]["bass"].notes}
+        mine = [n for n in part.notes if n[3] == 1 and n[0] < 18 * 4]
+        self.assertGreaterEqual(sum(1 for n in mine if round(n[0] * 12) in at) / len(mine), 0.9)   # its notes fall with the bass's (0.38 at the median before)
+
     def test_the_relation_words_say_struck_with(self):
         s = self._song()
         words = rhythm.relation_words(s)

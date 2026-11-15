@@ -2183,8 +2183,8 @@ def stretched_notes(v: int, own: list, spans: list, written: dict, scale: set, m
     out = []
     for kind, target, semi, a, b in spans:
         lo, hi = a * meter, b * meter
-        if kind != "own" and target in written:
-            line = [n for n in written[target].notes if (len(n) < 4 or n[3] == 0) and lo - NEAR <= n[0] < hi - NEAR]
+        if kind in ("double", "parallel") and target in written:   # a stretch struck with a part's line (round 178) is written in place, as
+            line = [n for n in written[target].notes if (len(n) < 4 or n[3] == 0) and lo - NEAR <= n[0] < hi - NEAR]   # one struck with its own line is
             if line:
                 out += parallel(line, semi, scale, v, song, role, models, rng, clash_rates, log) if kind == "parallel" else diatonic(line, semi, scale, v)
                 log.append(f"voice {v + 1} {kind} the {target}'s line at {semi:+d} in bars {a + 1}-{b}: {len(line)} notes")
@@ -4186,6 +4186,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
         written[R.BASS] = Part(R.BASS, line, figures, log, beside=beside_bass)
     tempo = rhythm.band(plan.bpm)
     pending = []                                            # the voices beside a line the token says what they do by stretch (round 90): written last
+    late_struck = {}                                        # (part, voice) -> the writing of its stretches struck with a part written after it (round 178)
     riding = {}                                             # a chord part -> the bars its line rides the bass in
     for role in rhythm.UPPER:
         if role not in plan.band or not all(k in models for k in ("rhythm", "voicings")):
@@ -4279,10 +4280,28 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                 rng_w = random.Random(f"{seed}:{role}:voice {v}:with")
                 mask_draw = (lambda f: _draw(models, "second_figures", (role, render_mod.layer_class(plan, role), plan.feel, rhythm.band(plan.bpm), str(len(f.split())), f),
                                              rng_w, floor_k=MASK_FLOOR)) if "second_figures" in models else None
+                waits = False                               # a stretch struck with a part written after this one (round 178)
                 for kind_w, target, semi_w, at, end in inline:
-                    ref = line_notes if target == ("line",) else voice_written.get(target[1])
+                    if isinstance(target, str):             # struck with another part's line (round 178): that part's line as written; with a
+                        if target not in written:           # part written after this one (the tune, the counter-line) once that is written
+                            if target in plan.band and kind_w == "with":
+                                sv_l = struck_values(plan, role, v)
+                                late_struck[(role, v)] = (lambda ref_l, at_l, end_l, semi_l, role=role, v=v, rng_w=rng_w, mask_draw=mask_draw, sv_l=sv_l,   # noqa: E731
+                                                          snd=(gs["second"] if gs else sounds), line_l=list(line_notes), clash=plan.extras[role].get("clashes"), scale_w=set(scale),
+                                                          fills_l=(plan.section_fills.get(role) or {}).get("beside"):
+                                                          struck_with(ref_l, at_l, end_l, semi_l, song, role, v, models, rng_w, clash, snd, scale_w, mask_draw, line_l, sv_l, fills=fills_l))
+                                waits = True
+                                log.append(f"voice {v + 1}: struck with the {target}'s line in bars {at + 1}-{end} once it is written (round 178)")
+                            else:
+                                log.append(f"voice {v + 1}: no {target} to be struck with in bars {at + 1}-{end}; its own notes there")
+                            continue
+                        ref = [x for x in written[target].notes if len(x) < 4 or x[3] == 0]
+                        whom = f"the {target}'s line"
+                    else:
+                        ref = line_notes if target == ("line",) else voice_written.get(target[1])
+                        whom = "the line" if target == ("line",) else f"voice {target[1] + 1}"
                     if ref is None:
-                        ref = line_notes
+                        ref, whom = line_notes, "the line"
                     a0, b0 = song.bars[at][0], song.bars[min(end, len(song.bars)) - 1][1]
                     in_span = [x for x in ref if a0 - rhythm.NEAR <= x[0] < b0 - rhythm.NEAR]
                     sv = struck_values(plan, role, v) if kind_w == "with" else None   # how the token song's voice strikes (round 108)
@@ -4306,8 +4325,8 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                         struck, thinned = parallel([(x[0], x[1], x[2], v) for x in in_span], semi_w, scale, v, song, role, models, rng_w, plan.extras[role].get("clashes"), None), 0
                     notes_v = [x for x in notes_v if not (a0 - rhythm.NEAR <= x[0] < b0 - rhythm.NEAR)] + struck
                     for k in range(at, min(end, len(voicings_v))):
-                        voicings_v[k] = f"{kind_w} {'the line' if target == ('line',) else 'voice ' + str(target[1] + 1)} {semi_w:+d}"
-                    log.append(f"voice {v + 1} {'struck with' if kind_w == 'with' else kind_w} {'the line' if target == ('line',) else f'voice {target[1] + 1}'} at {semi_w:+d} "
+                        voicings_v[k] = f"{kind_w} {whom} {semi_w:+d}"
+                    log.append(f"voice {v + 1} {'struck with' if kind_w == 'with' else kind_w} {whom} at {semi_w:+d} "
                                f"in bars {at + 1}-{end} (the token's stretches {word_v}): {len(struck)} notes"
                                + (f" on the chord by the parallel_intervals word, {thinned} of the followed onsets thinned by the second_figures word" if kind_w == "with" else "")
                                + ("" if sv is None else f", the mask held toward the token's share {sv['share']:.2f}; lengths by the line's gap"
@@ -4318,7 +4337,7 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                   + (f"; the cell repeated on {stats_w['repeats']} of {stats_w['comparable']} stabs with a stab at the same place of the bar "
                                      f"before, the token's {sv['cell']:.2f} (round 116)" if kind_w == "with" and sv.get("cell") is not None and stats_w.get("comparable") else "")
                                   + (f"; {stats_w['filled']} stabs added in the fill bars (round 118)" if stats_w.get("filled") else "")))
-                late = [sp for sp in spans_v if sp not in inline and sp[0] != "own"]   # its stretches on another part's line (round 122)
+                late = [sp for sp in spans_v if sp not in inline and sp[0] != "own"] or waits   # its stretches on another part's line (round 122)
                 notes_v.sort(key=lambda x: x[0])
                 beside_v.discard(v)
                 notes_v, looped_v, held_bars[(role, v)] = hold_loop(plan, f"{role}:{v}", notes_v, song.meter)   # its figure again where the token song's voice loops (round 121)
@@ -4536,6 +4555,15 @@ def write(plan: Plan, song: rhythm.Song, models: dict, seed: int, reference=None
                                                   leave=riding.get(role, ()), over=tune_notes)   # and before the
     scale = {(plan.tonic + i) % 12 for i in harmony.MODES["major" if plan.mode == "major" else "natural_minor"]}   # voices that follow a line by the token's stretches
     for role, v, own, word, *struck_too in pending:         # the voices beside a line written by the token's stretches (round 90), every line in place
+        if (role, v) in late_struck:                        # its stretches struck with a part written after it (round 178): written now, in place
+            for kind_l, target_l, semi_l, at_l, end_l in stretch_spans(relation_stretches(word), len(song.bars)):
+                if kind_l == "with" and isinstance(target_l, str) and target_l in written and target_l in (R.MELODY, R.COUNTER):
+                    ref_l = [x for x in written[target_l].notes if len(x) < 4 or x[3] == 0]
+                    struck_l, thinned_l, _ = late_struck[(role, v)](ref_l, at_l, end_l, semi_l)
+                    a_l, b_l = song.bars[at_l][0], song.bars[min(end_l, len(song.bars)) - 1][1]
+                    own = sorted([x for x in own if not (a_l - rhythm.NEAR <= x[0] < b_l - rhythm.NEAR)] + struck_l, key=lambda x: x[0])
+                    written[role].log.append(f"voice {v + 1} struck with the {target_l}'s line at {semi_l:+d} in bars {at_l + 1}-{end_l} (the token's stretches {word}): "
+                                             f"{len(struck_l)} notes on the chord, {thinned_l} of the followed onsets thinned (round 178)")
         notes_v = late_stretch_notes(plan, song, role, v, own, word, written, scale, models, random.Random(f"{seed}:{role}:voice {v}:stretch parallel"),
                                      struck_too=bool(struck_too))
         notes_v, looped_v, held_bars[(role, v)] = hold_loop(plan, f"{role}:{v}", notes_v, song.meter)   # its figure again where the token song's voice loops (round 121)
