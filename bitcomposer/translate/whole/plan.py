@@ -3303,7 +3303,7 @@ def _plan_sounds(models: dict, p: Plan, rng: random.Random) -> None:
         if role not in p.speeds:
             continue
         tier = rhythm.speed_tier(p.speeds[role])
-        p.gap_sounds[role] = {voice: {g: float(_draw(models, "gap_sounds", (role, voice, tier, g), rng, p.log)) for _, g in rhythm.GAP_CLASSES}
+        p.gap_sounds[role] = {voice: {g: float(_draw(models, "gap_sounds", (role, voice, tier, g), rng, p.log, own=p.token_song)) for _, g in rhythm.GAP_CLASSES}
                               for voice in ("only", "line", "second")}
     _own_gap_sounds(p.gap_sounds, p.token_gap_shares, None)   # the token song's own shares stand over the speed's redraw too (round 95)
 

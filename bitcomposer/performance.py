@@ -123,7 +123,7 @@ def vibrato_words(models: dict | None, plan, rng: random.Random) -> dict | None:
     for role in VIBRATO_PARTS:
         if role not in plan.band:
             continue
-        outcome = _draw(models, "vibrato", (role,), rng, plan.log)
+        outcome = _draw(models, "vibrato", (role,), rng, plan.log, own=getattr(plan, "token_song", None))   # its token song's own (round 174)
         word = rhythm.vibrato_word(outcome)
         if word is None:
             continue

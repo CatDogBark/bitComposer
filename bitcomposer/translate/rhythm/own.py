@@ -34,6 +34,10 @@ OWN = {                               # the once-a-song words answered by the to
     "part_speeds": ("rhythm", "part_speed_units", ("part", "habit")),
     "drum_group_habits": ("rhythm", "drum_group_habit_units", ("part", "classes", "habit")),
     "bass_locks": ("rhythm", "bass_lock_units", ("part",)),
+    # round 174: how long a voice's notes sound by the gap to the next (a unit a note: the song's middle answer is taken), and
+    # the vibrato the song is performed with
+    "gap_sounds": ("rhythm", "gap_sound_units", ("part", "voice", "speed", "gap")),
+    "vibrato": ("rhythm", "vibrato_units", ("part",)),
 }
 
 
