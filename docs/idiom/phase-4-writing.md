@@ -162,6 +162,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 168 | 2026-11-14 | a block line turns by the move its token song's line makes there | - |
 | 169 | 2026-11-14 | a tune keeps its token song's tune's share of notes on the half beat, in a triple feel | - |
 | 170 | 2026-11-14 | a bass keeps its token song's bass's share of notes on the half beat, in a triple feel | - |
+| 171 | 2026-11-14 | a tune and a counter-line go with a chord that leaves the key | - |
 
 ## Goal
 
@@ -12132,3 +12133,83 @@ songs (four of the 198 notes of the song heard). The tunes' fields
 are counted without the lag taken off.
 
 **Heard.** Not yet: it waits for the ear with round 169.
+
+### Round 171: a tune and a counter-line go with a chord that leaves the key (2026-11-14, from two songs heard clashing)
+
+**Why.** By ear, on the songs on Dancing Mad (part 5)'s token (seed
+1242: "the voices competing") and The Day After's (seed 1044: "the
+counter and melody clashing"). Investigated first; this is the first
+of the candidates, built on the pick of it.
+
+**Found.** Both songs are the same on round 168 and on the rounds
+before it. The song on The Day After's token is written in F sharp
+major with 22 of its 28 bars on a chord with a tone off that key,
+15 of them on one (a major chord on the seventh degree: F, A, C).
+The accompaniment and the bass play the chord; the tune and the
+counter-line play the key, not one note off it. Over 400 seeds a
+song's bars on such a chord are a quarter at the median, as the
+game's time on one is (0.25 both). What differs is the tune over
+them: FFVI's is on the chord on 0.53 of its notes and on the key's
+scale on 0.66, the written on 0.36 and 0.82. The `off_scale` word
+holds a line to its share of notes off the key over the whole song,
+whatever the chord, and the `chord_tones` word asks for chord tones
+on the beat: over a chord off the key they meet and the key wins.
+Counted on FFVI's tunes, for each tone a chord has off the key:
+over such a chord the tune plays that tone five times as often as
+over the chords of the key (0.169 of its notes against 0.034), the
+key's tone a semitone over it a third as often (0.043 against
+0.119) and the one under it three fifths as often (0.072 against
+0.120). Both give way, the one over it the more.
+
+**Built.** A new word, by song and pooled. For the tune and the
+counter-line the balance token says, after every other word,
+`follows=`: of the line's notes on a tone a chord has off the key
+or on the key's tone a semitone over it, the share on the chord's
+tone; and the same against the key's tone under it
+(`arrangement.chord_follows_field`, `given_way`; `m85/60,c70/-`).
+The same pairs are a table, `chord_follows`, for a line whose token
+song has too few such notes. In `plan.write`, once a line is
+written and before the next is, `follow_chords` takes each note on
+a key's tone that gives way to a tone of its bar's chord a semitone
+onto that tone, in time order, while the line's share on the
+chord's tone is within its song's for that side; the voices beside
+the line after them. A note keeps its place and its length; nothing
+is drawn. A vocabulary counted before the round has neither word
+and the lines stay on the key.
+
+**Measured.** Suite 634 tests, OK. The vocabulary: 117 tables for 116,
+the new one `chord_follows`; of the rest the balance table alone
+differs, 204 outcomes in the same order, each the same but for the
+new word and in its place; 28 of the 68 tokens carry `follows=`.
+Over 400 seeds (1000 to 1399, the player's asking), against round
+170: a note changes in 270 songs, 26.5 notes at the median and 558
+at the most, the tune's and the counter-line's pitches and what is
+written over them. The tune over a chord with a tone off the key:
+on the chord 0.48 of its notes (0.36 before, FFVI 0.53), on the
+key's scale 0.71 (0.82, FFVI 0.66). A note struck a semitone from
+a note another voice is sounding, song by song: 0.17 at the median
+before and after (the game's songs 0.09); 46 songs better by 0.02
+or more and 15 worse. The two songs heard are not among the better:
+seed 1044 0.22 before and 0.23 now, seed 1242 0.22 and 0.21. Their
+band is not on its own chord in those bars either (seed 1044's
+tremolo holds notes of the key through the bars on the chord off
+it), and seed 1044's chords are two tones off the key, more than a
+semitone's bending reaches: chords that far are in 0.19 of the bars
+of a song written in the other mode than its token song's, as this
+one is, and 0.07 of one written in its mode.
+
+**Open.** The chord parts do not go with the chord: their notes off
+it are the key's (a what-if with every part following: seed 1044
+0.18, seed 1242 0.17, 81 songs better and 17 worse; heard, and not
+preferred). The song's mode is the pooled key draw, not its token
+song's. A note bent for one chord and copied into a bar on another
+by a later hold keeps its bend. The shares are counted against the
+readings' chords, a chord a span, where the plan's are a chord a
+bar.
+
+**Heard.** Six songs each as it stood, with this round, and with
+the what-if (The Day After, Dancing Mad (part 5), Awakening, Last
+Dungeon, Celes, The Phantom Train): "the tune direction for sure",
+this round's over the other two. The Day After's counter-line and
+Dancing Mad (part 5)'s drums were heard as still wrong: other
+words' work.

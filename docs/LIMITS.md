@@ -186,6 +186,21 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   after the tune is written, so the tune's own clashes share was drawn
   against the voices as they stood before it. The voices hearing each
   other as they are drawn would carry it.
+- **A line goes with a chord off the key by a semitone, after it is
+  written; the band does not.** Since round 171 a tune's or a
+  counter-line's note on the key's tone a semitone over or under a tone
+  its bar's chord has off the key takes the chord's tone, as far as its
+  token song's line does (the `follows=` word, the `chord_follows` table
+  where the token says none). The chord parts' notes off their chord are
+  still the key's, so the band can sit a semitone from its own chord and
+  from a tune that went with it; a chord two tones off the key (a major
+  chord on a major key's seventh degree) leaves the tune's other notes a
+  semitone from it all the same, and such chords are commonest in a song
+  written in the other mode than its token song's (0.19 of its bars
+  against 0.07): the mode is the pooled key draw. A note struck a
+  semitone from a note another voice sounds is 0.17 of a written song's
+  notes at the median, 0.09 of its game song's, before the round and
+  after it.
 - **The counter is more diatonic than FFVI's.** A counter by the voice
   words takes scale steps from the tune's note, so it leaves the scale
   only where the tune does: 0.06 to 0.08 of its line's notes against
