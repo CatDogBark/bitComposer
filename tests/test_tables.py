@@ -977,6 +977,24 @@ class BalanceLevelTests(unittest.TestCase):
         self.assertIsNone(reading.note_vibrato(SimpleNamespace(voice=0, start=0.0, end=1.0, pitch=p0, bends=[(0.1 * k, p0 + 30 * k) for k in range(1, 9)], noise=False)))   # a slide
         self.assertIsNone(reading.note_vibrato(plain(0, 0.0, 1.0)))
         self.assertTrue(reading.note_vibrato(wobble(0, 0.0, 2.0, depth=100.0))["trill"])
+
+        def half_written(note):                 # round 179: the pitch's low byte written before its high byte, as the game's driver
+            out, last = [], note.pitch          # writes it: across a high-byte boundary the register holds a wrong value for an instant
+            for t, p in note.bends:
+                if p >> 8 != last >> 8:
+                    out.append((t - 0.00004, (last & 0xFF00) | (p & 0xFF)))
+                out.append((t, p))
+                last = p
+            return SimpleNamespace(voice=note.voice, start=note.start, end=note.end, pitch=note.pitch, bends=out, noise=False)
+        clean = wobble(0, 0.0, 2.0)             # 30 cents about 0x1000 crosses the boundary under it twice a cycle
+        torn = half_written(clean)
+        self.assertGreater(len(torn.bends), len(clean.bends) + 10)
+        self.assertGreater(max(abs(1200 * math.log2(p / p0)) for _, p in torn.bends), 80.0)        # the wrong values are far off
+        self.assertEqual(reading.note_vibrato(torn), reading.note_vibrato(clean))                  # and read as if never written
+        slide = SimpleNamespace(voice=0, start=0.0, end=1.0, pitch=0x0FF0, bends=[(0.005 * k, 0x0FF0 + 5 * k) for k in range(1, 160)], noise=False)
+        self.assertGreaterEqual(len(half_written(slide).bends) - len(slide.bends), 2)              # a slide across two boundaries
+        self.assertIsNone(reading.note_vibrato(half_written(slide)))                               # is still a slide
+        self.assertEqual(reading.vibrato_of_notes([torn, half_written(wobble(0, 2.0, 1.5))]), reading.vibrato_of_notes([clean, wobble(0, 2.0, 1.5)]))
         notes = [wobble(0, 0.0, 2.0), wobble(0, 2.0, 1.5), plain(0, 4.0, 1.5), plain(0, 6.0, 0.4), plain(0, 7.0, 0.2),   # the tune: 2 of 3 long, 0 of 1 short
                  plain(1, 0.0, 0.6), plain(1, 1.0, 0.6), wobble(1, 2.0, 0.6, depth=15.0, rate=6.0, onset=0.1)]            # the counter: 1 of 3 at 0.5-1 s
         f = reading.vibrato_of_notes(notes)
