@@ -84,6 +84,7 @@ from ..vocab import FIT, MARKS, SOUNDS, Span, _beats_at, _buckets, _median, _pct
 from ..vocab import TONES as CHORD_TONES
 
 from . import readings as readings_mod, cells as cells_mod, chords as chords_mod   # noqa: E402  the package's other sections
+from .fields import part_fields_text   # noqa: E402  a part's fields of the balance token, written by name
 
 
 # --- the arrangement: which parts play in which bars, the band, the voices, doublings, layered basses ---
@@ -2998,12 +2999,11 @@ def balance_units(songs) -> list:
         for role in sorted(s.notes):
             if role not in weights:
                 dh = habit_of_part.get((s.sid, role), "").replace(" ", "+")   # the kit's habit as the ninth field (round 62)
-                fields = ["", "", "", kit_channels(s), levels.get(role, ""), "", "", kit_token(s, top, tuned), dh] + [""] * 9 + [loop_field(s, s.notes[role], kit=True), "", part_spans_field(s, role), kit_onsets_field(s)]   # and its kit as the eighth (round 63; each
-                                                                                             # channel's pieces as the fourth, round 87;
-                                                                                             # piece's own level beside its sample, round 68)
-                while fields and not fields[-1]:
-                    fields.pop()
-                tokens.append(role + ("=" + ":".join(fields) if fields else ""))
+                text = part_fields_text(voices=kit_channels(s), level=levels.get(role, ""), sample=kit_token(s, top, tuned), habit=dh,   # the kit's fields, by
+                                        loops=loop_field(s, s.notes[role], kit=True), spans=part_spans_field(s, role),   # the names a pitched part's go by:
+                                        onsets=kit_onsets_field(s))   # its channels' pieces where a part's voices are (round 87), its kit where a part's sample
+                                                                      # is (round 63; each piece's own level beside its sample, round 68)
+                tokens.append(role + ("=" + text if text else ""))
                 continue
             reg = part_register(own_sample_notes(cells_mod.register_notes(s, role) or s.notes[role]), ambitus=role == R.MELODY)   # blips of another sample left out (round 104)
             line_notes = cells_mod.tune_line(s, role)       # the line voice's notes where the part has two or more (round 95: the part's merged
@@ -3011,40 +3011,38 @@ def balance_units(songs) -> list:
             by_gap = cells_mod.gap_shares(line_notes) if role in readings_mod.UPPER + (R.BASS,) else None   # Umaro's 0.4 pecks)
             beside = layer_tokens(s, role) if role in levels else None   # each voice beyond the line: level, sample, note share (round 65)
             kind = cells_mod.counter_kind(s) if role == R.COUNTER and role in levels else None
-            fields = [weights[role], f"{reg[0]}-{reg[1]}" if reg else "",
-                      (f"{round(share / cells_mod.SOUND_BIN) * cells_mod.SOUND_BIN:.1f}" if share is not None else "")
+            text = part_fields_text(weight=weights[role], register=f"{reg[0]}-{reg[1]}" if reg else "",
+                      sounds=(f"{round(share / cells_mod.SOUND_BIN) * cells_mod.SOUND_BIN:.1f}" if share is not None else "")
                       + ("@" + "/".join(f"{x:.1f}" if x is not None else "-" for _, g in cells_mod.GAP_CLASSES for x in (by_gap[g],)) if by_gap and any(x is not None for x in by_gap.values()) else ""),   # the line's share by gap class (round 95)
-                      str(max(1, voices.get(role, 1))), levels.get(role, ""), "/".join(beside) if beside else "", kind or "",
-                      part_sample_field(s, role),             # the part's own sample (round 60) and where the song plays it (round 86)
-                      habit_of_part.get((s.sid, role), "").replace(" ", "+"),   # and its habit (round 62): the song's density tiers together
-                      pan_field(s, role),                     # and its voices' pans (round 84): the song's stereo picture together
-                      line_stretches(s, role),                # and the line's instrument by stretch (round 91)
-                      line_motion(s, role, line_notes) if role in readings_mod.UPPER else "",   # a chord part's line motion (round 103)
-                      line_tone_tier(s, role) if role in readings_mod.UPPER else "",           # and its off-chord tier (round 103)
-                      part_period_field(s, role) if role in cells_mod.BACKING and role != R.DRUMS else "",   # the part's own period and holds (round 106)
-                      line_rides_field(s, role) if role in readings_mod.UPPER else "",         # and how far the line rides the bass (round 106)
-                      line_tone_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's chord-tone profile (round 111)
-                      bass_continuity_field(s, line_notes) if role == R.BASS else "",   # and the bass line's pitch continuity (round 114)
-                      line_step_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,)   # and the line's steps (round 117); a tune's
+                      voices=str(max(1, voices.get(role, 1))), level=levels.get(role, ""), layers="/".join(beside) if beside else "", kind=kind or "",
+                      sample=part_sample_field(s, role),             # the part's own sample (round 60) and where the song plays it (round 86)
+                      habit=habit_of_part.get((s.sid, role), "").replace(" ", "+"),   # and its habit (round 62): the song's density tiers together
+                      pans=pan_field(s, role),                     # and its voices' pans (round 84): the song's stereo picture together
+                      stretches=line_stretches(s, role),                # and the line's instrument by stretch (round 91)
+                      motion=line_motion(s, role, line_notes) if role in readings_mod.UPPER else "",   # a chord part's line motion (round 103)
+                      tone_tier=line_tone_tier(s, role) if role in readings_mod.UPPER else "",           # and its off-chord tier (round 103)
+                      period=part_period_field(s, role) if role in cells_mod.BACKING and role != R.DRUMS else "",   # the part's own period and holds (round 106)
+                      rides=line_rides_field(s, role) if role in readings_mod.UPPER else "",         # and how far the line rides the bass (round 106)
+                      tones=line_tone_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,) else "",   # and the line's chord-tone profile (round 111)
+                      continuity=bass_continuity_field(s, line_notes) if role == R.BASS else "",   # and the bass line's pitch continuity (round 114)
+                      steps=line_step_profile(s, role, line_notes) if role in readings_mod.UPPER + (R.BASS,)   # and the line's steps (round 117); a tune's
                       else tune_step_profile(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # own, of four classes (round 130)
-                      loop_field(s, line_notes) if role in cells_mod.BACKING else "",   # and the line's loops by the form's letters (round 121)
-                      line_company_field(s, role) if role in readings_mod.UPPER else "",   # and where the line doubles the bass, by part (round 123)
-                      part_spans_field(s, role),              # and the parts of the form it sounds in, with its entrances (round 124)
-                      section_onsets_field(s, line_notes),    # and its line's onsets a bar in each (round 125)
-                      bass_downbeat_field(s, line_notes) if role == R.BASS else "",   # and how often the bass roots a bar's first beat (round 129)
-                      first_beat_field(s, role) if role in readings_mod.UPPER + (R.BASS,) else "",   # and how often the bass strikes it, any
+                      loops=loop_field(s, line_notes) if role in cells_mod.BACKING else "",   # and the line's loops by the form's letters (round 121)
+                      company=line_company_field(s, role) if role in readings_mod.UPPER else "",   # and where the line doubles the bass, by part (round 123)
+                      spans=part_spans_field(s, role),              # and the parts of the form it sounds in, with its entrances (round 124)
+                      onsets=section_onsets_field(s, line_notes),    # and its line's onsets a bar in each (round 125)
+                      downbeat=bass_downbeat_field(s, line_notes) if role == R.BASS else "",   # and how often the bass roots a bar's first beat (round 129)
+                      first=first_beat_field(s, role) if role in readings_mod.UPPER + (R.BASS,) else "",   # and how often the bass strikes it, any
                                                              # voice of it (round 133), and a chord part (round 135)
-                      tune_shortest_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and a tune's shortest usual note (round 136)
-                      tune_lengths_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and how it sounds its notes, by the gap (round 141)
-                      tones_kept_field(s, role) if role in readings_mod.UPPER else "",   # and how often a chord part sounds a chord's tones again (round 142)
-                      together_field(s, role) if role in readings_mod.UPPER + (R.COUNTER, R.MELODY) else "",   # and how often it comes back with its lead
+                      shortest=tune_shortest_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and a tune's shortest usual note (round 136)
+                      lengths=tune_lengths_field(s, role, line_notes) if role in (R.MELODY, R.COUNTER) else "",   # and how it sounds its notes, by the gap (round 141)
+                      tones_kept=tones_kept_field(s, role) if role in readings_mod.UPPER else "",   # and how often a chord part sounds a chord's tones again (round 142)
+                      together=together_field(s, role) if role in readings_mod.UPPER + (R.COUNTER, R.MELODY) else "",   # and how often it comes back with its lead
                                                              # (round 144; the tune with the bass, round 146)
-                      tune_places_field(s, role, line_notes) if role in PLACE_PARTS else "",   # and where in the beat a tune's notes fall (round 147), the bass's (round 170)
-                      with_kit_field(s, role, line_notes) if role in KIT_PARTS else "",   # and how often its notes are struck with the kit (round 149)
-                      section_levels_field(s, role)]          # and its level in each part of the form (round 150)
-            while fields and not fields[-1]:                 # a field a song lacks is left off the end, not left empty
-                fields.pop()
-            tokens.append(f"{role}=" + ":".join(fields))
+                      places=tune_places_field(s, role, line_notes) if role in PLACE_PARTS else "",   # and where in the beat a tune's notes fall (round 147), the bass's (round 170)
+                      with_kit=with_kit_field(s, role, line_notes) if role in KIT_PARTS else "",   # and how often its notes are struck with the kit (round 149)
+                      section_levels=section_levels_field(s, role))          # and its level in each part of the form (round 150)
+            tokens.append(f"{role}=" + text)                 # by name, in rhythm.PART_FIELDS' order; a field a song lacks left off the end
         if s.echo is not None:                               # the song's echo word (round 82): the written song sits in its token song's room
             tokens.append("echo=" + echo_outcome(s))
         if s.tonic is not None:                              # the song's key (round 79): what the kit's degrees and tuned rates are read against
