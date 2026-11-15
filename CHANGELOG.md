@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 2.1.1 — 2026-11-15
+
+2.1.1: no song changes. A written song is note for note what 2.1.0 writes, and the shipped vocabulary is the same file. What changed is inside: the balance token, the line of text a written song takes its skeleton from, is read in a module of its own, its fields and words by name on both the side that writes it and the side that reads it, each step proven to change no note; and the emulator's workflow builds no macOS wheel for now. A token's text is unchanged, so packs imported with an earlier version read as they did.
 
 - Internal: the token's readers move to the token's module. The twenty-two small functions that each read one field or word of the balance token (`form_of`, `loops_of`, `relation_stretches` and the rest), and the two constants they need, go from `translate/whole/plan.py` to `whole/token.py`, as they stood; the plan imports them, so whoever took them from the plan still finds them there. `plan.py` is 4,230 lines (4,873 before the token's refactor began). Proven a refactor: 400 seeds note for note and log line for log line the same, and the byte-identical check's 90 files match.
 - Internal: the balance token's words of the song as a whole go by name on both sides too (`translate/rhythm/fields.py`, `SONG_WORDS`). The builder appended each word in the order of its code and the reader told them from parts by a chain of twenty branches; the builder now says each under its name and the list orders them (`song_words_text`), and the reader splits a token into its parts and its words (`token_words`) and takes each by name. The text is the same. Proven a refactor as the two stages before: the refit vocabulary is the shipped one exactly, 400 seeds are note for note and log line for log line the same, the byte-identical check's 90 files match, and every shipped token split and written again is itself.
