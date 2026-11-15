@@ -3266,6 +3266,61 @@ def kit_rate_units(songs) -> list:
     return out
 
 
+KIT_PLACES = "kit_rate_places"        # the word of a kit piece's rate by its place in the bar (round 176): a song's own, no pooled table
+KIT_PLACE_GRID = 12                   # the grid a hit's place is kept on, steps a beat: the written song's (plan.DIVISION)
+
+
+def kit_place(offset: float) -> tuple:
+    """A kit hit's place in its bar as the kit_rate_places word keeps it: (the exact place on KIT_PLACE_GRID, beats from the
+    bar line as a fraction's text, "3/2"; the beat it falls in, "b1")."""
+    pos = Fraction(round(offset * KIT_PLACE_GRID), KIT_PLACE_GRID)
+    return str(pos), f"b{math.floor(pos)}"
+
+
+def kit_rate_place_units(songs) -> list:
+    """Each place in the bar at which a song strikes a kit slot's percussion sample, where the song strikes that sample at
+    more than one rate, as a unit: its outcome the rate struck most at that place, in semitones from the slot's own rate
+    (the token's `r43`: Song.kit_rates, the rate struck most over the song; "+8", "+0"; on a tie the slot's own rate, then
+    the nearest to it), its values the piece's letter and the place (kit_place: the exact place, and the beat it falls in,
+    counted over every hit in that beat). One answer a song a place, kept in the `song_answers` table alone: the word has
+    no pooled table, and a written song asks its token song (round 176). A kit piece was one rate a song: Mt. Koltz's toms
+    are three drums (the low one on beats two and four, the high one on one, the middle one on three; the place in the bar
+    says the rate of 0.91 of its hits), and the written kit struck one. Of FFVI's 17 pieces struck at several rates the
+    place says the rate of three hits in four or more in 14; Dancing Mad (part 5)'s toms roll in pairs across the bar
+    line and the place says 0.62 of them."""
+    out = []
+    for s in songs:
+        hits = getattr(s, "kit_hit_rates", None) or {}
+        rates = getattr(s, "kit_rates", None) or {}
+        if not hits or not s.bars:
+            continue
+        counts = Counter()
+        for n in s.notes.get(R.DRUMS, []):
+            key = n[3] if isinstance(n[3], str) else None
+            piece = (s.pieces or {}).get(key)
+            if key and piece in readings_mod.LETTERS:
+                counts[(readings_mod.LETTERS[piece], key)] += 1
+        for letter, key in kit_slot_samples(counts, getattr(s, "kit_levels", None) or {}).items():
+            mine, main = hits.get(key) or [], rates.get(key)
+            if main is None or len({rate for _, rate in mine}) < 2:
+                continue
+            by_place = defaultdict(Counter)
+            for t, rate in mine:
+                k = bar_index_of(s.bars, t)
+                if k is None:                               # a hit outside the song's bars (before the first, a pickup) has no place
+                    continue
+                a, b = s.bars[k]
+                offset = t - a
+                if round(offset * KIT_PLACE_GRID) >= round((b - a) * KIT_PLACE_GRID):   # on the grid it is the next bar's first place
+                    offset -= b - a
+                for place in kit_place(offset):
+                    by_place[place][rate - int(main)] += 1
+            for place, votes in sorted(by_place.items()):
+                most = max(votes.items(), key=lambda kv: (kv[1], kv[0] == 0, -abs(kv[0]), -kv[0]))[0]
+                out.append(tables.Unit(s.sid, s.game, f"{most:+d}", {"part": letter, "place": place}))
+    return out
+
+
 def sample_ambitus_units(songs) -> list:
     """Each sample a song plays pitched, as a unit: its outcome the whole range the song played it in, lowest note to
     highest (part_register's grain, ambitus=True), its value the sample's id as a pack names it. The tune's bound

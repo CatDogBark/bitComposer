@@ -2470,7 +2470,20 @@ The words are grouped by where the writing draws them, in the order the song is 
   `step_habits`, `repeat_habits`, `repeat_rates`, `tune_grain`,
   `tune_sounds`, `layers`, `layer_sounds`, `voicing_habits`,
   `part_speeds`, `drum_group_habits` and `bass_locks`, and since round
-  174 `gap_sounds` and `vibrato`. A unit is
+  174 `gap_sounds` and `vibrato`. Since round 176 the list also holds a
+  word with no pooled table behind it, `kit_rate_places`: a unit a place
+  in the bar (on a grid of twelve steps a beat, the place as beats from
+  the bar line, `t|3/2`) and a unit a beat of the bar (`t|b1`) at which
+  a song strikes a kit slot's percussion sample, where the song strikes
+  that sample at more than one rate; its outcome the rate struck most
+  there in semitones from the slot's own rate (`+8`; on a tie the
+  slot's own, then the nearest to it). The plan asks its token song for
+  all of them (`whole.own.answers`, `plan.kit_places`; no draw) and the
+  renderer strikes a kit hit at its place's rate, the beat's where the
+  song never struck that place, the slot's own else
+  (`plan.kit_place_offset`), outside the `kit_rates` wall. Mt. Koltz's
+  toms: eight semitones over the slot's rate on beat one, five over on
+  three, at it on two and four. FFVI: 287 answers in 11 songs. A unit is
   one of those tables' own units, kept under its song's id, the table's
   name and its context joined by `|` (`melody|major|strong`). It is not
   drawn: the plan's draw of such a word is given its balance token's
@@ -2481,7 +2494,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   answers many times under one context (`gap_sounds`, counted a unit a
   note: 387 of the contexts) gives its middle answer, the one at half
   the song's units in the answers' numeric order; answers that are not
-  numbers have no middle and the draw stands. FFVI's songs give 3,252
+  numbers have no middle and the draw stands. FFVI's songs give 3,539
   answers, every one of the 68 songs some.
   A pooled draw is another song's kind of answer three times in four
   (the commonest answer under a context is 0.28 of the songs' for the

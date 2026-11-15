@@ -211,7 +211,8 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   held notes' lengths, what a voice beside a line does and how long it
   sounds, the voices' note lengths by the gap, the voicing, a part's
   sample's speed, the kit's limbs' habits, the bass's lock and the
-  vibrato. Still pooled: the counter-line's masks (which of the tune's
+  vibrato (a nineteenth, a kit piece's rate by its place in the bar, has
+  no pooled word at all: round 176). Still pooled: the counter-line's masks (which of the tune's
   notes it strikes with). The tonic, the tempo inside its class, the
   tune's shape and the theme's returns are pooled on purpose. A song
   too short for a share has no answer and keeps the draw. Songs on one
@@ -221,6 +222,17 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   did (The Day After). A song's vibrato is its game song's part's, on
   whatever sample the written part drew: the depth that suited one
   instrument can sit on another.
+- **A kit piece's several rates are by the place in the bar.** Since
+  round 176 a piece its token song strikes at more than one rate (toms
+  that are three drums, a snare on two rates in turn) is struck at the
+  rate that song strikes most at the hit's place in the bar
+  (`kit_rate_places`), the beat's where the song never struck that
+  place. That says 14 of FFVI's 17 such pieces on three hits in four or
+  more. It does not say a figure that rolls across the bar line:
+  Dancing Mad (part 5)'s written toms are two of its three drums, in
+  pairs only by chance, and Wild West's three of five. A piece struck
+  at another rate for one part of the form (Dancing Mad (part 5)'s hat)
+  is one rate.
 - **The counter is more diatonic than FFVI's.** A counter by the voice
   words takes scale steps from the tune's note, so it leaves the scale
   only where the tune does: 0.06 to 0.08 of its line's notes against

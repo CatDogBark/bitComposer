@@ -167,6 +167,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 173 | 2026-11-14 | thirteen more words by the song: the tune's manner and note lengths, the voices, the voicing, the kit's limbs | - |
 | 174 | 2026-11-14 | the voices' note lengths by the gap and the vibrato by the song; a word a song answers many times gives its middle answer | - |
 | 175 | 2026-11-14 | the role reader: a tom on the beats over a bass is a drum (Mt. Koltz reads with its kit); the game read again | - |
+| 176 | 2026-11-14 | a kit piece's rate by its place in the bar, the token song's own: a word with no pooled table | - |
 
 ## Goal
 
@@ -12485,5 +12486,74 @@ Koltz's tom at one rate where the game's are three drums (round
 176). Fanatics' and Troops March on's toms have nothing under them
 and stay pitched parts. The seven songs of other games are in no
 shipped vocabulary and were not heard.
+
+**Heard.** Not yet.
+
+### Round 176: a kit piece's rate by its place in the bar (2026-11-14, with round 175)
+
+**Why.** Dancing Mad (part 5) was heard as "a lot of noise in the A
+and B sections, mostly the drums now maybe" (the counter and kit
+investigation of that day), and its toms were found to be three
+pitches in the game and one in the written kit. Round 175 gave Mt.
+Koltz its kit, whose one piece is three drums.
+
+**Found.** A kit piece is one rate a song on the token (`r43`), the
+rate struck most. FFVI strikes 17 kit pieces at more than one rate
+(no one rate on nine hits in ten). What says which rate a hit takes
+is mostly its place in the bar: the rate struck most at a hit's
+place is that hit's rate on three hits in four or more for 14 of
+the 17. Mt. Koltz: 0.91 (the high tom on beat one, the low on two
+and four, the middle on three); The Mines of Narshe's snare and
+Troops March on's: 1.00, two rates in turn. Two are not by the
+place: Wild West's toms (0.66; the hit's order in the bar says all
+of them) and Dancing Mad (part 5)'s (0.62), which roll in pairs
+across the bar line.
+
+**Built.** A new word, `kit_rate_places`: a unit a place in the bar
+at which a song strikes a kit slot's sample, where the song strikes
+it at more than one rate; its outcome the rate struck most there, in
+semitones from the slot's own; and a unit a beat of the bar the same
+way, over the beat's hits. It is a song's own answer and nothing
+else: it joins `rhythm.OWN` (nineteen words) and has no pooled table
+behind it, the first such word. The loader keeps each kit hit's rate
+(`Song.kit_hit_rates`). The plan asks its token song for every place
+it has (`whole.own.answers`, `plan.kit_places`; no draw), and the
+renderer strikes a hit at its place's rate, the beat's where the
+song never struck that place, the slot's own where it never struck
+in that beat (`plan.kit_place_offset`, `render.kit_note_of`). The
+offset is added outside round 88's wall, so a piece's drums keep
+their distances when the key moves a tuned slot's rate. A slot's
+second sample plays its own rate as before. No constant, weight or
+filter.
+
+**Measured.** Suite 640 tests, 1 skipped. The vocabulary: 118 tables; the
+`song_answers` table has 3,539 answers (3,252 before), 287 of the
+new word in 11 songs; no other table differs. Over 400 seeds (1000
+to 1399, the player's asking), against round 175: no note of any
+song changes (a kit hit's rate is the renderer's); 66 songs on ten
+tokens have a kit that says its places, and in 58 a piece is struck
+at more than one rate. In the score of the song on Mt. Koltz's token
+(seed 1322) the tom sounds at three pitch registers, five and eight
+semitones over the first (one before). The eight songs on that
+token: the tom at its own rate on 164 hits, eight semitones over on
+54 to 70, five over on 41 (the game's 143, 102 and 34). The seven on
+Dancing Mad (part 5)'s: at its rate on about 195 hits and three
+semitones under on about 150, the third drum (seven under) never
+(the game's 140, 115 and 39); a hit at the rate of the hit before on
+0.52 to 0.61 (the game's 0.50). The eight on Wild West's: three
+rates (130, 26 and 26 hits) of the game's five. The tuning and
+ceiling measures on the six songs rendered for the listening: no
+voice off pitch, no note at the ceiling.
+
+**Open.** The place says a rolling figure badly: Dancing Mad (part
+5)'s written toms are two drums of its three and their pairs are by
+chance, Wild West's are three of five. A word for a piece's rates in
+their order would say those; it was not counted. A written kit's
+hits come from every song's figures, so a hit often falls where its
+token song never struck the piece and takes the beat's rate. The
+word is by the bar: Dancing Mad (part 5)'s hat, three semitones
+under for its first bars only, is one rate. Last Dungeon's two toms
+are struck at two rates and its token has no kit (the roll voice of
+round 152's investigation).
 
 **Heard.** Not yet.
