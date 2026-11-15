@@ -2483,7 +2483,25 @@ The words are grouped by where the writing draws them, in the order the song is 
   song never struck that place, the slot's own else
   (`plan.kit_place_offset`), outside the `kit_rates` wall. Mt. Koltz's
   toms: eight semitones over the slot's rate on beat one, five over on
-  three, at it on two and four. FFVI: 287 answers in 11 songs. A unit is
+  three, at it on two and four. FFVI: 287 answers in 11 songs. Since
+  round 177 two more such words say how a counter-line goes with its
+  tune, by the form's letter (each letter's first part) and over the
+  whole song (`*`): `counter_with`, the share of the counter-line's
+  notes struck with a tune note (`counter|C` `1.00`), and
+  `counter_intervals`, a unit a note struck with the tune, its outcome
+  the interval to the tune's note as `voice_intervals` counts one, by
+  the place and the tune note's state (`counter|C|scale`: `-2` 0.71,
+  `-3` 0.29, a third and a fourth under); a song answers it many times
+  and the answers are read as shares (`whole.own.shares`). The plan
+  asks by its bar's letter where the form is the token song's, the
+  whole song's where not (`plan.counter_place`). A bar's
+  `counter_figures` mask is asked first to keep its part of the form
+  within a note of the share (`plan.counter_mask`, `shared`), and a
+  note with the tune is drawn among the song's intervals by their
+  shares and the `voice_moves` word, the same interval an octave off
+  where the span holds none, the pooled `voice_intervals` word else
+  (`writer.tune.beside_pitch`, `own_intervals`). FFVI: 219 and 309
+  contexts in 54 and 53 songs. A unit is
   one of those tables' own units, kept under its song's id, the table's
   name and its context joined by `|` (`melody|major|strong`). It is not
   drawn: the plan's draw of such a word is given its balance token's
@@ -2494,7 +2512,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   answers many times under one context (`gap_sounds`, counted a unit a
   note: 387 of the contexts) gives its middle answer, the one at half
   the song's units in the answers' numeric order; answers that are not
-  numbers have no middle and the draw stands. FFVI's songs give 3,539
+  numbers have no middle and the draw stands. FFVI's songs give 4,067
   answers, every one of the 68 songs some.
   A pooled draw is another song's kind of answer three times in four
   (the commonest answer under a context is 0.28 of the songs' for the

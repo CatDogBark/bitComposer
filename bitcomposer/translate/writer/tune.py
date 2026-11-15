@@ -221,7 +221,7 @@ def interval_pitch(entry: str, ref: float, scale: set) -> int:
 
 
 def interval_weights(t_iv, ctx: tuple, refused, ref: float, scale: set, t_mv=None, move_ctx: tuple | None = None, prev_midi: float | None = None,
-                     span: tuple | None = None) -> dict:
+                     span: tuple | None = None, own: dict | None = None) -> dict:
     """{entry: weight} over the voice_intervals word's entries under `ctx` (its third value the line note's state, which
     picks the entries' form), within two octaves and off `refused`; with `t_mv` and the voice's last note, each weighed
     by the voice_moves word for the move the entry's note would make from it: the note both words agree on. `span`
@@ -235,7 +235,7 @@ def interval_weights(t_iv, ctx: tuple, refused, ref: float, scale: set, t_mv=Non
             continue
         if span is not None and not span[0] <= interval_pitch(entry, ref, scale) <= span[1]:
             continue
-        w = t_iv.p(entry, ctx)
+        w = own.get(entry, 0.0) if own is not None else t_iv.p(entry, ctx)   # the song's own share of the interval, where it says (round 177)
         if t_mv is not None and prev_midi is not None:
             mv = str(scale_index(interval_pitch(entry, ref, scale), scale) - scale_index(int(round(prev_midi)), scale))
             if mv not in t_mv.vocabulary:
@@ -246,9 +246,25 @@ def interval_weights(t_iv, ctx: tuple, refused, ref: float, scale: set, t_mv=Non
     return out
 
 
+def octaves_off(own: dict, ref: float, scale: set, span: tuple) -> dict:
+    """A song's own intervals to the line's note (entry -> share), each moved by octaves to the nearest one whose note the
+    span holds: {entry: share}, an interval with no octave inside the span left out. For a line whose span holds none of
+    its song's intervals as they stand (round 177): a third under played a tenth under is still that song's interval,
+    where the pooled word's draw is any song's."""
+    out = {}
+    for entry, share in own.items():
+        form, v = interval_entry(entry)
+        for k in (1, -1, 2, -2):
+            moved = f"s{v + 12 * k}" if form == "semis" else str(v + 7 * k)
+            if span[0] <= interval_pitch(moved, ref, scale) <= span[1]:
+                out[moved] = out.get(moved, 0.0) + share
+                break
+    return out
+
+
 def beside_pitch(models: dict, role: str, kind: str, scale: set, rng: random.Random, ref: float | None, prev_steps: str,
                  prev_midi: float | None, moved: int = 0, refused=(), chord: set | None = None, chord_rate: float | None = None,
-                 span: tuple | None = None) -> tuple[int | None, str | None]:
+                 span: tuple | None = None, own_intervals: dict | None = None) -> tuple[int | None, str | None]:
     """The note of a voice beside the line, as the voice_intervals and voice_moves words give it: with the line (`ref`, the
     line's note), the interval both words agree on, drawn from their product (the move the interval's note would make
     from the voice's last note; `moved`, the line's own move, is no longer needed and kept for the callers); alone, the
@@ -277,7 +293,15 @@ def beside_pitch(models: dict, role: str, kind: str, scale: set, rng: random.Ran
     if ref is not None:
         ctx = (role, kind, line_state(ref, scale), prev_steps)
         chained = prev_steps != rhythm.START and prev_midi is not None
-        weights = interval_weights(t_iv, ctx, refused, ref, scale, t_mv if chained else None, (role, kind, "with"), prev_midi if chained else None, span) if span is not None else {}
+        weights = {}
+        if own_intervals:                                   # the token song's own intervals to the line there (round 177), by their shares and
+            weights = interval_weights(t_iv, ctx, refused, ref, scale, t_mv if chained else None, (role, kind, "with"),   # the move each makes;
+                                       prev_midi if chained else None, span, own=own_intervals)   # none in the span: an octave off, then the
+            if not weights and span is not None:                                                  # pooled word
+                weights = interval_weights(t_iv, ctx, refused, ref, scale, t_mv if chained else None, (role, kind, "with"),
+                                           prev_midi if chained else None, span, own=octaves_off(own_intervals, ref, scale, span))
+        if not weights and span is not None:
+            weights = interval_weights(t_iv, ctx, refused, ref, scale, t_mv if chained else None, (role, kind, "with"), prev_midi if chained else None, span)
         if not weights:                                     # no span, or none of the entries' notes inside it: every entry, as before round 143
             weights = interval_weights(t_iv, ctx, refused, ref, scale, t_mv if chained else None, (role, kind, "with"), prev_midi if chained else None)
         if chord and chord_rate is not None and weights:     # the chord's tones at the line's drawn share (round 96)
@@ -306,7 +330,7 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
             kind: str, key: tuple | None = None, articulation: str = "mixed", register: tuple | None = None,
             role: str = R.COUNTER, spans_at=None, clash_rates: dict | None = None, chord_rate: float | None = None,
             tune_sounds: dict | None = None, shortest: float | None = None, lengths: dict | None = None,
-            lengths_rng: random.Random | None = None, move_profile: dict | None = None) -> tuple[list, list, list]:
+            lengths_rng: random.Random | None = None, move_profile: dict | None = None, own_intervals=None) -> tuple[list, list, list]:
     """The counter-line written beside the tune (round 29): its bar from the tune's bar and a counter_figures mask
     (`masks`, one a bar, REST where the plan has it rest; rhythm.apply_mask: the tune's onsets it strikes with and its
     own, its own alone where the tune rests), its pitch by the voice words as the second bass voice's is
@@ -395,7 +419,8 @@ def counter(song: rhythm.Song, tune: list, tune_figures: list, masks: list, span
                 refused = set()
                 for _ in range(figures_mod.VOICE_TRIES):
                     target, steps = beside_pitch(models, role, kind, scale, rng, ref, prev_steps, prev_midi, moved, refused,
-                                                 chord=chord_hold(place, t), chord_rate=chord_rate, span=span_k)   # among the span's notes (round 143)
+                                                 chord=chord_hold(place, t), chord_rate=chord_rate, span=span_k,   # among the span's notes (round 143)
+                                                 own_intervals=((own_intervals(k) or {}).get(line_state(ref, scale)) if own_intervals is not None else None))   # (round 177)
                     if target is None:
                         break
                     midi = upper_mod.in_register(target, span_k)

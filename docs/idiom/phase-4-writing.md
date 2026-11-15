@@ -168,6 +168,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 174 | 2026-11-14 | the voices' note lengths by the gap and the vibrato by the song; a word a song answers many times gives its middle answer | - |
 | 175 | 2026-11-14 | the role reader: a tom on the beats over a bass is a drum (Mt. Koltz reads with its kit); the game read again | - |
 | 176 | 2026-11-14 | a kit piece's rate by its place in the bar, the token song's own: a word with no pooled table | - |
+| 177 | 2026-11-14 | the counter-line with its tune by part of the form: its share of notes with the tune and its intervals to it, the token song's own | - |
 
 ## Goal
 
@@ -12555,5 +12556,86 @@ word is by the bar: Dancing Mad (part 5)'s hat, three semitones
 under for its first bars only, is one rate. Last Dungeon's two toms
 are struck at two rates and its token has no kit (the roll voice of
 round 152's investigation).
+
+**Heard.** Not yet.
+
+### Round 177: the counter-line goes with its tune as its token song's does (2026-11-14, the third of the rest of round 172's plan)
+
+**Why.** By ear, on The Day After's song: "the counter and melody
+seem to be clashing ... I think its trying to do some sort of call
+and echo like the original"; and after round 171: "the counter in
+the original song has like a specific call and then recall style
+between them".
+
+**Found.** The game's counter-line does two things by the part of
+the form. In A it plays alone in the first half of the bar and the
+tune answers; it is with a tune note on 0.12 of its notes. In C it
+is a second voice under the tune, note for note, a third or a fourth
+under (0.71 and 0.29 of its notes). The written counter's bar is a
+mask over the tune's bar from the pooled `counter_figures` word,
+and its note with the tune an interval from the pooled
+`voice_intervals` word: neither knows the song, nor the part of the
+form. Over FFVI's 54 songs with a tune, a counter-line and a form
+the counter is with its tune on 0.54 of its notes a part at the
+median, and of the 39 with two parts counted the parts differ by
+0.3 or more in 17. Over 400 seeds the written counter was with its
+tune on 0.76 of its notes a part, within 0.15 of its game song's
+part in 401 of 923 parts and 0.3 or more over in 218. Where the two
+strike together the game's part is on its two commonest intervals
+(in scale steps, octaves apart as one) on 0.73 of the notes at the
+median, the written part on those two on 0.36.
+
+**Built.** Two new words, a song's own with no pooled table, by
+the form's letter (each letter's first part, as the onsets a bar
+are counted) and over the whole song. `counter_with`: the share of
+the counter-line's notes struck with a tune note. `counter_intervals`:
+its interval to the tune's note at each such note, as the
+`voice_intervals` word counts one; many answers a place, kept as
+shares (`whole.own.shares`). The plan asks by its bar's letter where
+the form is the token song's (`plan.form_own`), the whole song's
+answer where it is not or the letter has none. A bar's mask is
+asked first to keep its part of the form within a note of the
+song's share (`counter_mask`'s `shared`, `mask_with`, `WITH_SLACK`:
+the count's grain); with the song's onsets a bar where both can be
+met, without them where not; the places hold stands over both. A
+note with the tune is drawn among the song's own intervals for the
+part, by their shares and the move each makes (`beside_pitch`'s
+`own_intervals`); where the span holds none of them, the same
+interval an octave off (`octaves_off`); then the pooled word. Two
+new words and a hold; the hold's slack is one note.
+
+**Measured.** Suite 641 tests, 1 skipped. The vocabulary: only `song_answers`
+differs (4,067 answers; 219 of the first word in 54 songs, 309 of
+the second in 53). Over 400 seeds (1000 to 1399, the player's
+asking), against round 176: every one of the 326 songs with a
+counter-line changes it; the accompaniment changes in 98, the tune
+in 10. The counter with its tune, by part: within 0.15 of its game
+song's part in 575 of 899 parts (401 of 923), 0.3 or more over in
+115 (218), 0.3 or more under in 13 (39); the median 0.72 (0.76, the
+game's parts 0.54). Its intervals: a note with the tune takes one
+of its song's own intervals for the part on 0.76 of the draws, the
+same an octave off on 0.15, the pooled word on 0.09; a part is on
+its game part's two commonest intervals on 0.54 at the median
+(0.36), within 0.2 of the game's in 362 of 656 parts (179). The
+song on The Day After's token (seed 1044): in C with the tune on
+0.60 of its notes (0.27), every one of those a third under; 28 of
+its 30 notes with the tune a third under (15 of 19). Against it:
+the counter-line is thinner, 0.84 of its game song's notes a bar at
+the median (0.90) and under three quarters in 15 of 47 songs (11),
+the share being asked before the onsets a bar where both cannot be
+met. A song's semitone meetings between voices are within 0.05 of
+its game song's in 146 songs (155). The tune battery otherwise: the
+counter's moves of a fourth or more 0.14 of its moves (0.12, FFVI
+0.15); the tune's measures as they were.
+
+**Open.** The call and its answer are not said: in A the written
+counter plays where the tune rests, its own notes, where the game's
+tune takes up the counter's three notes two and a half beats later
+(three of FFVI's songs do the like). The Day After's C reaches 0.60
+with the tune, not 1.00: two of its bars' masks give way to the
+places hold. A counter-line whose song doubles the tune at the
+unison now does (Last Dungeon: 20 of its notes on the tune's own).
+The counter-line's masks are still the pooled word, held to the
+song three ways now.
 
 **Heard.** Not yet.

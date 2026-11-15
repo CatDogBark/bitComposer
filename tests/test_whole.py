@@ -3778,12 +3778,12 @@ class SongsOwnAnswersTests(unittest.TestCase):
     def test_the_tables_keep_each_songs_own_answers(self):
         from bitcomposer.translate import packtables
         for word, (module, builder, shape) in rhythm.OWN.items():
-            if word == rhythm.KIT_PLACES:                                                          # round 176: a word with no pooled table behind it
+            if word in (rhythm.KIT_PLACES, rhythm.COUNTER_WITH, rhythm.COUNTER_INTERVALS):         # rounds 176, 177: words with no pooled table behind them
                 self.assertNotIn(word, packtables.KEPT)
                 continue
             self.assertEqual(packtables.KEPT[word][:2], (module, builder), word)                   # the pooled table's own module, builder and shape
             self.assertEqual(tuple(packtables.KEPT[word][3]), shape, word)
-        self.assertEqual(len(rhythm.OWN), 19)                                                      # three in round 172, thirteen in 173, two in 174, one in 176
+        self.assertEqual(len(rhythm.OWN), 21)                                                      # three in round 172, thirteen in 173, two in 174, one in 176
         self.assertEqual(tuple(packtables.KEPT["song_answers"][3]), rhythm.OWN_SHAPE)
         self.assertEqual(rhythm.own_context(("melody", "major", "strong")), "melody|major|strong")
         units = rhythm.own_units([self._song()])
@@ -3863,6 +3863,78 @@ class SongsOwnAnswersTests(unittest.TestCase):
         self.assertEqual(whole.kit_place_offset(plan, "snare", 0.0), 0)                            # a piece the song says nothing of
         self.assertTrue(any(l.startswith("the kit's t: its rate by its place in the bar") for l in plan.log))
 
+    def test_the_counter_line_goes_with_its_tune_as_its_token_songs_does_by_part_of_the_form(self):
+        """Round 177: two words of a song's own with no pooled table. counter_with: the share of the counter-line's notes
+        struck with a tune note, by the form's letter and over the whole song. counter_intervals: its intervals to the
+        tune's note there, many answers a place. The plan asks them by its bar's letter where the form is the token
+        song's; a bar's mask is asked to keep its part of the form at the share; a note with the tune is drawn among
+        the song's own intervals, an octave off where the span holds none."""
+        from types import SimpleNamespace
+        from bitcomposer.translate.vocab import Span
+        import importlib
+        P = importlib.import_module("bitcomposer.translate.whole.plan")
+        T = importlib.import_module("bitcomposer.translate.writer.tune")
+        bars = [(4.0 * k, 4.0 * k + 4.0) for k in range(8)]
+        tune = [(float(t), 0.9, 72.0 if t % 2 == 0 else 74.0, "m") for t in range(16, 32)]         # C major: the tune plays in B (bars 4 to 7), a note a beat
+        counter = ([(float(t) + 0.5, 0.4, 60.0, "c") for t in range(0, 16)]                        # A: the counter alone, off the beats
+                   + [(float(t), 0.9, 69.0 if t % 2 == 0 else 71.0, "c") for t in range(16, 32)])  # B: a third under the tune, note for note
+        song = rhythm.Song("t", 4, 12, bars, [Span(0.0, 32.0, 0, "", 1.0)], notes={"melody": tune, "counter": counter}, bpm=120.0, sid="song1", game="g",
+                           numbers=list(range(8)), parts=[(0, 4, None, "A"), (4, 4, None, "B")], tonic=0, mode="major")
+        said = {u.values["place"]: u.outcome for u in rhythm.counter_with_units([song])}
+        self.assertEqual(said, {"A": "0.00", "B": "1.00", rhythm.COUNTER_WHOLE: "0.50"})
+        ivs = Counter((u.values["place"], u.values["line"], u.outcome) for u in rhythm.counter_interval_units([song]))
+        self.assertEqual(ivs, Counter({("B", "scale", "-2"): 16, (rhythm.COUNTER_WHOLE, "scale", "-2"): 16}))   # a third under, sixteen times; none in A
+        units = [u for u in rhythm.own_units([song]) if u.values["word"] in (rhythm.COUNTER_WITH, rhythm.COUNTER_INTERVALS)]
+        models = {"song_answers": tables.Table(rhythm.OWN_SHAPE, "song_answers", votes=tables.SHARES).fit(units)}
+        self.assertEqual(whole.own_answers(models, "song1", rhythm.COUNTER_WITH), {"counter|A": "0.00", "counter|B": "1.00", "counter|*": "0.50"})
+        self.assertEqual(whole.own_shares(models, "song1", rhythm.COUNTER_INTERVALS), {"counter|B|scale": {"-2": 1.0}, "counter|*|scale": {"-2": 1.0}})
+        self.assertEqual(whole.own_shares(models, "another", rhythm.COUNTER_INTERVALS), {})
+        plan = SimpleNamespace(band=[R.MELODY, R.COUNTER], token_song="song1", form_own=True, counter_with={}, counter_intervals={}, log=[],
+                               parts=[(0, 2, None, "A"), (2, 2, None, "B"), (4, 2, None, "C")])
+        P._plan_counter_own(models, plan)
+        self.assertEqual(plan.counter_with, {"A": 0.0, "B": 1.0, "*": 0.5})
+        self.assertEqual([P.counter_place(plan, k) for k in range(6)], ["A", "A", "B", "B", "*", "*"])   # a letter the song's counter does not play in: the whole song's
+        self.assertEqual([P.counter_with_share(plan, k) for k in (0, 2, 4)], [0.0, 1.0, 0.5])
+        self.assertEqual(P.counter_intervals_at(plan, 2), {"scale": {"-2": 1.0}})
+        self.assertEqual(P.counter_intervals_at(plan, 0), {"scale": {"-2": 1.0}})                  # A has none of its own: the whole song's
+        other = SimpleNamespace(band=[R.MELODY, R.COUNTER], token_song="song1", form_own=False, counter_with={}, counter_intervals={}, log=[], parts=plan.parts)
+        P._plan_counter_own(models, other)
+        self.assertEqual((other.counter_with, [P.counter_place(other, k) for k in (0, 2)]), ({"*": 0.5}, ["*", "*"]))   # a form not the song's: the whole song's
+        self.assertIsNone(P.counter_place(SimpleNamespace(counter_with={}, form_own=True, parts=plan.parts), 0))
+        # a mask's count with the tune, and the mask asked to keep the share
+        self.assertEqual([P.mask_with("0 1 2 3", m) for m in ("1 |", "1 0 |", "0 | 1/2", "-", "0 0 1 1 | 7/2")], [4, 2, 0, 0, 2])
+        self.assertEqual(P.mask_with("-", "0 | 1/2"), 0)
+        unit = lambda outcome: tables.Unit("s", "g", outcome, {"part": "counter"})                 # noqa: E731
+        figures = tables.Table(("part",), "counter_figures").fit([unit("0 | 1/2 3/2")] * 6 + [unit("1 |")] + [unit("1 0 | 1/2")])
+        both = {"counter_figures": figures}
+        ask = lambda share, first="0 | 1/2 3/2": P.counter_mask(both, ("counter",), "0 1 2 3", first, None, random.Random(3), shared=(0, 0, share))[0]   # noqa: E731
+        self.assertEqual(ask(1.0), "1 |")                                                          # every note with the tune
+        self.assertEqual(ask(0.0), "0 | 1/2 3/2")                                                  # none: the first draw stands
+        self.assertEqual(ask(0.67), "1 0 | 1/2")                                                   # two of three: within a note
+        self.assertEqual(P.counter_mask(both, ("counter",), "0 1 2 3", "0 | 1/2 3/2", None, random.Random(3))[1], "first")   # no share asked: as it was
+        self.assertEqual(P.counter_mask(both, ("counter",), "0 1 2 3", "0 | 1/2 3/2", (9, 9), random.Random(3), shared=(0, 0, 1.0))[1], "none")   # nothing fits: the first draw
+        # a note with the tune among the song's own intervals
+        scale = {0, 2, 4, 5, 7, 9, 11}
+        iv = tables.Table(("part", "kind", "line", "previous"), "voice_intervals").fit(
+            [tables.Unit("s", "g", o, {"part": "counter", "kind": "other", "line": "scale", "previous": rhythm.START}) for o in ("0", "-2", "-2", "-9", "4", "4", "4", "4")])
+        ctx = ("counter", "other", "scale", rhythm.START)
+        pooled = T.interval_weights(iv, ctx, (), 72.0, scale)
+        self.assertTrue({"4", "0", "-9", "-2"} <= set(pooled))                                     # the pooled word: every entry the table knows
+        self.assertEqual(T.interval_weights(iv, ctx, (), 72.0, scale, own={"-2": 0.7, "-3": 0.3}), {"-2": 0.7})   # the song's shares; an entry the table does not know is none
+        self.assertEqual(T.octaves_off({"-2": 1.0}, 72.0, scale, (50, 60)), {"-9": 1.0})           # a third under, an octave lower: the span holds it
+        self.assertEqual(T.octaves_off({"-2": 1.0}, 72.0, scale, (20, 30)), {})
+        mv = tables.Table(("part", "kind", "place"), "voice_moves").fit([tables.Unit("s", "g", "0", {"part": "counter", "kind": "other", "place": "with"})])
+        words = {"voice_intervals": iv, "voice_moves": mv}
+        for seed in range(6):
+            self.assertEqual(T.beside_pitch(words, "counter", "other", scale, random.Random(seed), 72.0, rhythm.START, None, own_intervals={"-2": 1.0}), (69, "-2"))
+            self.assertEqual(T.beside_pitch(words, "counter", "other", scale, random.Random(seed), 72.0, rhythm.START, None, span=(50, 60), own_intervals={"-2": 1.0}), (57, "-9"))
+        from bitcomposer import vocabularies
+        shipped = vocabularies.load("default")
+        day = "706738b9f7f64a7f2111"                                                               # The Day After: the counter calls in A, a second voice under the tune in C
+        self.assertEqual(whole.own_answers(shipped, day, rhythm.COUNTER_WITH), {"counter|*": "0.66", "counter|A": "0.12", "counter|C": "1.00", "counter|D": "0.81"})
+        thirds = whole.own_shares(shipped, day, rhythm.COUNTER_INTERVALS)["counter|C|scale"]
+        self.assertEqual({k: round(v, 2) for k, v in thirds.items()}, {"-2": 0.71, "-3": 0.29})
+
     def test_the_plan_takes_its_token_songs_mode_and_answers(self):
         token = "bass=half:36-44:0.9:1:1.0 melody=main:64-84:0.9:1:0.7:::slead top=0.30 tempo=medium key=9:minor song=song1"
         keys = tables.Table(("part",), "keys").fit([tables.Unit(f"k{i}", "g", "0 major", {"part": "song"}) for i in range(3)])
@@ -3894,10 +3966,10 @@ class SongsOwnAnswersTests(unittest.TestCase):
         self.assertEqual(len({o.split()[-1] for o in outcomes}), 68)
         own = getattr(vocabulary["song_answers"], "table", vocabulary["song_answers"])
         answers = [k for k in own.votes if len(k) == 3]
-        self.assertEqual(len(answers), 3539)
+        self.assertEqual(len(answers), 4067)
         self.assertEqual({k[1] for k in answers}, set(rhythm.OWN))
         many = {k[1] for k in answers if len(own.votes[k]) > 1}                                    # one answer a song, a word and a context, but for
-        self.assertEqual(many, {"gap_sounds"})                                                     # the word counted a note at a time (round 174)
+        self.assertEqual(many, {"gap_sounds", "counter_intervals"})                                # the words counted a note at a time (rounds 174, 177)
         self.assertEqual(len({k[0] for k in answers}), 68)                                         # every song answers some of the sixteen
         self.assertTrue({k[0] for k in answers} <= {o.split()[-1][5:] for o in outcomes})
 

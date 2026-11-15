@@ -211,8 +211,9 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   held notes' lengths, what a voice beside a line does and how long it
   sounds, the voices' note lengths by the gap, the voicing, a part's
   sample's speed, the kit's limbs' habits, the bass's lock and the
-  vibrato (a nineteenth, a kit piece's rate by its place in the bar, has
-  no pooled word at all: round 176). Still pooled: the counter-line's masks (which of the tune's
+  vibrato (three more have no pooled word at all: a kit piece's rate by
+  its place in the bar, round 176, and the counter-line's share with its
+  tune and its intervals to it, round 177). Still pooled: the counter-line's masks (which of the tune's
   notes it strikes with). The tonic, the tempo inside its class, the
   tune's shape and the theme's returns are pooled on purpose. A song
   too short for a share has no answer and keeps the draw. Songs on one
@@ -222,6 +223,17 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   did (The Day After). A song's vibrato is its game song's part's, on
   whatever sample the written part drew: the depth that suited one
   instrument can sit on another.
+- **The counter-line's call and answer are not said.** Since round 177
+  the counter-line strikes with its tune on its token song's own share
+  of its notes for the part of the form, at that song's own intervals
+  (`counter_with`, `counter_intervals`), so a second voice under the
+  tune is one and a counter that plays in the tune's rests does. Where
+  the game's tune takes up the counter's figure a few beats later (The
+  Day After's first part; three of FFVI's songs) the written counter
+  plays its own notes there. The share gives way to the places hold (The
+  Day After's C: 0.60 with the tune where the game's is every note), and
+  the counter is thinner for being asked the share before its onsets a
+  bar: 0.84 of its game song's notes a bar at the median.
 - **A kit piece's several rates are by the place in the bar.** Since
   round 176 a piece its token song strikes at more than one rate (toms
   that are three drums, a snare on two rates in turn) is struck at the

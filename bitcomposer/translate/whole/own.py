@@ -53,3 +53,19 @@ def answers(models: dict, song: str | None, word: str) -> dict:
             if mine is not None:
                 out[key[2]] = mine
     return out
+
+
+def shares(models: dict, song: str | None, word: str) -> dict:
+    """The song's answers to a word it answers many times, as shares: {the context as the table keeps it: {answer: its
+    share of the song's answers there}}; empty without the table, the song or an answer (round 177: the counter-line's
+    intervals to its tune by part of the form, drawn among by these shares)."""
+    t = (models or {}).get(TABLE)
+    if t is None or not song:
+        return {}
+    t = t.table if hasattr(t, "table") else t
+    out = {}
+    for key, votes in t.votes.items():
+        if len(key) == 3 and key[0] == song and key[1] == word and votes:
+            total = sum(votes.values())
+            out[key[2]] = {outcome: v / total for outcome, v in votes.items()}
+    return out

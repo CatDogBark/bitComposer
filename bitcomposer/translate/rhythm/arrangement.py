@@ -3415,26 +3415,120 @@ def _voice_walk(songs):
     struck, the voice's move in steps from its own previous note or None, the interval at its previous onset with the
     line or START, the line note's state (scale or altered: off the song's scale) and the interval as the word's outcome
     (the steps, or "s" and the semitones against an altered line note)."""
-    from .. import writer                                   # writer imports this module
     for s, role, kind, notes, lns, scale in _beside_lines(songs):
-        prev_with, prev_midi, li = readings_mod.START, None, 0
-        for n in notes:
-            t, m = n[0], int(round(n[2]))
-            while li + 1 < len(lns) and lns[li + 1][0] <= t + readings_mod.NEAR:
-                li += 1
-            if lns[li][0] > t + readings_mod.NEAR:
-                prev_midi = m
-                continue
-            lm = int(round(lns[li][2]))
-            steps = writer.scale_index(m, scale) - writer.scale_index(lm, scale)
-            move = writer.scale_index(m, scale) - writer.scale_index(prev_midi, scale) if prev_midi is not None else None
-            with_line = abs(lns[li][0] - t) < readings_mod.NEAR
-            altered = lm % 12 not in scale                     # the line's note off the song's scale (a leading tone in minor): the voice's
-            outcome = f"s{m - lm}" if altered else str(steps)  # interval is then counted in semitones from the note itself (round 66)
-            yield s, role, kind, with_line, steps, move, prev_with, "altered" if altered else "scale", outcome
-            if with_line:
-                prev_with = outcome
+        for _, with_line, steps, move, prev_with, line, outcome in _pair_walk(notes, lns, scale):
+            yield s, role, kind, with_line, steps, move, prev_with, line, outcome
+
+
+def _pair_walk(notes, lns, scale):
+    """_voice_walk's walk of one voice beside one line, each onset with its time: (the onset's beat, with the line?, steps,
+    the voice's move or None, the interval at its previous onset with the line or START, the line note's state, the
+    interval as the word's outcome)."""
+    from .. import writer                                   # writer imports this module
+    prev_with, prev_midi, li = readings_mod.START, None, 0
+    for n in notes:
+        t, m = n[0], int(round(n[2]))
+        while li + 1 < len(lns) and lns[li + 1][0] <= t + readings_mod.NEAR:
+            li += 1
+        if lns[li][0] > t + readings_mod.NEAR:
             prev_midi = m
+            continue
+        lm = int(round(lns[li][2]))
+        steps = writer.scale_index(m, scale) - writer.scale_index(lm, scale)
+        move = writer.scale_index(m, scale) - writer.scale_index(prev_midi, scale) if prev_midi is not None else None
+        with_line = abs(lns[li][0] - t) < readings_mod.NEAR
+        altered = lm % 12 not in scale                     # the line's note off the song's scale (a leading tone in minor): the voice's
+        outcome = f"s{m - lm}" if altered else str(steps)  # interval is then counted in semitones from the note itself (round 66)
+        yield t, with_line, steps, move, prev_with, "altered" if altered else "scale", outcome
+        if with_line:
+            prev_with = outcome
+        prev_midi = m
+
+
+COUNTER_WITH = "counter_with"         # the counter-line's share of notes struck with a tune note, by part of the form (round 177)
+COUNTER_INTERVALS = "counter_intervals"   # and its intervals to the tune's note there; both a song's own, no pooled table
+COUNTER_WHOLE = "*"                   # the place of the two words' answer over the whole song (a form not the song's own asks it)
+
+
+def _counter_and_tune(s):
+    """A song's counter-line and its tune's line, pitched and in time order, and the song's scale; None where the song has
+    not both (cells.counter_kind)."""
+    from .. import harmony
+    if cells_mod.counter_kind(s) is None:
+        return None
+    pitched = lambda ns: sorted((n for n in ns if not math.isnan(n[2])), key=lambda n: n[0])   # noqa: E731
+    tune, line = pitched(cells_mod.tune_line(s, R.MELODY)), pitched(cells_mod.tune_line(s, R.COUNTER))
+    if not tune or not line:
+        return None
+    return line, tune, {((s.tonic or 0) + i) % 12 for i in harmony.MODES["major" if s.mode == "major" else "natural_minor"]}
+
+
+def _letter_of_bars(s) -> dict:
+    """A song's bar index -> the letter of the part of the form it is in, each letter's first part alone (as
+    section_onsets_text counts a letter); {} for a song whose form the token does not carry."""
+    if not form_field(s):
+        return {}
+    index = {num: k for k, num in enumerate(getattr(s, "numbers", None) or range(len(s.bars)))}
+    out, seen = {}, set()
+    for bar, n, of, label in s.parts:
+        if of is not None or label in seen:
+            continue
+        seen.add(label)
+        out.update({index[num]: label for num in range(bar, bar + n) if num in index})
+    return out
+
+
+def counter_with_units(songs) -> list:
+    """Each part of the form in which a song's counter-line plays beside its tune, as a unit: its outcome the share of
+    the counter-line's notes struck with a note of the tune there (to hundredths), its values the part (counter) and the
+    place: the form's letter, and COUNTER_WHOLE for the song as a whole. A song's own answer only (the song_answers table;
+    no pooled table). FFVI's counter-line is with its tune on 0.54 of its notes a part at the median, and not evenly: in 17
+    of the 39 songs with two parts counted the parts differ by 0.3 or more (The Day After: 0.12 in A, where the counter
+    calls and the tune answers, 1.00 in C, where it is a second voice under the tune). The written counter's bar is a
+    mask from the pooled counter_figures word and struck with the tune on 0.76 of its notes whatever the part."""
+    out = []
+    for s in songs:
+        pair = _counter_and_tune(s)
+        if pair is None or not s.bars:
+            continue
+        line, tune, _ = pair
+        at = [n[0] for n in tune]
+        letters = _letter_of_bars(s)
+        by = defaultdict(lambda: [0, 0])
+        for n in line:
+            i = bisect.bisect_left(at, n[0] - readings_mod.NEAR)
+            hit = i < len(at) and at[i] < n[0] + readings_mod.NEAR
+            k = bar_index_of(s.bars, n[0])
+            for place in ([letters[k]] if k in letters else []) + [COUNTER_WHOLE]:
+                by[place][0] += hit
+                by[place][1] += 1
+        for place, (hits, notes) in sorted(by.items()):
+            out.append(tables.Unit(s.sid, s.game, f"{hits / notes:.2f}", {"part": R.COUNTER, "place": place}))
+    return out
+
+
+def counter_interval_units(songs) -> list:
+    """Each note of a song's counter-line struck with a note of its tune, as a unit: its outcome the interval to the
+    tune's note as the voice_intervals word counts it (scale steps, or "s" and the semitones against a tune note off the
+    scale), its values the part (counter), the place (the form's letter, and COUNTER_WHOLE for the whole song) and the
+    tune note's state. Many answers a song a place: its own profile of intervals there, in the song_answers table alone.
+    The pooled word knows the kind of the counter's sample and the interval before; it does not know the song: where the
+    game's counter and tune strike together the two intervals a part uses most are 0.59 of its notes there at the median,
+    and the written counter was on those two on 0.11."""
+    out = []
+    for s in songs:
+        pair = _counter_and_tune(s)
+        if pair is None or not s.bars:
+            continue
+        line, tune, scale = pair
+        letters = _letter_of_bars(s)
+        for t, with_line, steps, _, _, state, outcome in _pair_walk(line, tune, scale):
+            if not with_line or not (abs(steps) <= VOICE_STEPS if state == "scale" else abs(int(outcome[1:])) <= VOICE_SEMITONES):
+                continue
+            k = bar_index_of(s.bars, t)
+            for place in ([letters[k]] if k in letters else []) + [COUNTER_WHOLE]:
+                out.append(tables.Unit(s.sid, s.game, outcome, {"part": R.COUNTER, "place": place, "line": state}))
+    return out
 
 
 def voice_interval_units(songs) -> list:
