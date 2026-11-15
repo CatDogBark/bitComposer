@@ -3081,6 +3081,8 @@ def balance_units(songs) -> list:
             tokens.append(f"keeps={voice_keeps_field(s)}")
         if chord_follows_field(s):                           # and how far the tune and the counter go with a chord off the key (round 171)
             tokens.append(f"follows={chord_follows_field(s)}")
+        if s.sid:                                            # and which song it is (round 172): the plan asks that song's own answers to the
+            tokens.append(f"song={s.sid}")                   # once-a-song words first (rhythm.own)
         out.append(tables.Unit(s.sid, s.game, " ".join(tokens), {"part": ARRANGEMENT}))
     return out
 

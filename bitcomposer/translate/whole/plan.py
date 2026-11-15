@@ -53,6 +53,7 @@ from .. import roles as R
 from ..vocab import Span
 
 from . import render as render_mod   # noqa: E402  the package's other sections
+from . import own as own_mod         # noqa: E402
 
 
 METER = 4                             # beats a bar: the form and texture tables were kept at one meter (FFVI: 64 of its 69 metered songs)
@@ -333,6 +334,8 @@ class Plan:
                                                         # the token song (round 144)
     tune_places: dict = field(default_factory=dict)     # the melody, the counter -> the share of the token song's line's onsets on a quarter of
                                                         # the beat, on a third and finer than either (rhythm.FINE_PLACES; round 147)
+    token_song: str = ""                                # the balance token's song's id (round 172: the `song=` word), for its own answers to the
+                                                        # once-a-song words (own.answer)
     token_feel: str = "duple"                           # the token song's feel (round 147): its tune's places are held where the song is written in it
     with_kit: dict = field(default_factory=dict)        # the bass -> (the share of the token song's bass line's onsets struck with a kit hit, of
                                                         # the kit's hits struck with a bass note), the melody -> (its onsets' share,), over
@@ -2588,6 +2591,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     token_rubs = {}                                         # how often a voice sits a semitone from its own part in the token song (round 165)
     token_keeps = {}                                        # how often a voice keeps its note where its line keeps its own (round 167)
     token_follows = {}                                      # how far the tune and the counter go with a chord off the key (round 171)
+    token_song = ""                                         # the token's song's id (round 172)
     token_gap_shares = {}                                   # a chord part's or the bass's line: the share a note sounds by its gap class (round 95)
     token_kit_channels = []                                # the kit's channels, each one's pieces (round 87)
     token_class, token_top, token_loud = None, None, None
@@ -2660,6 +2664,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             continue
         if role == "loud":                                  # the token's song's rendered loudness in dBFS (round 59), not a part
             token_loud = float(rest)
+            continue
+        if role == "song":                                  # which song the token is (round 172), not a part
+            token_song = rest
             continue
         if role == "key":                                   # the token's song's key (round 79): the kit's degrees and tuned rates read against it
             t, _, m = rest.partition(":")
@@ -2873,6 +2880,9 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
             parts = taken
             log += form_log[-1:] + ["form from the balance's song: " + " ".join(f"{p[3]}{p[1]}" for p in parts) + f" (the draw {drawn_form})"]
             loop_bar = plan_loop(models, parts, random.Random(f"whole:{seed}:loop part"), log)
+    if own_mod.TABLE in render_mod.models_or_empty(models) and token_key is not None and token_key[1] != mode:   # the song is written in its token song's
+        log.append(f"the song's mode from the balance (round 172): {token_key[1]} (the draw {mode}); the tonic is the draw's")   # mode (round 172): the key
+        mode = token_key[1]                                 # draw above is made all the same, so no other draw moves; a vocabulary with no song_answers table keeps it
     own_form = bool(token_form) and [p[3] for p in parts] == own_letters[:len(parts)]   # the form's letters are the token song's
     own_loop = parts[token_loop][0] if own_form and token_loop is not None and token_loop < len(parts) else None   # the token song's loop's part (round 132)
     loops = {}                                              # the loops (round 121): the token song's, where the form's letters are its own
@@ -3007,6 +3017,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                         if "clashes" in render_mod.models_or_empty(models) else None),   # its share of onsets a semitone from the bass and the chord parts under it (round 94), own streams
                             "tone_tier": (_draw(models, "tone_tiers", (role,), random.Random(f"whole:{seed}:tone_tier:{role}"), log)
                                           if "tone_tiers" in render_mod.models_or_empty(models) else None)}   # how much of its line leaves the chord (round 96), an own stream
+            own_mod.take(models, token_song, role, extras[role], mode, log)   # the token song's own clashes (round 172)
             if role in token_line_company:                  # where the line doubles the bass, by stretch (round 123): the token song's own
                 extras[role]["company"] = token_line_company[role]
                 log.append(f"{role}'s line doubles the bass where the balance's song's does (round 123): {token_line_company[role]}")
@@ -3037,6 +3048,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
                                       if "tune_grain" in render_mod.models_or_empty(models) else None)}   # an own stream, floored at the tier (round 66)
             if role == R.COUNTER and "chord_tones" in render_mod.models_or_empty(models):   # the counter-line's own chord-tone share (round 96), on an
                 extras[role]["chord_tones"] = float(_draw(models, "chord_tones", (R.COUNTER,), random.Random(f"whole:{seed}:chord_tones:{role}"), log))   # own stream
+            own_mod.take(models, token_song, role, extras[role], mode, log)   # the token song's own clashes, off-scale share and chord tones (round 172)
             if "tune_sounds" in render_mod.models_or_empty(models):   # the share of its gap a held and a detached note sounds (round 98), own streams
                 extras[role]["tune_sounds"] = {kind: float(_draw(models, "tune_sounds", (role, kind), random.Random(f"whole:{seed}:tune_sounds:{role}:{kind}"), log))
                                                for kind in rhythm.TUNE_KINDS}
@@ -3241,7 +3253,7 @@ def _plan_once(models: dict, seed: int, rng: random.Random, game: str, title: st
     return Plan(seed, game, title or f"Whole {seed}", tonic, mode, bpm, parts, loop_bar, names, chords, band, weights, textures, plays,
                 registers, sounds, habits, extras, voices, log, feel=feel, levels=levels, layer_levels=layer_levels, gap_sounds=gap_sounds, token_gap_shares=token_gap_shares, locks=locks,
                 level_from=level_from, voice_levels=voice_levels, layer_from=layer_from, kinds=token_kinds, token_samples=token_samples, token_habits=token_habits, layer_samples=token_layer_samples, layer_shares=token_layer_shares, section_levels=section_levels, section_onsets=section_onsets, kit_bounds=kit_bounds, section_densities=section_densities, section_fills=section_fills,
-                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_turn_moves=token_turn_moves, line_pulse=token_pulse, voice_rubs=token_rubs, voice_keeps=token_keeps, chord_follows=token_follows, layer_onsets=voices_onsets(token_layer_onsets, own_form), voice_places=voices_onsets(token_voice_places, own_form), tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel)
+                top_level=top_level, loudness=token_loud, pans=token_pans, sample_ranges=token_sample_ranges, layer_ranges=token_layer_ranges, layer_relations=token_layer_relations, stretches=token_stretches, layer_stretches=token_layer_stretches, layer_struck=token_layer_struck, struck_places=token_struck_places if own_form else {}, line_turns=token_turns, line_turn_moves=token_turn_moves, line_pulse=token_pulse, voice_rubs=token_rubs, voice_keeps=token_keeps, chord_follows=token_follows, layer_onsets=voices_onsets(token_layer_onsets, own_form), voice_places=voices_onsets(token_voice_places, own_form), tone_profiles=token_profiles, step_profiles=token_steps, chord_shapes=token_shapes, form_letters=token_form, loops=loops, bass_continuity=token_continuity, bass_downbeat=token_downbeat, first_beats=token_first, tune_shortest=token_shortest, tune_lengths=token_lengths, tones_kept=token_tones, together=token_together, tune_together=token_tune_together, beat=token_beat, tune_places=token_places, with_kit=token_with_kit, token_feel=token_feel, token_song=token_song)
 
 
 def _plan_speeds(models: dict, p: Plan, rng: random.Random) -> None:
