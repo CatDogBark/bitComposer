@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Internal: a part's fields of the balance token go by name on both sides (`translate/rhythm/fields.py`). The builder laid thirty-one values out in a list and the reader took `fields[13]`; the places now have names in one list (`PART_FIELDS`), the builder writes a part with `part_fields_text(weight=..., register=..., ...)` and the reader takes `PartFields(text).period`. The token's text is the same, field for field. Proven a refactor: the tables refit with the new builder are the shipped vocabulary's exactly, over 400 seeds every note and log line is the same, and the byte-identical check's 90 files match.
 - Internal: the balance token is read in a module of its own (`translate/whole/token.py`, `read_token`). The three hundred lines that read it sat in the middle of `plan._plan_once`, each fact a local of that function; they moved statement for statement, and the plan now draws the token and takes a `Token` of named facts. The token's text is unchanged, so packs counted by earlier versions read as they did. Proven a refactor: over 400 seeds every note and every log line is the same, and the byte-identical check's 90 files match.
 - Internal: the emulator's workflow builds no macOS wheel for now (`emu.yml`). bitComposer has no macOS build, and the runner the one universal2 wheel was built on stopped being offered to the repository, which left a red job on every pull request into `main` that touches the workflow. The README, CONTRIBUTING and `docs/SPC-IMPORT.md` say Linux and Windows.
 
