@@ -1284,6 +1284,11 @@ The words are grouped by where the writing draws them, in the order the song is 
   `follow_chords` takes the line's notes onto the chord's tone within
   those shares; a line it says nothing of draws its pair from the
   `chord_follows` table.
+  Since round 172 the token ends with a `song=` word, the song's id
+  (`song=504c1adbb7a8981358e1`): the plan keeps it (`plan.token_song`)
+  and asks that song's own answers to the once-a-song words in the
+  `song_answers` table before it draws them, and writes the song in the mode the
+  token's `key=` word says.
 
 - **parts**, **voices** — whether a song has each part by the band's size;
   how many voices a song uses. The fallbacks for the band and its voice
@@ -2026,7 +2031,7 @@ The words are grouped by where the writing draws them, in the order the song is 
   behind it is drawn again. Since round 134 a bar plays its theme bar
   again only where that bar is within the token song's own onsets for
   the part of the form the return falls in (round 125's envelope, which
-  `envelope_at_for` marks `own`; `_free_figures`): elsewhere the bar
+  `envelope_at_for` marks `song_answers`; `_free_figures`): elsewhere the bar
   keeps the figure it was drawn, so no draw moves. Why: since round 124
   the tune rests where its token song's rests, a theme stated over an
   intro is stated over the intro's band, and the return put the intro's
@@ -2453,6 +2458,21 @@ The words are grouped by where the writing draws them, in the order the song is 
   line's sample over 400 seeds. Until round 167 a voice on its line's
   sample was held to a hand share of 1.0 and no other voice was held.
   *`voice_keeps`: shape (sample); drawn in settle_chord_parts; conditions nothing.*
+- **song_answers** — each song's own answer to the once-a-song words, by the
+  song, the word and the word's context (round 172). The words are the
+  list `rhythm.OWN` (`clashes`, `off_scale`, `chord_tones`); a unit is
+  one of those tables' own units, kept under its song's id, the table's
+  name and its context joined by `|` (`melody|major|strong`). It is not
+  drawn: a plan looks its balance token's song up in it
+  (`whole.own.answer`) and takes the answer over the pooled table's
+  draw, which is made all the same so that no stream moves; a song with
+  no unit under a context (too few notes for a share) has no answer and
+  the draw stands. FFVI's songs give 871 answers, 65 of the 68 songs.
+  A pooled draw is another song's kind of answer three times in four
+  (the commonest answer under a context is 0.28 of the songs' for the
+  clashes, 0.24 for the off-scale share). A word of the song as a whole
+  goes by the song by joining the list.
+  *`song_answers`: shape (song, word, context); looked up, not drawn; conditions nothing.*
 - **chord_follows** — how far a tune or a counter-line goes with a
   chord that has a tone off the key (round 171). A unit is a song's
   line with sixteen notes or more to count; its outcome two shares to a

@@ -72,9 +72,9 @@ flowchart LR
 | `section_densities` | part, step | plan_section_densities | - | a part's density tier in a section against its song density (denser, the same, sparser), by the step the section's level makes: a level step rides a figure change as the game's does |
 | `part_entries` | part, habit, form, length | plan_texture | - | where inside a section a part present in it enters and leaves (so many bars after its start, so many before its end, or whole), by the part, for the drums the kit's density tier (round 59), the section's place in the form and its length class |
 | `drum_group_habits` | part, classes, habit | _plan_once | `bass`, `cell_handoffs`, `changes`, `drums`, `drums@2`, `half_recall`, `kit_pieces`, `lengths`, `melody_recall`, `moves`, `pair_bar_recall`, `pair_recall`, `part_entries`, `part_speeds`, `part_textures`, `recall_continues`, `recall_sources`, `relations`, `rhythm`, `tune_grain`, `values`, `voicings` | a drum group's own habit given its backbone slot's strike class (round 81: the densest of the kick, snare and toms for their limb) and the kit's habit, drawn once a song on its own stream |
-| `chord_tones` | part | _plan_once, write | - | the share of a line's notes on a beat that are chord tones, for the tune and (since round 96) the counter-line, each drawn once a song and held by its writer |
-| `off_scale` | part, mode, place | _plan_once, write | - | the share of a part's notes off the song's natural scale, by the part, the mode and the beat (strong, weak); the tune's drawn once a song and held in place of a ban |
-| `clashes` | part, place | _plan_once, late_stretch_notes, write | - | a part's share of onsets under a sounding note of a part written before it (the bass, then the chord parts, then the tune, then the counter) that sit a semitone from it, by the beat; each writer holds its draw |
+| `chord_tones` | part | _plan_once, take, write | - | the share of a line's notes on a beat that are chord tones, for the tune and (since round 96) the counter-line, each drawn once a song and held by its writer |
+| `off_scale` | part, mode, place | _plan_once, take, write | - | the share of a part's notes off the song's natural scale, by the part, the mode and the beat (strong, weak); the tune's drawn once a song and held in place of a ban |
+| `clashes` | part, place | _plan_once, late_stretch_notes, take, write | - | a part's share of onsets under a sounding note of a part written before it (the bass, then the chord parts, then the tune, then the counter) that sit a semitone from it, by the beat; each writer holds its draw |
 | `voice_keeps` | sample | settle_chord_parts | - | the share of a voice's strikes, where its chord part's line keeps its note, on which the voice keeps its own, by whether the voice plays the line's sample; drawn once a voice, on an own stream, for a voice its balance token gives no share (round 167) |
 | `chord_follows` | part | follow_share | - | of a tune's or a counter-line's notes on a tone a chord has off the key or on the key's tone a semitone over it, the share on the chord's tone, and the same against the key's tone a semitone under it; drawn once a line, on an own stream, for a line its balance token gives no shares (round 171) |
 | `parallel_intervals` | interval, tone, part, previous | parallel | - | where a parallel voice's note sits against the chord at each shared onset (the chord tone it lands on, or its semitones from the line's note off the chord), by the stretch's nominal interval in scale steps, the tone class of the line's note against the chord, the part and the landing before: the writer's parallel voice lands where the game's does, on the chord, instead of the line again in the scale (round 97) |
@@ -156,7 +156,7 @@ flowchart LR
 | `part_samples` | part, speed | samples_for | - | the sample a part's line plays, by the part and the speed class of its fastest bar, drawn once a song before the writing |
 | `echo` | part | _plan_once, compose, echo_of, echo_word, hand_off_cells, write_melody | - | the song's echo as the chip had it: its volume of full, its delay in ms, its feedback, the parts that send to it and the parts that stay dry, drawn once a song on its own stream (round 70) |
 
-### counted, drawn nowhere (the measures' words) (9)
+### counted, drawn nowhere (the measures' words) (10)
 
 | table | shape | drawn in | conditions | what it counts |
 |---|---|---|---|---|
@@ -168,6 +168,7 @@ flowchart LR
 | `presence` | part, meter, previous | - | - | a part playing or resting in a bar |
 | `doubles` | part | - | - | what a song's double voices double, and how |
 | `weights` | part | - | `bass_habits`, `counter_figures`, `echo_habits`, `habits` | a part's weight in the band (minor, half, main) |
+| `song_answers` | song, word, context | - | - | each song's own answer to the once-a-song words (rhythm.OWN: clashes, off_scale, chord_tones), by the song, the word and the word's context; not drawn: the plan looks the balance token's song up in it and draws the pooled word where that song has no answer (round 172) |
 | `vibrato` | part | - | - | a part's vibrato on its held notes: the share carrying it in each length class (0.35-0.5 s, 0.5-1, 1-2, 2 and over), its depth in cents, its rate in Hz and its onset in seconds, drawn once a song a part by the player's performance on its own stream (round 72) |
 
 ## What conditions what
@@ -617,6 +618,7 @@ flowchart LR
     presence["presence"]
     doubles["doubles"]
     weights["weights"]
+    song_answers["song_answers"]
     vibrato["vibrato"]
   end
   balance -- habit --> changes

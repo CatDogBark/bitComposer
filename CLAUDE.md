@@ -59,7 +59,7 @@ Read CONTRIBUTING.md first: it covers the tests, the analyzer tables, the byte-i
 - A game read again loses what the lead pass wrote into its readings (which voice carries the tune, round 64): run `python -m bitcomposer.translate.lead GAME SPC_FOLDER --db READINGS` after every re-read and before the tables are counted. `packtables` says as it counts whether the pass has run, the tables' source keeps it (`"lead": {"heard", "relabelled"}`), and the shipped vocabulary's test in `tests/test_written.py` asserts it; rounds 102 to 151 were counted without it.
 - A change that refits the counted tables commits `bitcomposer/vocabularies/default.json.gz` on its branch before the pull request; verify with `git log -3 -- bitcomposer/vocabularies/default.json.gz`.
 - A fixed-seed test against the shipped vocabulary asserts the table's own values, never a bound that one draw happened to meet. Run the full local suite after the shipped vocabulary is in place.
-- The band-levels test in `tests/test_whole.py` iterates every balance token, so a new song-level token field must be filtered out there (as `shapes=`, `quals=`, `form=`, `cycle=`, `struck=`, `turns=`, `pulse=`, `rubs=`, `keeps=` and `follows=` are).
+- The band-levels test in `tests/test_whole.py` iterates every balance token, so a new song-level token field must be filtered out there (as `shapes=`, `quals=`, `form=`, `cycle=`, `struck=`, `turns=`, `pulse=`, `rubs=`, `keeps=`, `follows=` and `song=` are). Since round 172 a fact of the song as a whole does not need a token field: add its table to `rhythm.OWN` and the plan takes the token song's own answer over the pooled draw (`whole/own.py`).
 
 ### Random streams
 

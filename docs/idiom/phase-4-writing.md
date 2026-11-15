@@ -163,6 +163,7 @@ Every round recorded below, in the order written: its number, date, what it did,
 | 169 | 2026-11-14 | a tune keeps its token song's tune's share of notes on the half beat, in a triple feel | - |
 | 170 | 2026-11-14 | a bass keeps its token song's bass's share of notes on the half beat, in a triple feel | - |
 | 171 | 2026-11-14 | a tune and a counter-line go with a chord that leaves the key | - |
+| 172 | 2026-11-14 | a song's own answers to the once-a-song words, before the pool: the mode, the clashes, the off-scale share, the chord tones | - |
 
 ## Goal
 
@@ -9259,7 +9260,7 @@ tune rests in half its bars or more in 35, the band back with it in
 plays half as busy or less than the part of the form they land in.
 
 **Built.** `envelope_at_for` marks the envelope it builds from the
-token song's own onsets a bar (`own`), apart from a density tier's
+token song's own onsets a bar (`song_answers`), apart from a density tier's
 shift (round 101). `_free_figures`, copying a part's theme bars under a
 return (`song.copies`), leaves a bar as it was drawn where the theme's
 bar is not within that envelope, and says how many (the bass's and the
@@ -9454,7 +9455,7 @@ songs, over in 8 (to 3.75 times), under in 5: Blackjack's 2.8 against
 the tune's line too (the melody's, or the counter's in a band without
 a melody), its last bar its own where the token says a fill or a
 thinning, so `envelope_at_for` and `habit_at_for` hand the tune's
-writer the song's own envelope (round 134's `own`) and the tier it
+writer the song's own envelope (round 134's `song_answers`) and the tier it
 sits in. The writer (`tune.melody`): `keeps(k, n)`, whether a bar of
 n notes is within bar k's own onsets, and every way a bar is made asks
 it. A new bar is drawn within the envelope and asked neither the
@@ -12213,3 +12214,87 @@ Dungeon, Celes, The Phantom Train): "the tune direction for sure",
 this round's over the other two. The Day After's counter-line and
 Dancing Mad (part 5)'s drums were heard as still wrong: other
 words' work.
+
+### Round 172: a song's own answers to the once-a-song words, before the pool (2026-11-14, the pooled draws gone over)
+
+**Why.** Asked for: "we keep fixing pooled draws individually";
+how many are left, and which should be the song's own. Since round
+32 a word that says something of a song as a whole, drawn from the
+pool beside a token that is one song's, has been heard to disagree
+with the rest of the song and moved onto the token, a field and a
+round at a time. Investigated first; this is the first of two
+steps agreed.
+
+**Found.** A written song draws from 84 of the vocabulary's tables.
+Most draws are material, the bars and the notes, pooled by design.
+Of a plan's 377 facts of the song as a whole, 275 are the same in
+every song written on one token, the token song's; about twenty
+words are still drawn from the pool apart from it: the key with its
+mode, each part's clashes, the tune's and the counter-line's share
+off the key and of chord tones, their manner and their notes'
+lengths, what a voice does on its own, the voicing, the kit's limbs'
+habits, the riff's periods, the theme's returns. FFVI's songs split
+widely on them: the commonest answer under a context is 0.28 of the
+songs' for the clashes and the chord tones and 0.24 for the
+off-scale share, so a pooled draw gives a song another kind of
+answer than its token song's three times in four. The mode is the
+other song's in a third of the songs, and those have chords two
+tones off the key in 0.19 of their bars against 0.07: the token's
+chord facts are by numeral, and a numeral is not the same degree in
+the other mode.
+
+**Built.** One mechanism, and four words by it. The vocabulary
+keeps each song's own answer to the once-a-song words beside the
+pooled counts: a table, `song_answers`, by the song, the word and the word's
+context (`rhythm.own`: `OWN` lists the words, `own_units` counts
+them with the pooled tables' own builders). The balance token says
+which song it is, after every other word (`song=`). The plan makes
+each pooled draw as before, so no stream moves, and takes the token
+song's own answer over it where the song has one (`whole/own.py`:
+`answer`, `take`); a song with too few notes for a share has none
+and keeps the draw. By it: a part's clashes, the tune's and the
+counter-line's share of notes off the key, and their share of chord
+tones on the beat. And the song is written in its token song's mode
+(the token's `key=` word, there since round 79); the tonic is the
+draw's. A vocabulary counted before the round has no `song_answers` table
+and draws every word, the mode too, as it did. A word goes by the
+song from here on by being added to `OWN`: no field of the token,
+no reading of it in the plan.
+
+**Measured.** Suite 637 tests, OK. The vocabulary: 118 tables for 117,
+the new one `song_answers`, 871 answers of 65 songs (three too short for any
+of the three words); of the rest the balance table alone differs,
+by the `song=` word. Over 400 seeds (1000 to 1399, the player's
+asking), against round 171: 127 songs take their token song's mode
+over the draw, and 1,047 of 1,176 parts take an own answer over a
+pooled draw. A note changes in 389 songs; eleven are written on
+another token than they were (a themed plan whose tune cannot come
+back is drawn again, and the mode changes which can). No song is in
+the other mode than its token song's (65 of the 247 whose token's
+key is known here, before). Bars on a chord of the key 0.73 (0.67
+before, FFVI's time 0.69), on a chord two tones or more off it 0.078
+(0.096, FFVI 0.095). The tune over a chord with a tone off the key:
+on the key's scale 0.68 (0.71, FFVI 0.66), on the chord 0.48 (0.48,
+FFVI 0.53). A note struck a semitone from a note another voice is
+sounding: 0.17 of a song's notes at the median, as before (the
+game's songs 0.09); 115 songs are 0.10 or more over their game
+song's (126 before), 205 are 0.05 or more over (214). The tune
+battery over the 68 test songs: no measure moved the wrong way; the
+tune plays the bar before again in 48 of 1,635 bars (43 of 1,621;
+the game's 71 of 1,547), and the song on Returners' token stands on
+a bar ten bars running where its game song does twelve (three
+before).
+
+**Open.** The words still drawn from the pool, to go by the song in
+the second step: the tune's and the counter-line's manner and their
+notes' lengths, what a voice does on its own, the voicing, the
+parts' samples' speed, the kit's limbs' habits, the riff's periods,
+the vibrato. The counter-line's masks and the voices' note lengths
+are drawn many times a song and need the song's own answers drawn
+among, not looked up. The tune's shape and the theme's returns stay
+pooled: they are the new song. The token's own thirty-one fields
+are still text; they can move into the same table. The semitone
+meetings are where they were: what a part does against the parts
+written after it is held by no word.
+
+**Heard.** Not yet.
