@@ -163,7 +163,7 @@ class PackFiles(unittest.TestCase):
 
     def test_the_second_format_carries_tables_and_still_composes(self):
         """A format 2 pack: the tables field beside the voices, checked for
-        shape, kept on the table, and the generator composes as before."""
+        shape, kept on the table, and a written song still plays on the pack's sounds."""
         model = {"conditionings": ["part"], "votes_by": "shares", "discount": 0.75, "covers": 0, "vocabulary": ["4"],
                  "contexts": [{"context": [], "songs": 1, "units": 1, "votes": {"4": 1.0}},
                               {"context": ["form"], "songs": 1, "units": 1, "votes": {"4": 1.0}}]}
@@ -176,8 +176,9 @@ class PackFiles(unittest.TestCase):
         self.assertEqual(PACKS[name]["tables"]["tables"]["lengths"]["model"]["vocabulary"], ["4"])
         from bitcomposer.translate import packtables
         self.assertEqual(packtables.read(PACKS[name]["tables"])["lengths"].p("4", ("form",)) > 0.5, True)
-        song = compose_song(seed=3, pack=name)
-        self.assertEqual(song["info"]["pack"], name)
+        from bitcomposer import written
+        out = written.compose_written("default", None, 3, pack_file=self.save(pack))
+        self.assertEqual(out["sounds"], name)
         broken = json.loads(json.dumps(pack))
         broken["tables"]["tables"]["lengths"].pop("model")
         with self.assertRaises(pf.PackError) as cm:
