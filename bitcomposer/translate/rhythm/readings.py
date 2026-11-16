@@ -281,18 +281,28 @@ def load_loudness(pack_dir) -> dict:
             x = array.array("h", w.readframes(w.getnframes()))
         except Exception:
             continue
-        strike = x[:max(1, int(rate * STRIKE_SECONDS))]
-        if spec.get("percussion"):
-            body = strike
-        else:
-            lp = spec.get("loop")
-            body = x[lp[0]:lp[1]] if lp and len(lp) == 2 and lp[1] > lp[0] else x
-        if len(body):
-            out[sid] = math.sqrt(sum(v * v for v in body) / len(body)) / 32768
-            strikes[sid] = math.sqrt(sum(v * v for v in strike) / len(strike)) / 32768 if len(strike) else out[sid]
+        got = sample_loudness(x, rate, spec)
+        if got is not None:
+            out[sid], strikes[sid] = got
     out = _Loudness(out)
     out.strikes = strikes                                   # set_loudness reads them (round 65: a note hears its sample's strike, then its body)
     return out
+
+
+def sample_loudness(x, rate: int, spec: dict) -> tuple | None:
+    """One sample's loudness from its frames (16-bit) and its pack entry: (its body's RMS, its strike's), 0-1; None for
+    an empty one. A tonal sample's body is its loop, a percussion sample's its strike (load_loudness's rule, also asked
+    for a sound made in memory: packs/bit_voices.py)."""
+    strike = x[:max(1, int(rate * STRIKE_SECONDS))]
+    if spec.get("percussion"):
+        body = strike
+    else:
+        lp = spec.get("loop")
+        body = x[lp[0]:lp[1]] if lp and len(lp) == 2 and lp[1] > lp[0] else x
+    if not len(body):
+        return None
+    rms = math.sqrt(sum(v * v for v in body) / len(body)) / 32768
+    return rms, (math.sqrt(sum(v * v for v in strike) / len(strike)) / 32768 if len(strike) else rms)
 
 
 class _Loudness(dict):
