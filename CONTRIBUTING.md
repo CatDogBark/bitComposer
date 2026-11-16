@@ -54,28 +54,29 @@ the signing environment, and only those release tags the PyPI one.
    before touching `bitcomposer/player/`. The window's tests run Qt
    offscreen, so no display is needed.
 
-2. If you touched anything in `bitcomposer/`, generate a fixed batch before
-   and after your change and paste both analyzer tables in the PR. The
-   analyzer reads Classic's channel layout, so the batch is Classic's
-   (without `--classic` the command line writes from the vocabulary):
+2. Leave Classic alone. Classic, the 1.x generator behind `--classic`,
+   lives in `bitcomposer/classic/` and is frozen: no file in that folder
+   changes, nothing in it imports from outside it, and code outside it
+   takes only the names of its front door (`bitcomposer/classic/__init__.py`).
+   `tests/test_classic_wall.py` holds all three, each file to its
+   checksum, and `tests/test_classic_lock.py` holds 109 Classic songs to
+   the files they were. A fault found in code the writer has a copy of is
+   put right in the writer's copy. Classic plays its own sounds and reads
+   no pack file.
 
-   ```bash
-   for s in $(seq 1 12); do python3 -m bitcomposer.cli --classic -s $s -d /tmp/before; done
-   python3 tools/analyze.py '/tmp/before/*.it'
-   ```
-
-   `docs/ANALYSIS.md` explains what the columns mean and why ear-checking
-   alone has repeatedly missed real defects here.
+   The analyzer (`tools/analyze.py`; `docs/ANALYSIS.md` explains its
+   columns) reads Classic's channel layout: it measured changes to
+   Classic and still reads a Classic song, and it does not measure a
+   written one. A change to the writer carries the measures its round's
+   record gives (`docs/idiom/phase-4-writing.md`).
 
 3. Keep seeded output deterministic. If your change alters what a seed
    produces, say so; that is fine, silently breaking it is not. A change
    meant to leave the music alone (a refactor, a cleanup, moving code
    between modules) must leave every file byte-identical: see the check
-   below. Classic is frozen: `tests/test_classic_lock.py` holds the
-   checksum of 109 of its songs (every sound, the random pick, every
-   choice of every option it takes), and a change that moves one of them
-   does not go in. The lock's file is not written again to make a change
-   pass.
+   below. Classic's songs need no check by hand: the lock in the suite
+   holds them, and neither its file nor the wall's is written again to
+   make a change pass.
 
 4. Keep it dependency-free. The generator must run with a bare `python3`.
 
@@ -116,15 +117,13 @@ the mixer's voice labels also drop each pack's voice-name prefix (`ffvi_`,
 `mmx_`, ...) by one pattern near the top of the file. The random sound
 draw picks a new pack up by itself.
 
-The byte-identical check, on one version (a Classic song's message
-records it), before and after the change: Classic on every sound, then
-written songs (without `--classic` the command line writes from the
-vocabulary and does not read `--sound`):
+The byte-identical check, on one version, before and after the change:
+written songs, as the player performs them and bare (without `--classic`
+the command line writes from the vocabulary and does not read `--sound`):
 
 ```bash
 mkdir -p /tmp/before
-for sound in chip snes genesis bit ffvi mana evermore megamanx; do for s in $(seq 1 10); do python3 -m bitcomposer.cli --classic --sound $sound -s $s -o /tmp/before/$sound-$s.it; done; done
-for s in $(seq 1 10); do python3 -m bitcomposer.cli -s $s -o /tmp/before/written-$s.it; done
+for s in $(seq 1 10); do python3 -m bitcomposer.cli -s $s -o /tmp/before/written-$s.it; python3 -m bitcomposer.cli --bare -s $s -o /tmp/before/bare-$s.it; done
 ```
 
 then the same into `/tmp/after`, and compare:
@@ -134,9 +133,9 @@ diff <(cd /tmp/before && sha256sum *.it) <(cd /tmp/after && sha256sum *.it)
 ```
 
 No output means no song changed. Add the options your change touches to
-the loops: Classic's (`--keys home`, `--form aaba`, `--lead-shift -3`,
-...) to the first, the writer's (`--pack ffvi`, `--no-carry-theme`,
-`--bare`, ...) to the second.
+the loop (`--pack ffvi`, `--pack-file PACK.json`, `--no-carry-theme`,
+...). Classic is not in the loop: it cannot change, and the suite's lock
+says so on every run.
 
 ## Building the emulator
 

@@ -1,0 +1,33 @@
+{
+ "what": "bitcomposer/classic/ as it was walled off: each file's path from the folder and the sha256 of its text with line ends as \\n",
+ "files": {
+  "__init__.py": "6140e7ff4f4010cb3364f896fb2e88ad7f8fb2b6ef170e6433b0ba0d286f0913",
+  "arp.py": "b6f3a119979c64e615b566266bd4556ebece927fb4788f43e2fe4257a6b4500d",
+  "bass.py": "53c45a256e68923852bbe93edbf4657eab089d402924cbb01c035b2999a6b318",
+  "builder.py": "f2153c13f755646c5d94c64cef87cf05ea92fa249fc69b3c93e35bce2500ad3a",
+  "composer.py": "05b079d7078dc51f0595987c516ace1b2c0254ed66537257a978e7f7d1cd354d",
+  "drums.py": "d084aa0df02d950de5307d910831c3e72ce33c136e767dbd12023c2eb62470a0",
+  "echo.py": "cb03961ef2a045ea3ebfe701b11833f5e32580d13b6960f7a6e0400a35544ab7",
+  "harmony.py": "b3eb8a9d14af3908b49ce1453037f4c288eb519ed41c021a31fcb61f8b8f6bfe",
+  "instruments.py": "262ed241149837a8725e7bcd63d96af18c21d3505900a00ec4b3f675e50b8d1b",
+  "it_format.py": "c6a99b00dbf71becfa9087be21db2326854a22991f769f8bf02ace40b8dd8b53",
+  "melody.py": "fa61566ce996fd18eec601ceb2a415a0a4d1a73a5fe2335a7cc87640e85d52c7",
+  "mix.py": "4a97a3bbc2d57ce7e689eea01d981afd641f60cbe1ceca3fa4d644dbce0de546",
+  "names.py": "5a4cd3098dbfc22ec4befa093a36f03f9d7fd9ed44174e3317f54c92aa06fae8",
+  "pattern.py": "afc097ba144e8285e6595e5d55dad07010bac3442c2e883e42439876b004be7e",
+  "registers.py": "3852a8aeca15facc9dc7ff2a16442892d79c6ccc26b07e5b0ac4be5cf3c3a767",
+  "structure.py": "9e8bb39d149ac261e06c1306b99d14c476f77afd0a1a07ecfb986559f91870fd",
+  "theory.py": "120c9762031b13cd0d4e9609874db2fcde728e071f819bc6574b1af7fbaa9825",
+  "packs/__init__.py": "a9809af855a0840c92ecc8719454f3a8b5da988a60d6dcc74637bf74e5227938",
+  "packs/bit.py": "e0429d543e40bbe5db8cc89a8c24704e960a919cd4f9039d49d5aa15abf82b2d",
+  "packs/evermore.py": "696dcbb3d6a06b71d0f8ae3912127b0e16f016954575b22a283179a1e234bfe3",
+  "packs/ffvi.py": "87f64af21b049583417e887c2cbadb49eb0371dbde312c7da8096c5b0b644bb7",
+  "packs/mana.py": "d7103c533d2c8c96d67e409c12fe87bd45e2f66ba54ee643d855167a5f1a082c",
+  "packs/megamanx.py": "8fde613bd93ec3a01ad6a2cc673fd0a8c62990fb936081aace8d024b61c22a2b",
+  "samples/__init__.py": "366dc75f42aa3cca31263a18f462c72e14fd64dd21ad2e97083d2a724f5f6508",
+  "samples/chip.py": "8d1de0f0a3b1f0b3180735e07b3a50b2aaa1465fcafb92f0b3ff7c6acca4749b",
+  "samples/dsp.py": "981c55205987a279a93558816b093a2a6243f5bef68a9921ff126988eed128d1",
+  "samples/genesis.py": "89cef7b7b342fa2af17a15b36691a7cc0639d5ca81d2bd8ca709e02a4b21484b",
+  "samples/snes.py": "e2e8ca73ee0ba03e2fa38af480ea139b4609420341145ccbcd0bfc57b4d069c6"
+ }
+}
