@@ -192,7 +192,7 @@ class ImportCountsAVocabularyTests(unittest.TestCase):
         import sys
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         from test_library import make_pack
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.packs import library, packfile
         from bitcomposer.translate import harness, packtables
         with tempfile.TemporaryDirectory() as tmp:

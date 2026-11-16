@@ -21,7 +21,8 @@ from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-from bitcomposer import cli, composer  # noqa: E402
+from bitcomposer import cli  # noqa: E402
+from bitcomposer.classic import composer  # noqa: E402
 
 LOCK = os.path.join(HERE, "classic_lock.json")
 VERSION = "locked"

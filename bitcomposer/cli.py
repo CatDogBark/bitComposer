@@ -9,7 +9,18 @@ import sys
 import time
 
 from . import __version__
-from .composer import compose_song, save_song, unique_path
+
+
+def unique_path(directory: str, stem: str, suffix: str = "", ext: str = ".it", prefix: str = "") -> str:
+    """`<directory>/<prefix><stem><suffix><ext>`, with " 2", " 3", ...
+    after the stem if that name is taken. Titles are drawn from a finite
+    list, so two songs can share one."""
+    candidate = os.path.join(directory, f"{prefix}{stem}{suffix}{ext}")
+    n = 2
+    while os.path.exists(candidate):
+        candidate = os.path.join(directory, f"{prefix}{stem} {n}{suffix}{ext}")
+        n += 1
+    return candidate
 
 
 def build_parser():
@@ -261,6 +272,7 @@ def compose_from_args(args, index: int = 0):
     if args.pack_file:                                         # Classic plays its own sounds and nothing else: it reads no pack file
         raise ValueError("--classic takes no --pack-file: Classic plays its own sounds; a pack file's sounds are for a written song "
                          "(leave --classic out)")
+    from .classic import compose_song, save_song               # Classic's front door, loaded only when Classic is asked for
     song = compose_song(seed=seed,
                         tempo_pref=args.tempo, energy_pref=args.energy,
                         scale_pref=args.scale, style_pref=args.style,

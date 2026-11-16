@@ -26,7 +26,7 @@ import sys
 import wave
 from pathlib import Path
 
-from .. import arp, bass, echo, samples as smp, structure
+from .. import echo, samples as smp
 from ..drums import KIT_NOTE
 from ..instruments import PALETTES
 from ..mix import CHANNEL_ROLES
@@ -52,10 +52,11 @@ WEIGHTED = {
     "bass_style": ("steady", "walking", "octave", "driving", "drone", "riff"),
     "drum_density": ("sparse", "normal", "busy"),
     "drum_swing": ("off", "light", "heavy"),
-    "form": tuple(structure.FORMS),
-    "intro": tuple(structure.INTROS),
-    "arp_figures": tuple(arp.FIGURES),
-    "riffs": tuple(bass.RIFFS),
+    "form": ("standard", "aaba", "rondo", "short", "linear"),          # the format's own lists: the names Classic's forms,
+    "intro": ("arp_bed", "riff_vamp", "drum_pickup", "pad_hook"),      # intros, arp figures and bass riffs had when Classic
+    "arp_figures": ("sparse_pulse", "quarter_up", "classic_up", "up_down", "broken_octave", "pedal_bounce", "sync_push",
+                    "offbeat_stabs", "gallop", "run16", "cascade"),    # was walled off (it reads no pack file; the built-in
+    "riffs": ("rock", "gallop", "funk", "pedal_push", "octaves", "fifth_bounce", "drop"),   # packs still say them)
     "echo_wet": tuple(echo.ECHO_WET_WEIGHTS),
     "echo_delay": tuple(echo.ECHO_DELAYS),
     "echo_stereo": tuple(echo.ECHO_STEREO_WEIGHTS),

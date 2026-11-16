@@ -8,7 +8,7 @@ import unittest
 import wave
 from pathlib import Path
 
-from support import compose_song, os, samples, tempfile, unittest  # noqa: F401,F811
+from support import os, samples, tempfile, unittest  # noqa: F401,F811
 from bitcomposer import cli  # noqa: E402
 from bitcomposer.packs import PACKS, PACK_NAMES  # noqa: E402
 from bitcomposer.packs import packfile as pf  # noqa: E402

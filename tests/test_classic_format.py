@@ -1,8 +1,8 @@
 """The file: determinism, IT header and samples, tempo fields, CLI naming. Run with: python3 -m unittest discover -s tests"""
 import unittest
 
-from support import (_gen, _read, analyze, compose_song, composer, it_format, names, os, pattern, struct, sys, tempfile, unittest)  # noqa: F401
-from bitcomposer import mix  # noqa: E402
+from classic_support import (_gen, _read, analyze, compose_song, composer, it_format, names, os, pattern, struct, sys, tempfile, unittest)  # noqa: F401
+from bitcomposer.classic import mix  # noqa: E402
 
 
 
@@ -134,9 +134,9 @@ class Pitch(unittest.TestCase):
     sounded an octave below its label (label 60 rendered at 130.8 Hz)."""
 
     def test_note_numbers_agree_and_registers_land(self):
-        from bitcomposer.it_format import midi_to_it_note
-        from bitcomposer.bass import BASS_FLOOR
-        from bitcomposer.drums import KIT_NOTE
+        from bitcomposer.classic.it_format import midi_to_it_note
+        from bitcomposer.classic.bass import BASS_FLOOR
+        from bitcomposer.classic.drums import KIT_NOTE
         self.assertEqual(midi_to_it_note(60), 60)
         self.assertEqual(KIT_NOTE, 48)
         song = compose_song(seed=11, style_pref="snes")

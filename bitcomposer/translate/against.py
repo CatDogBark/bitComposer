@@ -76,7 +76,7 @@ class _Grid:
 def compose(pack: str, n: int) -> tuple[str, list[dict]]:
     """n Classic songs composed on one of Classic's own sounds (its name), seeds 1 to n, and the name. Classic reads no
     pack file: a pack.json is refused."""
-    from ..composer import compose_song
+    from ..classic import compose_song
     if pack.endswith(".json"):
         raise ValueError(f"--against {pack}: Classic plays its own sounds and reads no pack file; name one of its sounds")
     return pack, [compose_song(seed=seed, sound=pack) for seed in range(1, n + 1)]
@@ -154,7 +154,8 @@ def _keys(vs: list, homes: list) -> str:
     key whose notes its scale's are (a mixolydian or dorian tune read as the
     major a fifth or a tone off, a phrygian as a minor a fourth up: the
     profile knows major and minor only); another."""
-    from ..theory import SCALES
+    from ..classic import theory
+    SCALES = theory.SCALES
     kinds = Counter()
     for s, (tonic, mode, scale) in zip(vs, homes):
         read_ = {(s.tonic + i) % 12 for i in (SCALES["major"] if s.mode == "major" else SCALES["natural_minor"])}

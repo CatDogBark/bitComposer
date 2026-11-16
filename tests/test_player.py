@@ -10,9 +10,10 @@ import unittest
 import unittest.mock
 
 try:
-    from .support import compose_and_save
+    from . import support  # noqa: F401  the repo on sys.path
 except ImportError:          # discover -s tests imports the modules top-level
-    from support import compose_and_save
+    import support  # noqa: F401
+from bitcomposer.classic import compose_and_save      # Classic songs, as files for the player to play
 from bitcomposer.player import engine
 from bitcomposer.player import level as leveling
 from bitcomposer.player.openmpt import LibraryMissing, lib
