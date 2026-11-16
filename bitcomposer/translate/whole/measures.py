@@ -50,7 +50,7 @@ from . import plan as plan_mod, render as render_mod   # noqa: E402  the package
 
 # --- the measures: the same numbers over a written song read back and over a game's songs ---
 
-SPAN = 32                             # bars the distinct figures are counted over (tools/slice1.py)
+SPAN = 32                             # bars the distinct figures are counted over (as phase 4's slice tool counted them)
 
 
 def tune_measures(song: rhythm.Song) -> dict:

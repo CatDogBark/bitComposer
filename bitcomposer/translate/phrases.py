@@ -1014,7 +1014,7 @@ def main(argv=None) -> int:
     ap.add_argument("--game", help="only this game's songs (the songs table's game)")
     ap.add_argument("--top", type=int, default=10, help="rows of each progressions table (default 10)")
     ap.add_argument("--games", action="store_true", help="each game's headline numbers, their spread and what explains them")
-    ap.add_argument("--against", action="append", default=[], metavar="PACK", help="a pack's name or a pack.json: songs composed with it beside")
+    ap.add_argument("--against", action="append", default=[], metavar="PACK", help="one of Classic's own sounds, by name: Classic songs composed on it beside")
     ap.add_argument("--songs", type=int, default=20, help="songs composed for each pack (default 20)")
     ap.add_argument("--heard", metavar="JSON", help="parts marked by ear (heard-form.json): the reader's parts scored, the marked songs counted both ways")
     args = ap.parse_args(argv)

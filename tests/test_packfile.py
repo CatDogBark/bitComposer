@@ -77,16 +77,17 @@ class PackFiles(unittest.TestCase):
         self.assertTrue(samples.is_percussion("testpack_thump"))
         self.assertFalse(samples.is_struck("testpack_flute"))
         self.assertEqual(samples.PRESET_RELEASE["testpack_flute"], "flute")
-        song = compose_song(seed=3, pack=name)
-        self.assertEqual(song["info"]["pack"], name)
-        self.assertEqual(song["info"]["instruments"]["melody"], "testpack_flute")
-        self.assertEqual(song["info"]["instruments"]["kick"], "testpack_thump")
-        flute = next(s for s in song["samples"] if s.name == "Testpack Flute")
+        from bitcomposer import instruments, written
+        flute = instruments._make_sample("testpack_flute")
+        self.assertEqual(flute.name, "Testpack Flute")
         # in tune: a 441 Hz recording at 22050 Hz plays middle C at its C5Speed
         self.assertEqual(flute.c5_speed, round(22050 * 2 ** ((60 - (69 + 12 * math.log2(441 / 440))) / 12)))
         self.assertEqual((flute.sus_loop_start, flute.sus_loop_end), (11025, 22050))
-        # the same seed is the same song
-        self.assertEqual(compose_song(seed=3, pack=name)["message"], song["message"])
+        # a written song plays on it, and the same seed is the same song (Classic plays its own sounds: it takes no pack file)
+        out = written.compose_written("default", None, 3, pack_file=self.save())
+        self.assertEqual(out["sounds"], name)
+        again = written.compose_written("default", None, 3, pack_file=self.save())
+        self.assertEqual([(n.voice, n.start, n.pitch) for n in again["score"].notes], [(n.voice, n.start, n.pitch) for n in out["score"].notes])
         # unloading takes it all back out
         pf.unload(name)
         self.assertNotIn(name, PACKS)
@@ -127,10 +128,10 @@ class PackFiles(unittest.TestCase):
         self.addCleanup(pf.unload, "testpack")
         args = cli.build_parser().parse_args(["--classic", "--pack-file", path, "--sound", "chip", "-s", "5",
                                               "-o", os.path.join(self.dir.name, "song.it")])
-        out, info = cli.compose_from_args(args)
-        self.assertTrue(os.path.exists(out))
-        self.assertEqual(info["pack"], "testpack")                   # the pack file wins over --sound
-        self.assertEqual(info["style"], "snes")
+        with self.assertRaises(ValueError) as cm:                    # Classic plays its own sounds and reads no pack file
+            cli.compose_from_args(args)
+        self.assertIn("--classic takes no --pack-file", str(cm.exception))
+        self.assertFalse(os.path.exists(os.path.join(self.dir.name, "song.it")))
         args = cli.build_parser().parse_args(["--pack-file", path, "-s", "5", "-o", os.path.join(self.dir.name, "written.it")])
         out, info = cli.compose_from_args(args)                      # the writer, on the pack file's samples (2.0)
         self.assertTrue(os.path.exists(out))

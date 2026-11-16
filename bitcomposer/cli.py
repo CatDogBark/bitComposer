@@ -258,9 +258,9 @@ def compose_from_args(args, index: int = 0):
     if not getattr(args, "classic", False):
         return compose_written_from_args(args, seed, index)
     pack, sound = args.pack, args.sound
-    if args.pack_file:
-        from .packs.packfile import load_pack_file
-        pack, sound = load_pack_file(args.pack_file), "random"
+    if args.pack_file:                                         # Classic plays its own sounds and nothing else: it reads no pack file
+        raise ValueError("--classic takes no --pack-file: Classic plays its own sounds; a pack file's sounds are for a written song "
+                         "(leave --classic out)")
     song = compose_song(seed=seed,
                         tempo_pref=args.tempo, energy_pref=args.energy,
                         scale_pref=args.scale, style_pref=args.style,

@@ -922,6 +922,15 @@ class WindowHeadless(unittest.TestCase):
         self.pump(0.3)
         self.assertIn("--pack-file", b.autoFlags())
         self.assertIn("test_quest", b.autoFlags())
+        win.setProperty("settGenerator", "classic")             # Classic plays its own sounds: the game stays the writer's
+        self.pump(0.3)
+        self.assertIn("--classic", b.autoFlags())
+        self.assertNotIn("--pack-file", b.autoFlags())
+        self.assertNotIn("test_quest", b.autoFlags())
+        self.assertNotIn("--sound", b.autoFlags())              # the seed's pick
+        win.setProperty("settGenerator", "bitcomposer")
+        self.pump(0.3)
+        self.assertIn("--pack-file", b.autoFlags())             # and is still the writer's choice when the writer is back
 
         b.playIndex(1)
         self.assertTrue(self.pump(2, lambda: b.state["status"] == "Playing"))
