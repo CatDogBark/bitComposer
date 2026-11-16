@@ -28,7 +28,7 @@ ROOT = os.path.dirname(HERE)
 LOCK = os.path.join(HERE, "bit_voices_lock.json")
 FIELDS = {"tone": {"kind", "rate", "period", "periods", "frames", "rms", "steady", "onset", "attack", "env", "chorus", "breath", "strike", "off",
                    "struck_as_kit"},
-          "hit": {"kind", "rate", "frames", "peak", "env", "partials", "noise", "note"}}
+          "hit": {"kind", "rate", "frames", "peak", "env", "partials", "noise", "note", "moments", "rms", "delay"}}
 
 
 def digests() -> dict:
@@ -75,6 +75,15 @@ class BitVoices(unittest.TestCase):
                 self.assertEqual(set(p), {"hz", "db"}, name)
                 self.assertEqual(len(p["hz"]), 2, name)                                            # where it starts and ends
             self.assertTrue(all(len(row) <= len(recipe.BAND_EDGES) for row in r.get("noise", ())), name)
+            at = r.get("moments")
+            if at:                                                                          # moments in whole ms, rising, a level a moment
+                self.assertTrue(all(isinstance(m, int) for m in at) and at == sorted(set(at)) and at[0] == 0, name)
+                self.assertTrue(len(at) <= 12, name)
+                self.assertEqual(len(r["noise"]), len(at) - 1, name)
+                self.assertTrue(all(len(p["db"]) == len(at) - 1 for p in r.get("partials", ())), name)
+            else:
+                self.assertTrue(all(len(p["db"]) == 4 for p in r.get("partials", ())), name)   # four quarters
+            self.assertIsInstance(r.get("delay", 0), int, name)
             for k in ("breath", "strike", "chorus"):
                 self.assertTrue(all(isinstance(x, (int, float)) for x in (r.get(k) or {}).values()), name)
             self.assertLessEqual(len(json.dumps(r)), 4096, name)

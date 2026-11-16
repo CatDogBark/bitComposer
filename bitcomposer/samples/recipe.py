@@ -16,7 +16,9 @@ Two kinds:
           a loop of whole periods (one period, or many where the voice has a
           chorus or breath to carry).
   "hit"   a voice that plays once: partials that may glide, and banded
-          noise, under the measured level curve.
+          noise, under the measured level curve; the partials' and the
+          noise's levels given at four equal quarters of the sound, or at
+          the recipe's own moments (`moments`, spaced as a strike decays).
 
 render() returns the samples as floats with the loop and the pitch; voice()
 returns what the sample registry takes.
@@ -251,6 +253,19 @@ def _quarters(levels: list, count: int):
     return gain
 
 
+def _at_moments(levels: list, centres: list):
+    """A level given at moments of a sound (dB, one a moment, `centres` the moments' middles in frames): gain at a frame,
+    straight lines in decibels between the middles, the first and the last held beyond them."""
+    def gain(i: int) -> float:
+        if i <= centres[0]:
+            return _amp(levels[0])
+        for q in range(len(centres) - 1):
+            if i <= centres[q + 1]:
+                return _amp(levels[q] + (levels[q + 1] - levels[q]) * (i - centres[q]) / (centres[q + 1] - centres[q]))
+        return _amp(levels[-1])
+    return gain
+
+
 def level_window(rate: int, partials) -> int:
     """The frames a hit's level is read over: four milliseconds, or a period and a half of its lowest partial where
     that is longer (a kick's level read over less than a period follows the wave, not the sound)."""
@@ -261,9 +276,15 @@ def level_window(rate: int, partials) -> int:
 def _hit(recipe: dict, rnd: random.Random) -> tuple:
     rate, count = recipe["rate"], recipe["frames"]
     out = [0.0] * count
+    at = recipe.get("moments")                              # the moments its partials and noise are given at (ms, their bounds);
+    if at:                                                  # without, four equal quarters of the sound
+        centres = [rate * (a + b) / 2000.0 for a, b in zip(at, at[1:])]
+        levels_of = lambda levels: _at_moments(levels, centres)   # noqa: E731
+    else:
+        levels_of = lambda levels: _quarters(levels, count)       # noqa: E731
     for partial in recipe.get("partials", ()):
         f0, f1 = partial["hz"]
-        gain = _quarters(partial["db"], count)
+        gain = levels_of(partial["db"])
         phase = rnd.uniform(0.0, 2.0 * math.pi)
         for i in range(count):
             out[i] += math.sqrt(2.0) * gain(i) * math.sin(phase)
@@ -278,15 +299,24 @@ def _hit(recipe: dict, rnd: random.Random) -> tuple:
             hi = BAND_EDGES[b + 1] if b + 1 < len(BAND_EDGES) else rate / 2.0
             white = [rnd.uniform(-1.0, 1.0) for _ in range(count)]   # noise of its own for each band: one noise through every filter
             band = _unit(_band(white, rate, lo, min(hi, rate / 2.0)))   # cancels where two bands meet, the filters turning its phase apart
-            gain = _quarters(levels, count)
+            gain = levels_of(levels)
             for i in range(count):
                 out[i] += gain(i) * band[i]
     _set_levels(out, rate, recipe.get("env") or [], level_window(rate, recipe.get("partials")), count)
+    wait = int(rate * recipe.get("delay", 0) / 1000.0)      # where given, how long the sound waits before it strikes (ms): silent until
+    if wait:                                                # then, opening over half a millisecond (a level curve read over a window
+        rise = max(4, int(rate * 0.0005))                   # cannot open that sharply of itself)
+        for i in range(min(count, wait + rise)):
+            out[i] *= 0.0 if i < wait else (i - wait + 1) / (rise + 1)
     fade = min(count // 4, max(8, int(rate * 0.002)))       # the last two milliseconds to nothing: an unlooped sample must not end on a step
     for x in range(fade):
         out[count - fade + x] *= 1.0 - (x + 1) / fade
     peak = max(abs(v) for v in out) or 1.0
-    scale = recipe.get("peak", 0.9) / peak
+    if recipe.get("rms"):                                   # its loudness, where given: the sound's RMS, the peak kept under clipping
+        level = math.sqrt(sum(v * v for v in out) / count) or 1.0
+        scale = min(recipe["rms"] / level, 0.98 / peak)
+    else:
+        scale = recipe.get("peak", 0.9) / peak
     return [v * scale for v in out], None, recipe.get("note")
 
 
