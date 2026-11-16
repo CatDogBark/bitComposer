@@ -369,6 +369,9 @@ These change how every note sounds, not what notes are played.
 This section and Melody below, Mix by palette above and the items from
 `ANALYSIS.md` under Generation are about Classic, the 1.x generator kept
 behind `--classic`; the writer's own open items are in `docs/LIMITS.md`.
+Classic is frozen since 2.1.2 (`bitcomposer/classic/`, CONTRIBUTING), so
+none of these will be done; they stay as the record of what was planned
+for it.
 
 - **Chip chord stabs (J effect).** The `Jxy` arpeggio command cycles one
   channel through three notes fast enough to read as a chord — the
@@ -421,7 +424,9 @@ and the hit-or-miss part. Two steps, in order.
   and the default player's sound in 2.0.0rc3, the parts' attack class in
   2.0.0, released 2026-11-01: `docs/idiom/phase-6-generator.md`; the
   kit's pieces in rounds 74 to 83 and the writer's rounds through 178 in
-  2.1.0, released 2026-11-14 (2.1.1, of 2026-11-15, changes no song), recorded in
+  2.1.0, released 2026-11-14 (2.1.1, of 2026-11-15, changes no song;
+  round 179, the vibrato read as the game plays it, in 2.1.2, of
+  2026-11-15), recorded in
   `docs/idiom/phase-4-writing.md`, with what stays open in
   `docs/LIMITS.md`).** The idiom's plan took
   this over from the translator's stages 3 and 4 on 2026-10-20: the
@@ -487,7 +492,8 @@ and the hit-or-miss part. Two steps, in order.
   bars. `docs/LIMITS.md`, "A channel's second instrument is not
   written".
 - **The generator writes IT instruments (a later version, with a listening
-  review; decided 2026-10-18).** Classic's songs are sample mode (a
+  review; decided 2026-10-18; will not be done, Classic is frozen since
+  2.1.2).** Classic's songs are sample mode (a
   written song renders through `spc/convert.py`, with instruments and
   envelopes): release
   tails baked into the sample data (a sustain loop and a decaying copy
