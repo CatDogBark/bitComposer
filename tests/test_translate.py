@@ -428,11 +428,14 @@ class Pack(unittest.TestCase):
         self.assertEqual(data["samples"]["sbass"]["release"], "bass")
         self.assertTrue(data["samples"]["skick"]["percussion"])
         with tempfile.TemporaryDirectory() as d:
-            name = packfile.load_pack_file(pack.write(data, files, Path(d)))
+            path = pack.write(data, files, Path(d))
+            name = packfile.load_pack_file(path)
             self.addCleanup(packfile.unload, name)
             self.assertIn(name, PACKS)
-            song = compose_song(seed=1, pack=name)
-            self.assertTrue(song["patterns"])
+            from bitcomposer import written                      # a written song plays on it (Classic reads no pack file)
+            out = written.compose_written("default", None, 1, pack_file=path)
+            self.assertEqual(out["sounds"], name)
+            self.assertTrue(out["score"].notes)
 
 
 class Archives(unittest.TestCase):

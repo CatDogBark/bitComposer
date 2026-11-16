@@ -190,7 +190,7 @@ makes a pack (`bitcomposer --pack-file OUT/pack.json` composes with it);
 an IT module, one to one, its samples, notes, envelopes and echo (how well,
 over 1836 songs of 39 games and 20 music drivers, is in `docs/drivers/`);
 and `python -m bitcomposer.translate FOLDER` prints each song's reading,
-with `--against PACK` measuring songs composed with a pack beside them.
+with `--against SOUND` measuring Classic songs on one of its own sounds beside them.
 
 The SPC files are yours: bitComposer ships none, and the packs made from
 them stay on your machine, in your data folder
@@ -296,7 +296,7 @@ With `--classic`, everything defaults to `random` but `--keys` (moving) and `--l
 --sound   chip|snes|genesis|bit|ffvi|mana|evermore|megamanx  the sound in one word: a palette or a style pack (overrides the two below)
 --style   chip|snes|genesis          sound palette
 --pack    bit|ffvi|mana|evermore|megamanx|none|random  style pack: an instrument set with the habits of the scores it imitates (a pack implies snes)
---pack-file PACK.json               a pack as data, with its own voices as WAV files (docs/PACKS.md); overrides --pack and --sound
+--pack-file PACK.json               a pack as data, with its own voices as WAV files (docs/PACKS.md): a written song plays on it; --classic refuses it
 --echo    on|off|random              echo (random: 70% of snes songs, never chip or genesis)
 --echo-wet    light|normal|wet|random  how much of the lead, harmony and arp the echo carries
 --echo-delay  eighth|dotted|quarter|slap|row|random  beat fraction between repeats, a 48 ms slap, or one row (random: weighted by tempo)
