@@ -71,7 +71,11 @@ the signing environment, and only those release tags the PyPI one.
    produces, say so; that is fine, silently breaking it is not. A change
    meant to leave the music alone (a refactor, a cleanup, moving code
    between modules) must leave every file byte-identical: see the check
-   below.
+   below. Classic is frozen: `tests/test_classic_lock.py` holds the
+   checksum of 109 of its songs (every sound, the random pick, every
+   choice of every option it takes), and a change that moves one of them
+   does not go in. The lock's file is not written again to make a change
+   pass.
 
 4. Keep it dependency-free. The generator must run with a bare `python3`.
 
