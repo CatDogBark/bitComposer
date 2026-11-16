@@ -42,6 +42,12 @@ VIBRATO_CYCLES = 1.5
 VIBRATO_MIN_DEPTH = 3.0
 VIBRATO_TRILL = 90.0
 VIBRATO_CLASSES = ((0.35, 0.5), (0.5, 1.0), (1.0, 2.0), (2.0, float("inf")))
+# A HALF-WRITTEN pitch (round 179): the SNES chip's pitch is two registers, the low byte and the high, written one after the
+# other, and the decoder notes the pitch after each write. Where a pitch crosses a high-byte boundary the register holds, between
+# the two writes, the new low byte under the old high byte: a value as much as a semitone off that lasts under a tenth of a
+# millisecond and is never heard. A value the next write replaces within this many seconds is left out before the swings are
+# counted (FFVI: 23,223 such values, every one across a high-byte change, and no other pitch write under 1 ms from the next).
+VIBRATO_HALF_WRITTEN = 0.001
 
 
 def vibrato_class(seconds: float) -> int | None:
@@ -57,11 +63,14 @@ def note_vibrato(note) -> dict | None:
     sounds) carries of periodic pitch modulation: None where none, else {"depth": cents either side of the centre (the
     median half swing), "rate": Hz (one cycle per two swings), "onset": seconds from key-on to the modulation's start
     (the first extreme less a quarter cycle), "rise": the first swing's depth over the median (1.0: no rise),
-    "trill": whether the swings are a trill's (VIBRATO_TRILL cents or more)}."""
+    "trill": whether the swings are a trill's (VIBRATO_TRILL cents or more)}. A half-written pitch (VIBRATO_HALF_WRITTEN)
+    is not a swing: counted as one, each made two extra turns, so a vibrato across a high-byte boundary read three times
+    as fast and deeper than it is played, and a slide across two read as a vibrato."""
     p0 = note.pitch
-    if p0 <= 0 or len(note.bends) < 3:
+    bends = [b for i, b in enumerate(note.bends) if i + 1 == len(note.bends) or note.bends[i + 1][0] - b[0] >= VIBRATO_HALF_WRITTEN]
+    if p0 <= 0 or len(bends) < 3:
         return None
-    series = [(0.0, 0.0)] + [(t - note.start, 1200.0 * math.log2(p / p0)) for t, p in note.bends if p > 0]
+    series = [(0.0, 0.0)] + [(t - note.start, 1200.0 * math.log2(p / p0)) for t, p in bends if p > 0]
     ext, n, i = [], len(series), 1
     while i < n - 1:                                       # local extremes, a plateau's first point, the ends left out
         t, c = series[i]
@@ -98,10 +107,12 @@ def vibrato_of_notes(notes) -> dict:
     {"voice_N_held": how many notes it held, "voice_N_vib": how many of them carry vibrato (trills left out),
     "voice_N_held_K" and "voice_N_vib_K": the same by length class K (VIBRATO_CLASSES), "voice_N_depth",
     "voice_N_rate", "voice_N_onset": the medians over its vibrato notes (cents, Hz, seconds)}; a voice with no held
-    note has no entries. FFVI (80 songs, round 72's count): the tune's held notes carry vibrato in 0.19 of cases, the
-    counter's in 0.10, the other parts' in 0.02 to 0.08; the depth's median 30 cents on the tune (quartiles 16 to 45),
-    19 on the counter; the rate 5.7 Hz in most songs and 15 to 19 Hz in a third of them; the onset a median 0.5 s from
-    key-on, so a note held under half a second carries it in 0.01 of cases, one held over a second in 0.3."""
+    note has no entries. FFVI (the vocabulary's 68 songs, round 179's count, the half-written pitches left out): the
+    tune's held notes carry vibrato in 0.18 of cases, the counter's in 0.11, the accompaniment's in 0.06, the bass's in
+    0.08; over the songs with any, the depth's median is 24 cents on the tune (quartiles 16 to 31) and 22 on the counter,
+    the rate 5.7 Hz (4.5 to 6 on every tune: round 72's "15 to 19 Hz in a third of them" was the half-written pitches
+    counted as swings), the onset a median 0.7 s from key-on, so a tune's note held under half a second never carries
+    it, one held half a second to a second in 0.09 of cases, one held over a second in half."""
     held, vib, depths, rates, onsets = {}, {}, {}, {}, {}
     for n in notes:
         if n.end is None or getattr(n, "noise", False) or n.pitch <= 0:

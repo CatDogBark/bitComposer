@@ -1,7 +1,8 @@
 """Samples: every preset renders, loops are clean, releases end in silence. Run with: python3 -m unittest discover -s tests"""
 import unittest
 
-from support import (compose_song, it_format, random, samples, struct, unittest)  # noqa: F401
+from support import (it_format, random, samples, struct, unittest)  # noqa: F401
+from bitcomposer.classic import compose_song  # noqa: E402  a Classic song, read here for what its voices do when released
 
 
 

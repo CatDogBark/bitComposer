@@ -7,10 +7,12 @@ are code; a **pack file** is the same thing as data, so a
 pack can be added without touching the code. The SPC importer writes
 them from a game's songs: the player's LIBRARY screen (IMPORT), or
 `python -m bitcomposer.spc --pack OUT FOLDER|ARCHIVE`, a first thin pack
-(`TRANSLATOR.md`, stage 2). A written song, the default, takes only a
-pack's sounds (`translate/whole/render.py`); the tempo, the form, the
-other habits and the trims apply with `--classic`, and the echo habits
-stand in for a written song only where its vocabulary has no echo word.
+(`TRANSLATOR.md`, stage 2). A pack file is for written songs: a written
+song takes a pack's sounds (`translate/whole/render.py`), and its echo
+habits where the vocabulary has no echo word. Classic plays its own
+sounds and reads no pack file, so a pack file's tempo, form, other
+habits and trims are read by nothing; the format keeps them, and the
+built-in packs say the same things in code for Classic.
 
 A pack file is a JSON file, with the pack's own voices as WAV files
 beside it. It is data only: a pack someone sends you cannot run anything.
@@ -19,9 +21,8 @@ beside it. It is data only: a pack someone sends you cannot run anything.
 bitcomposer --pack-file mypack/pack.json -s 7 -v
 ```
 
-composes a song with it. `--pack-file` takes the place of `--pack` and
-`--sound`; the other options work as usual. A pack file is never drawn by
-a random sound, only used when named.
+composes a written song on its sounds. A pack file is never drawn by a
+random sound, only used when named, and `--classic` refuses one.
 
 In the player, LIBRARY keeps the packs on this machine, each a folder in the
 user's data folder (`~/.local/share/bitcomposer/packs`, or under
@@ -90,11 +91,12 @@ README's "Packs from your games").
   A voice name is one of the pack's own `samples`, or a built-in voice
   (any voice the palettes and packs have: `snes_strings`, `ffvi_harp`,
   `gen_lead`, ...).
-- **`habits`**: weighted draws and settings the composer follows (Classic,
-  with `--classic`; a written song reads only the echo habits, as above).
-  Any habit left out is drawn the way the palette draws it. The list is
-  below.
-- **`trims`**: channel volumes (0 to 64) by part, over Classic's mix:
+- **`habits`**: weighted draws and settings in the shape Classic's
+  built-in packs keep them. Classic reads no pack file, so of a pack
+  file's habits only the echo ones are read, by a written song, as
+  above. The list is below.
+- **`trims`**: channel volumes (0 to 64) by part, in the shape of Classic's
+  mix (read by nothing from a pack file):
   `melody`, `harmony`, `bass`, `arp`, `kick`, `snare`, `hihat`, `tom`, `crash`,
   `openhat`, `echo.melody`, `echo.harmony`, `echo.arp`.
 - **`samples`**: the pack's own voices, by name (see below).

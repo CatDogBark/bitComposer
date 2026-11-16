@@ -26,7 +26,7 @@ import sys
 import wave
 from pathlib import Path
 
-from .. import arp, bass, echo, samples as smp, structure
+from .. import echo, samples as smp
 from ..drums import KIT_NOTE
 from ..instruments import PALETTES
 from ..mix import CHANNEL_ROLES
@@ -52,10 +52,11 @@ WEIGHTED = {
     "bass_style": ("steady", "walking", "octave", "driving", "drone", "riff"),
     "drum_density": ("sparse", "normal", "busy"),
     "drum_swing": ("off", "light", "heavy"),
-    "form": tuple(structure.FORMS),
-    "intro": tuple(structure.INTROS),
-    "arp_figures": tuple(arp.FIGURES),
-    "riffs": tuple(bass.RIFFS),
+    "form": ("standard", "aaba", "rondo", "short", "linear"),          # the format's own lists: the names Classic's forms,
+    "intro": ("arp_bed", "riff_vamp", "drum_pickup", "pad_hook"),      # intros, arp figures and bass riffs had when Classic
+    "arp_figures": ("sparse_pulse", "quarter_up", "classic_up", "up_down", "broken_octave", "pedal_bounce", "sync_push",
+                    "offbeat_stabs", "gallop", "run16", "cascade"),    # was walled off (it reads no pack file; the built-in
+    "riffs": ("rock", "gallop", "funk", "pedal_push", "octaves", "fifth_bounce", "drop"),   # packs still say them)
     "echo_wet": tuple(echo.ECHO_WET_WEIGHTS),
     "echo_delay": tuple(echo.ECHO_DELAYS),
     "echo_stereo": tuple(echo.ECHO_STEREO_WEIGHTS),
@@ -135,10 +136,12 @@ def check_name(name: str, source: str = "pack") -> str:
     return name
 
 
-def parse(data, base: Path, source: str = "pack") -> tuple[dict, dict]:
+def parse(data, base: Path, source: str = "pack", audio: dict | None = None) -> tuple[dict, dict]:
     """Check pack file data. Returns ({"name", "table"}, the pack's own
     voices read from their files), registering nothing. table is what PACKS
-    holds for a built-in pack."""
+    holds for a built-in pack. `audio`: a sample's sound given in memory,
+    {its file's name: (16-bit mono data, frames, rate)}, in place of a WAV
+    beside the pack file (bitComposer's own voices are synthesised)."""
     def fail(where, problem):
         raise PackError(f"{source}: {where}: {problem}")
 
@@ -181,7 +184,7 @@ def parse(data, base: Path, source: str = "pack") -> tuple[dict, dict]:
             fail(f"samples.{key}", "voice names are lower-case letters, digits and _")
         if key in BUILTIN_VOICES:
             fail(f"samples.{key}", "a built-in voice has this name; give the pack's voice its own")
-        own[key] = _sample(spec, base, f"samples.{key}", key in kit_voices, fail)
+        own[key] = _sample(spec, base, f"samples.{key}", key in kit_voices, fail, audio)
     for key in list(own):                                   # a kit voice's tonal reading is a voice of its own beside it (round 119)
         view = own[key].pop("tonal", None)
         if view is not None:
@@ -320,7 +323,7 @@ def _habit(h, v, where, voice_name, fail):
     fail(where, f"not a habit ({', '.join(every)})")
 
 
-def _sample(spec, base: Path, where: str, in_kit: bool, fail) -> dict:
+def _sample(spec, base: Path, where: str, in_kit: bool, fail, audio: dict | None = None) -> dict:
     if not isinstance(spec, dict):
         fail(where, "an object: file, note (or hz), and optionally loop, release, percussion, volume, envelope, tonal")
     allowed = {"file", "note", "hz", "loop", "release", "percussion", "volume", "envelope", "piece", "tonal"}
@@ -330,7 +333,7 @@ def _sample(spec, base: Path, where: str, in_kit: bool, fail) -> dict:
     file = spec.get("file")
     if not isinstance(file, str) or not file.lower().endswith(".wav"):
         fail(f"{where}.file", "a .wav file, named relative to the pack file")
-    data, frames, rate = read_wav(base / file, f"{where}.file", fail)
+    data, frames, rate = audio[file] if audio is not None and file in audio else read_wav(base / file, f"{where}.file", fail)
     percussion = spec.get("percussion", in_kit)
     if not isinstance(percussion, bool):
         fail(f"{where}.percussion", "true for a kit voice (left at its level), false for a tonal one")

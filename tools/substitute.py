@@ -13,7 +13,7 @@ import sys
 
 from bitcomposer import spc
 from bitcomposer import score as score_mod
-from bitcomposer.composer import compose_song
+from bitcomposer.classic import compose_song
 from bitcomposer.spc import convert
 from bitcomposer.translate import harmony, reading
 

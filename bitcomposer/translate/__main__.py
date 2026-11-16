@@ -10,7 +10,7 @@ sections, a short part and its repeats as one). The readings are kept in a datab
 (~/.local/share/bitcomposer/readings.db unless --db says), a song read
 again only when the translator has changed. Needs the emulator.
 
---against PACK (a pack's name, or a pack.json; more than one allowed)
+--against PACK (the name of one of Classic's own sounds; more than one allowed)
 composes --songs songs with it (seeds 1 to N) and measures them beside the
 songs read, the same yardsticks from notes on both sides (measures.py): a
 table of medians, the middle half of the songs in brackets. The generated
@@ -56,16 +56,15 @@ def line(r) -> str:
 
 
 def _composed(db, pack: str, n: int) -> tuple[str, dict]:
-    """Measures of n songs composed with a pack (its name, or a pack.json), kept as the generator's."""
-    from ..composer import compose_song
-    name, how = pack, {"sound": pack}
+    """Measures of n Classic songs composed on one of Classic's own sounds (its name), kept as the generator's. Classic
+    reads no pack file: a pack.json is refused."""
+    from ..classic import compose_song
     if pack.endswith(".json"):
-        from ..packs.packfile import load_pack_file
-        name = load_pack_file(pack)
-        how = {"pack": name}
+        raise ValueError(f"--against {pack}: Classic plays its own sounds and reads no pack file; name one of its sounds")
+    name = pack
     out = {}
     for seed in range(1, n + 1):
-        values = measures.measure(measures.of_composed(compose_song(seed=seed, **how)))
+        values = measures.measure(measures.of_composed(compose_song(seed=seed, sound=pack)))
         measures.keep(db, f"{name}/{seed}", "generator", values)
         for k, v in values.items():
             out.setdefault(k, []).append(v)
@@ -98,7 +97,7 @@ def main(argv=None) -> int:
     ap.add_argument("--show", action="store_true", help="each song's chords too")
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     ap.add_argument("--against", action="append", default=[], metavar="PACK",
-                    help="measure songs composed with PACK (a name or a pack.json) beside the songs read")
+                    help="measure Classic songs composed on PACK (one of its own sounds, by name) beside the songs read")
     ap.add_argument("--songs", type=int, default=20, help="songs composed for each --against (default 20)")
     args = ap.parse_args(argv)
     files = _files(args.paths)

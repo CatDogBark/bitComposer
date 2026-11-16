@@ -5,8 +5,8 @@ pack, beside the game's own from the readings database, side by side.
     python -m bitcomposer.translate.against --against PACK ... [--db PATH] [--game NAME]
                                              [--songs N] [--top N] [--spc DIR] [--phrases]
 
-The packs and seeds are stage 2's (__main__.py --against): a pack's name or
-a pack.json, --songs songs each, seeds 1 to N. Each table's rows are the
+The sounds and seeds are stage 2's (__main__.py --against): the name of one of
+Classic's own sounds (Classic reads no pack file), --songs songs each, seeds 1 to N. Each table's rows are the
 top ones of every column (the game's first), so a habit of either side
 shows; a cell is the column's share, a pattern's with the songs it is heard
 in after it.
@@ -74,14 +74,12 @@ class _Grid:
 
 
 def compose(pack: str, n: int) -> tuple[str, list[dict]]:
-    """n songs composed with a pack (its name, or a pack.json), seeds 1 to n, and the pack's name."""
-    from ..composer import compose_song
-    name, how = pack, {"sound": pack}
+    """n Classic songs composed on one of Classic's own sounds (its name), seeds 1 to n, and the name. Classic reads no
+    pack file: a pack.json is refused."""
+    from ..classic import compose_song
     if pack.endswith(".json"):
-        from ..packs.packfile import load_pack_file
-        name = load_pack_file(pack)
-        how = {"pack": name}
-    return name, [compose_song(seed=seed, **how) for seed in range(1, n + 1)]
+        raise ValueError(f"--against {pack}: Classic plays its own sounds and reads no pack file; name one of its sounds")
+    return pack, [compose_song(seed=seed, sound=pack) for seed in range(1, n + 1)]
 
 
 def _harmony_part(notes: list) -> str:
@@ -156,7 +154,8 @@ def _keys(vs: list, homes: list) -> str:
     key whose notes its scale's are (a mixolydian or dorian tune read as the
     major a fifth or a tone off, a phrygian as a minor a fourth up: the
     profile knows major and minor only); another."""
-    from ..theory import SCALES
+    from ..classic import theory
+    SCALES = theory.SCALES
     kinds = Counter()
     for s, (tonic, mode, scale) in zip(vs, homes):
         read_ = {(s.tonic + i) % 12 for i in (SCALES["major"] if s.mode == "major" else SCALES["natural_minor"])}
@@ -326,7 +325,7 @@ def main(argv=None) -> int:
     ap.add_argument("--db", help="the readings database (default: ~/.local/share/bitcomposer/readings.db)")
     ap.add_argument("--game", help="only this game's songs (the songs table's game)")
     ap.add_argument("--against", action="append", default=[], metavar="PACK", required=True,
-                    help="a pack's name or a pack.json; more than one allowed")
+                    help="one of Classic's own sounds, by name; more than one allowed")
     ap.add_argument("--songs", type=int, default=20, help="songs composed for each pack (default 20)")
     ap.add_argument("--top", type=int, default=8, help="rows of each column in the pattern and move tables (default 8)")
     ap.add_argument("--spc", metavar="DIR", help="the game folders' root, or one game's folder: its drums named by their sound")

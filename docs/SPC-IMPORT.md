@@ -182,7 +182,8 @@ file is JSON holding the table a built-in pack keeps as `PACK` (palette,
 label, voices per role, habits, trims), with the pack's own voices as WAV
 files (tuning, loop, release family, volume). `bitcomposer/packs/packfile.py`
 checks it, registers its voices with the sample registry and the pack in
-`PACKS` (not in the random draw), and `--pack-file` composes with it; the
+`PACKS` (not in the random draw), and `--pack-file` writes a song on it (a
+written song: Classic reads no pack file); the
 player's LIBRARY screen passes that same option. It carries every habit
 the composer reads (27) and every role.
 

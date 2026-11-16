@@ -2,18 +2,26 @@
 
 bitComposer is procedural 16-bit game music: a pure-Python generator with no runtime dependencies that writes Impulse Tracker `.it` files, and a Qt player (`bitcomposer-player`; PySide6, plus jeepney on Linux) that composes as you listen. Since 2.0 the generator writes from a shipped vocabulary, and the 1.x generator is kept as Classic (`--classic`).
 
-Read CONTRIBUTING.md first: it covers the tests, the analyzer tables, the byte-identical check, where things live, building and releasing the emulator, checking the SPC converter and cutting a release. The notes below add to it.
+Read CONTRIBUTING.md first: it covers the tests, Classic's wall, the byte-identical check, where things live, building and releasing the emulator, checking the SPC converter and cutting a release. The notes below add to it.
 
 ## Branches, CI and pull requests
 
 - `main` holds released code and nothing else. Work goes into `dev` through pull requests, one topic each, and `dev` merges into `main` for a release (CONTRIBUTING.md, Branches).
 - CI as the workflows define it: `ci.yml` (the unit tests on Python 3.10 to 3.14, plus the vocabulary-map check) runs on every pull request into `dev` and into `main`, and on pushes to `main`. The Windows build (`windows.yml`) runs only on pull requests into `main`, on `v*` tags, or by hand.
 - Before calling a pull request ready, run the whole suite locally with the player's dependencies (Qt offscreen; a skip is not a pass), plus CONTRIBUTING.md's byte-identical check when generator code changed. For a change that could break Windows, start `windows.yml` by hand on the branch (`gh workflow run windows.yml --ref <branch>`), since pull requests into `dev` don't run it.
-- Generator changes are judged by measured metrics (`tools/analyze.py` tables before and after, as CONTRIBUTING.md describes), never by ear alone.
-- A generator refactor must leave every song byte-identical: CONTRIBUTING.md's two loops (Classic on every `--sound`, then written songs, over fixed seeds) and a sha256 diff. Without `--classic` the CLI writes a written song and does not read `--sound`.
+- Writer changes are judged by measured metrics (the round's record, as the whole-song writer section below describes), never by ear alone. `tools/analyze.py` reads Classic's channel layout and does not measure a written song.
+- A refactor of the writer must leave every written song byte-identical: CONTRIBUTING.md's loop (written songs as performed and bare, over fixed seeds, with the options the change touches) and a sha256 diff. Without `--classic` the CLI writes a written song and does not read `--sound`.
 - Keep the CHANGELOG as you go: every pull request adds its own entry under `## Unreleased`, internal changes (tests, CI, docs, process) included. At release, check that every pull request merged into `dev` since the last tag is covered.
 - Through release candidates the CHANGELOG heading stays `## Unreleased`; it becomes `## X.Y.Z` only at the final release, with the rcs as bullets inside that section.
 - Run `rm -rf build` before building a wheel locally: a stale git-ignored `build/` makes `pip wheel` ship files already deleted from the source, and it can hide packaging faults (the package list is `[tool.setuptools.packages.find] include = ["bitcomposer*"]`). Check packaging from a clean `git archive` in a fresh venv, not from the working tree.
+
+## Classic is frozen
+
+- Classic, the 1.x generator behind `--classic`, lives in `bitcomposer/classic/` behind a wall and does not change: not a fix, not a comment, not a new file. `tests/test_classic_wall.py` holds every file in the folder to its checksum and `tests/test_classic_lock.py` holds 109 Classic songs to the files they were. Never write either test's checksum file again to make a change pass; if one of them fails, the change is at fault.
+- The wall is one way. Nothing in `bitcomposer/classic/` imports from outside it (the standard library and the package's `__version__` apart). Code outside it (`bitcomposer/`, `tools/`) takes Classic only as `from bitcomposer.classic import <name>` with a name in its `__all__` (`compose_song`, `compose_and_save`, `save_song`, `resolve_sound`, `SOUNDS`, `STYLES`, `theory`), never a module inside the folder. Classic's own tests (`tests/test_classic_*.py`, `tests/classic_support.py`) do reach in.
+- The folder holds Classic's own copies of `samples/`, `packs/`, `it_format`, `pattern`, `instruments`, `drums`, `echo`, `mix` and `names`. The modules of those names outside the folder are the writer's: change those, never Classic's, and do not try to keep the two alike.
+- Classic plays its own sounds (chip, snes, genesis, bit, ffvi, mana, evermore, megamanx) and reads no pack file. A new built-in set, a new voice or an imported game is the writer's and does not reach Classic's lists.
+- A written song must load none of Classic: the command line imports the front door inside its Classic branch only.
 
 ## Writing in the repository
 
@@ -31,7 +39,8 @@ Read CONTRIBUTING.md first: it covers the tests, the analyzer tables, the byte-i
 
 - Adding a game set: put the game folders beside the others, add each to `drivers.json` (`{"folder": {"driver": "<file slug>", "game": "...", "composer": optional}}`), run `tools/spc_check.py` `traits`, `sweep` and `doc` (`doc` regenerates the generated blocks in `docs/drivers/` and writes a skeleton file for a new driver), then hand-write the driver file's notes. CONTRIBUTING.md gives the commands.
 - When SPC measurement shows a built-in style pack (ffvi, mana, evermore, megamanx) got a habit wrong, add a row with the numbers and where they were measured to `docs/drivers/snes/README.md`, "The style packs against the drivers in play", in the same pull request as the finding. Don't change the packs themselves unless asked.
-- A thin pack with tables: `python -m bitcomposer.spc <spc dir> --pack <out dir> --name <name>`, then `python -m bitcomposer.translate.packtables --db READINGS --game GAME --into <out dir>/pack.json` adds the tables and marks the pack format 2 (docs/PACKS.md). `python -m bitcomposer.translate FOLDER --against PACK --songs N` measures songs generated on a pack against the game's own.
+- A thin pack with tables: `python -m bitcomposer.spc <spc dir> --pack <out dir> --name <name>`, then `python -m bitcomposer.translate.packtables --db READINGS --game GAME --into <out dir>/pack.json` adds the tables and marks the pack format 2 (docs/PACKS.md). `python -m bitcomposer.translate FOLDER --against SOUND --songs N` measures Classic songs on one of Classic's own sounds against the game's own (Classic reads no pack file).
+- bitComposer's own voices (`docs/VOICES.md`): a recipe describes a sound and never holds one, no sample value and no phase, levels in whole decibels, times in whole milliseconds (`tests/test_bit_voices.py` holds it). A recipe changed on purpose rewrites `tests/bit_voices_lock.json` in the same pull request (`python tests/test_bit_voices.py --write`), naming the voices that moved; never to make a failing change pass. A voice stands for a game's samples by id (`stands_for`); a new game's sample joins a voice that already makes its sound or gets one of its own.
 - Whole songs from a format-2 pack: `python tools/whole.py --pack PACK.json --seeds 1-20 -o DIR --game "Final Fantasy VI" --db readings.db` (defaults: the loop once, at most 48 bars, a 3 s fade). `--pack` is required; `--themed` and `--band-returns` turn on the two switches, `--stems DIR` writes each part alone, `--tail-bars N` plays the loop's first bars once more after the form, `--min-bars N` draws again any form shorter than N bars.
 
 ## The whole-song writer (`bitcomposer/translate/`)

@@ -4,7 +4,7 @@ import io
 import math
 
 from support import unittest  # noqa: F401
-from bitcomposer.composer import compose_song  # noqa: E402
+from bitcomposer.classic import compose_song  # noqa: E402
 from bitcomposer import score as score_mod  # noqa: E402
 from bitcomposer.spc import convert  # noqa: E402
 from bitcomposer.translate import measures, reading  # noqa: E402

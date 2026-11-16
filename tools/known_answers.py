@@ -23,8 +23,7 @@ import math
 import sys
 from collections import Counter, defaultdict
 
-from bitcomposer import theory
-from bitcomposer.composer import compose_song
+from bitcomposer.classic import compose_song, theory
 from bitcomposer.pattern import CHANNEL_ROLES
 from bitcomposer.translate import against, drums as drums_mod, form as form_mod, harmony, measures, reading, roles as R
 

@@ -2323,7 +2323,7 @@ The words are grouped by where the writing draws them, in the order the song is 
 
 - **drums-KSt**, **drums-h**, **drums-c**, **drums-o** — the kick, snare and
   toms' bar; the hat's; the cymbals'; the other sounds'. The group figures,
-  drawn by the slice writer (`tools/slice1.py`); the whole-song writer
+  drawn by phase 4's slice writer (a tool retired with Classic's wall); the whole-song writer
   draws the kit as one where its token carries no strike classes, and
   since round 81 from the limbs under the slots' classes: the kick, snare
   and toms' bar under three fields, the densest slot's class first (the
@@ -2777,11 +2777,17 @@ The words are grouped by where the writing draws them, in the order the song is 
   cycle; where a vocabulary has no such word the player's old rule stands
   (every held note, 10 cents at 5.5 Hz after 0.12 s) and the message says
   so. Why: FFVI's tunes carry vibrato on a fifth of their held notes
-  (none at all in half the songs, nine in ten in a few), at a median 30
-  cents, 5.7 Hz in most songs and 15 to 19 Hz in a third, from half a
-  second in, so a note under half a second almost never has it; the
-  rule had put a third of the depth on every held note a quarter of a
-  second in.
+  (none at all in four songs in ten, nine in ten in a few), at a median
+  24 cents and 5.7 Hz, from half a second in or later, so a note under
+  half a second almost never has it; the rule had put under half the
+  depth on every held note a quarter of a second in.
+  Since round 179 a half-written pitch is left out before the swings
+  are counted (`reading.VIBRATO_HALF_WRITTEN`: the SNES chip's pitch is
+  two registers written one after the other, and across a high-byte
+  boundary the register holds a wrong value for under a tenth of a
+  millisecond). Counted, each made two extra swings: round 72 read "15
+  to 19 Hz in a third of the songs" and a median 30 cents from them,
+  and no tune of FFVI's is faster than 6 Hz.
   Since round 174 the draw is given the balance token's song
   (`song_answers`) and a part's vibrato is its game song's part's, none
   where that part has none; the pooled draw stands where the song's

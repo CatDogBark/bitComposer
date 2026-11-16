@@ -476,8 +476,7 @@ ApplicationWindow {
         if (settTempo !== "random") flags += " --tempo " + settTempo
         if (settEnergy !== "random") flags += " --energy " + settEnergy
         if (settScale !== "random") flags += " --scale " + settScale
-        if (isLibraryPack(settSound)) flags += backend.packFlags(settSound)
-        else if (builtinSounds.indexOf(settSound) > 0) flags += " --sound " + settSound
+        if (builtinSounds.indexOf(settSound) > 0) flags += " --sound " + settSound      // one of your games is the writer's to play on: Classic takes the seed's pick
         if (settDrumDensity !== "random") flags += " --drum-density " + settDrumDensity
         if (!settDrumFills) flags += " --no-fills"
         if (settDrumSwing !== "random") flags += " --swing " + settDrumSwing
@@ -514,7 +513,7 @@ ApplicationWindow {
         if (settTempo !== "random") cp.push(settTempo)
         if (settEnergy !== "random") cp.push(settEnergy)
         if (settScale !== "random") cp.push(settScale)
-        if (settSound !== "random") cp.push(settSound)
+        if (settSound !== "random" && !isLibraryPack(settSound)) cp.push(settSound)
         if (settDrumDensity !== "random") cp.push(settDrumDensity + " drums")
         if (!settDrumFills) cp.push("no fills")
         if (settDrumSwing !== "random") cp.push(settDrumSwing + " swing")
@@ -1547,11 +1546,11 @@ ApplicationWindow {
                                 visible: root.settGenerator === "classic"
                                 label: "SOUND"
                                 options: root.builtinSounds
-                                value: root.isLibraryPack(root.settSound) ? "" : root.settSound
+                                value: root.isLibraryPack(root.settSound) ? "random" : root.settSound
                                 onPicked: function(c) { root.settSound = c }
                             }
                             OptionRow {
-                                visible: root.packNames.length > 0
+                                visible: root.settGenerator !== "classic" && root.packNames.length > 0   // Classic plays its own sounds only
                                 label: "YOUR GAMES"
                                 options: root.packNames
                                 labels: { var m = {}; for (var i = 0; i < backend.packs.length; i++) m[backend.packs[i].name] = backend.packs[i].label; return m }
@@ -1562,7 +1561,7 @@ ApplicationWindow {
                                 color: root.dimText; font.pixelSize: Math.round(10 * root.ui)
                                 text: root.settGenerator !== "classic"
                                     ? "bitComposer's own set: generic instruments, synthesised, each fitted to its part by register and speed. A game you have read lends its own samples instead. The chip, Genesis and styled SNES sets belong to Classic. The player's performance adds the echo and the vibrato as the vocabulary counted them, and plays the loop twice."
-                                    : "Classic's sounds: the chip, the Genesis and the SNES sets, or one of your games' packs."
+                                    : "Classic's sounds: the chip, the Genesis and the SNES sets. Classic plays its own sounds only; your games' sounds are for bitComposer's writing."
                             }
                         }
                     }

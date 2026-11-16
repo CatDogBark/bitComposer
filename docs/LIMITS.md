@@ -223,6 +223,19 @@ would change it. Rounds are in [idiom/phase-4-writing.md](idiom/phase-4-writing.
   did (The Day After). A song's vibrato is its game song's part's, on
   whatever sample the written part drew: the depth that suited one
   instrument can sit on another.
+- **Two vibrato words are not a vibrato, and an imported game keeps
+  the reading it was imported with.** Since round 179 a half-written
+  pitch is no longer counted as a swing, and every tune's vibrato is
+  4.5 to 6 Hz. Two counter-lines' words still say otherwise: Techno de
+  Chocobo's 13 Hz at 10 cents from the key-on, and The Fierce Battle's
+  36.5 Hz on notes six seconds long. Neither is what the pitch does by
+  its spectrum (a peak near 7.5 Hz in the first, near 4 in the
+  second): the turning-point count misreads a pitch that moves in
+  some other way than a vibrato's, and the reader has no word for
+  that. A game imported with a version before round 179
+  holds its vibrato as that version read it, three times too fast
+  where the pitch crossed a high-byte boundary, until it is imported
+  again.
 - **A song is written in bars of four at the beat its token song was
   read at.** Three of FFVI's songs come back at a lag no bar of four
   fits: Dancing Mad (part 5) (bars of 4/4 and 7/8 in turn, by

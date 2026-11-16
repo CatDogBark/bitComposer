@@ -27,7 +27,7 @@
   "seconds": 141,
   "voices": "bit_sine_flute / bit_horn / bit_piano / bit_fretless",
   "seed": 2,
-  "version": "2.1.0",
+  "version": "2.1.2",
   "command": "bitcomposer -s 2",
   "picked": false
  },
@@ -43,7 +43,7 @@
   "seconds": 151,
   "voices": "bit_horn / bit_piano / bit_fretless",
   "seed": 3,
-  "version": "2.1.0",
+  "version": "2.1.2",
   "command": "bitcomposer -s 3",
   "picked": false
  },
@@ -75,7 +75,7 @@
   "seconds": 158,
   "voices": "bit_sine_flute / bit_cello / bit_piano / bit_fretless",
   "seed": 5,
-  "version": "2.1.0",
+  "version": "2.1.2",
   "command": "bitcomposer -s 5",
   "picked": false
  },

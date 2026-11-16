@@ -277,7 +277,7 @@ class DrumWriterTests(unittest.TestCase):
 
 class GeneratedSongTests(unittest.TestCase):
     def test_a_generated_song_is_read_and_its_bass_and_drums_written_from_tables(self):
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=5, pack="ffvi")
         ctx = harness.load_generated(song, "seed 5", "test", seconds=30.0)
@@ -356,7 +356,7 @@ class UpperPartTests(unittest.TestCase):
         self.assertTrue(writer.FreeManner({"0 1/12 1/2"}, division=12).fits("0 1/12 1/2"))
 
     def test_the_upper_parts_of_a_generated_song_are_written_from_tables(self):
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         for seed in range(1, 13):                                # a seed whose harmony sustains enough to voice
             song = compose_song(seed=seed, pack="ffvi")
@@ -411,7 +411,7 @@ class MelodyTests(unittest.TestCase):
     def test_contour_targets_and_a_phrase_on_the_tables(self):
         self.assertEqual(writer.contour_targets("rising"), (0, 2.0, 4.0))
         self.assertEqual(writer.contour_targets("level"), (0, 0, 0))
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables, phrases
         for seed in range(1, 13):
             song = compose_song(seed=seed, pack="ffvi")

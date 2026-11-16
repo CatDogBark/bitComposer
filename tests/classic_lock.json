@@ -1,0 +1,973 @@
+{
+ "what": "Classic's songs as they were locked: each case's options (after --classic) and the sha256 of its file, composed with the version in its message set to 'locked'",
+ "songs": {
+  "chip 1": {
+   "options": [
+    "--sound",
+    "chip",
+    "-s",
+    "1"
+   ],
+   "sha256": "5b7e11a164390b5a82d555ed358cbb7ef23ee30c1e6e7f5baaa813ee437bf989"
+  },
+  "chip 2": {
+   "options": [
+    "--sound",
+    "chip",
+    "-s",
+    "2"
+   ],
+   "sha256": "46deb596a9e264f06e877a03e345deb7c8067451da6bc15f6e40b95ba4898d9a"
+  },
+  "chip 3": {
+   "options": [
+    "--sound",
+    "chip",
+    "-s",
+    "3"
+   ],
+   "sha256": "814323073830e75f117a611cd6850ce705a3ec5e00062cd2f6d2a656448b8993"
+  },
+  "chip 4": {
+   "options": [
+    "--sound",
+    "chip",
+    "-s",
+    "4"
+   ],
+   "sha256": "e185c8d5e68e8f107bdf9d7170c0ed1218f2e05d89f2f38fb2f62e7ed47eec7f"
+  },
+  "chip 5": {
+   "options": [
+    "--sound",
+    "chip",
+    "-s",
+    "5"
+   ],
+   "sha256": "6bbb0a84f132f5c8e36543634f395c1220da0672a538949f2418a34d18f98528"
+  },
+  "snes 1": {
+   "options": [
+    "--sound",
+    "snes",
+    "-s",
+    "1"
+   ],
+   "sha256": "96e2de7e5c5bbda23f28c3985eeaa188860b4696bf7ce5edfb9726af6914838a"
+  },
+  "snes 2": {
+   "options": [
+    "--sound",
+    "snes",
+    "-s",
+    "2"
+   ],
+   "sha256": "4831262673263be1e37d91b7bb75ee123646502186f23aaac10f26101dd45e5f"
+  },
+  "snes 3": {
+   "options": [
+    "--sound",
+    "snes",
+    "-s",
+    "3"
+   ],
+   "sha256": "21fcd201fa359e42965974f04948f6588e8abcec6e51867936d7ed76993e7084"
+  },
+  "snes 4": {
+   "options": [
+    "--sound",
+    "snes",
+    "-s",
+    "4"
+   ],
+   "sha256": "717d51ea2dc9f2415e0bbcb7bdc7229b5d7a632745acdc1b8762077a515cb0b7"
+  },
+  "snes 5": {
+   "options": [
+    "--sound",
+    "snes",
+    "-s",
+    "5"
+   ],
+   "sha256": "c935185df378ce785d45596133a5472e6d77b56a220f1224db70ab5b4580995a"
+  },
+  "genesis 1": {
+   "options": [
+    "--sound",
+    "genesis",
+    "-s",
+    "1"
+   ],
+   "sha256": "cc1e3311536a6dfbfc951f0ad34461c322af30d8a022abaf9d8a2e0f65bb17db"
+  },
+  "genesis 2": {
+   "options": [
+    "--sound",
+    "genesis",
+    "-s",
+    "2"
+   ],
+   "sha256": "12ec2c5e66f7450bc669680aea145e7ee92af2a315fa62d96bb436b371d5b0e2"
+  },
+  "genesis 3": {
+   "options": [
+    "--sound",
+    "genesis",
+    "-s",
+    "3"
+   ],
+   "sha256": "872b57262a02831a50f6e983333005853018ef44e2fcf4cbcbb17bcfc4f9466a"
+  },
+  "genesis 4": {
+   "options": [
+    "--sound",
+    "genesis",
+    "-s",
+    "4"
+   ],
+   "sha256": "b8c44f32f9799da397a423bd31574f9f7fe276ab1d8059470e50ef8294c0a287"
+  },
+  "genesis 5": {
+   "options": [
+    "--sound",
+    "genesis",
+    "-s",
+    "5"
+   ],
+   "sha256": "a2d8a041420660d34e675052083d4403f080c1ca611fd2e60eff0b6ba88b7a2a"
+  },
+  "bit 1": {
+   "options": [
+    "--sound",
+    "bit",
+    "-s",
+    "1"
+   ],
+   "sha256": "8690550882a964c847587db58b22277ad6e09d5645e48342c4e1a82bce379f33"
+  },
+  "bit 2": {
+   "options": [
+    "--sound",
+    "bit",
+    "-s",
+    "2"
+   ],
+   "sha256": "cb76957ead78ef076c244e8a19678e3fcb7adde8274d636265ed4af0528011b1"
+  },
+  "bit 3": {
+   "options": [
+    "--sound",
+    "bit",
+    "-s",
+    "3"
+   ],
+   "sha256": "c0cf5aa87271c2c10058b8a71ea9f86a908ee30746f3f8e76a03623a3a09f3a1"
+  },
+  "bit 4": {
+   "options": [
+    "--sound",
+    "bit",
+    "-s",
+    "4"
+   ],
+   "sha256": "a00ba1d72f17b8c75d72bc261a1dfcc032dbb52a63c8f61b8172ab64c17beade"
+  },
+  "bit 5": {
+   "options": [
+    "--sound",
+    "bit",
+    "-s",
+    "5"
+   ],
+   "sha256": "e127cb08d1cca76ee739e2b39ea0c7c4c923372833045b356dfaab2caf04cad1"
+  },
+  "ffvi 1": {
+   "options": [
+    "--sound",
+    "ffvi",
+    "-s",
+    "1"
+   ],
+   "sha256": "b5807f386fd604aa1ea6c84886eed17a673923b185919b0ce86627338e91984b"
+  },
+  "ffvi 2": {
+   "options": [
+    "--sound",
+    "ffvi",
+    "-s",
+    "2"
+   ],
+   "sha256": "52a541d7ad6e77fd2bc7489214b5aec7e67a995abab5c9915a96658df0635165"
+  },
+  "ffvi 3": {
+   "options": [
+    "--sound",
+    "ffvi",
+    "-s",
+    "3"
+   ],
+   "sha256": "15bb1ca1ccc55008fb13b7845ba107167a0fd604290f5d5590096684532b308e"
+  },
+  "ffvi 4": {
+   "options": [
+    "--sound",
+    "ffvi",
+    "-s",
+    "4"
+   ],
+   "sha256": "5ec2c3f58d3a3c4e90e2becd41076e049770a5f7372ecd89585f26e0f0d23b42"
+  },
+  "ffvi 5": {
+   "options": [
+    "--sound",
+    "ffvi",
+    "-s",
+    "5"
+   ],
+   "sha256": "eab54f61f5564189647882d7a5c9ce48ee0c84334e81692b03bf90173877777b"
+  },
+  "mana 1": {
+   "options": [
+    "--sound",
+    "mana",
+    "-s",
+    "1"
+   ],
+   "sha256": "cb8826d90b27b39ef642d8825414cc2c38e30d33982ed8c0b886e0590ee1056d"
+  },
+  "mana 2": {
+   "options": [
+    "--sound",
+    "mana",
+    "-s",
+    "2"
+   ],
+   "sha256": "4e5ae54d2a2dc245dd0c4669c0574039218d777770a682567135ba8cc246ce62"
+  },
+  "mana 3": {
+   "options": [
+    "--sound",
+    "mana",
+    "-s",
+    "3"
+   ],
+   "sha256": "3a76c591ca5a491312e750990b55e6447f70b9c0ca928ffc918366dbc7bfce1f"
+  },
+  "mana 4": {
+   "options": [
+    "--sound",
+    "mana",
+    "-s",
+    "4"
+   ],
+   "sha256": "10d3db37d46fc7efc85a6d76db500c30b28cdf3b001dfa41db3ba4a5f22484ff"
+  },
+  "mana 5": {
+   "options": [
+    "--sound",
+    "mana",
+    "-s",
+    "5"
+   ],
+   "sha256": "ed4e17911493ee7025055f1ac9eaeb0d37f9cbced4fbe5383ffbea0b33127045"
+  },
+  "evermore 1": {
+   "options": [
+    "--sound",
+    "evermore",
+    "-s",
+    "1"
+   ],
+   "sha256": "3b3470c3be83382081d0ecafec95f9901aeba6f8a903e032566a7b7408465eb9"
+  },
+  "evermore 2": {
+   "options": [
+    "--sound",
+    "evermore",
+    "-s",
+    "2"
+   ],
+   "sha256": "c15d63c5c4cd543ec38753a27941279a62c030a2bd39bd1d49463d9fad5f7b4f"
+  },
+  "evermore 3": {
+   "options": [
+    "--sound",
+    "evermore",
+    "-s",
+    "3"
+   ],
+   "sha256": "a81180ec94cd15fc442b74f5a0bbd641b297a35b7d96b1065c4f1a962b82c231"
+  },
+  "evermore 4": {
+   "options": [
+    "--sound",
+    "evermore",
+    "-s",
+    "4"
+   ],
+   "sha256": "409156d9f0c8411854d0568cbd5a736740699fdbfe9956ce348ae040a94e285e"
+  },
+  "evermore 5": {
+   "options": [
+    "--sound",
+    "evermore",
+    "-s",
+    "5"
+   ],
+   "sha256": "d932e05884ca9450d3e455cd1b8d77e77353a49c1a08af20dd3409e0e32cb45e"
+  },
+  "megamanx 1": {
+   "options": [
+    "--sound",
+    "megamanx",
+    "-s",
+    "1"
+   ],
+   "sha256": "57f74c00d77c9e889d03281676d4072a7460b1282634b9ab0aadd729a0fb984d"
+  },
+  "megamanx 2": {
+   "options": [
+    "--sound",
+    "megamanx",
+    "-s",
+    "2"
+   ],
+   "sha256": "a85e53b66c25048d750eef169387f56eb5bdff31419e3369de915671526bd178"
+  },
+  "megamanx 3": {
+   "options": [
+    "--sound",
+    "megamanx",
+    "-s",
+    "3"
+   ],
+   "sha256": "abfa9476ceea6b8f6626a231c2fda0781c63592f87bcbbccef9dd1c5fee38a3e"
+  },
+  "megamanx 4": {
+   "options": [
+    "--sound",
+    "megamanx",
+    "-s",
+    "4"
+   ],
+   "sha256": "f46b2028c5170df2e37fdad725fee18cf72e195b6fa2c690457faee16821dcf5"
+  },
+  "megamanx 5": {
+   "options": [
+    "--sound",
+    "megamanx",
+    "-s",
+    "5"
+   ],
+   "sha256": "b2ba8a0f0f866ad4bc82c22c6c95d32d2748c31647343b94c4239b9d078f12df"
+  },
+  "random 11": {
+   "options": [
+    "-s",
+    "11"
+   ],
+   "sha256": "44fc673506d72ea1f67913bf45cef14b5d66072b5e996c267e16fd3770763f29"
+  },
+  "random 12": {
+   "options": [
+    "-s",
+    "12"
+   ],
+   "sha256": "1327686db72a7402750748c8661d5ca8fd4bf90b406e59610702a8f851936a0e"
+  },
+  "random 13": {
+   "options": [
+    "-s",
+    "13"
+   ],
+   "sha256": "516e4796ef2bda91276f7af05353f3bc3326cf4f6f291b0f4608864a10f6bbca"
+  },
+  "random 14": {
+   "options": [
+    "-s",
+    "14"
+   ],
+   "sha256": "f2b41cacd65da35d3fc76695070cefa7963a83a086d7507cbed740184a6b6ec1"
+  },
+  "random 15": {
+   "options": [
+    "-s",
+    "15"
+   ],
+   "sha256": "22b5756a3b305e3bf530bef4bd42795563c192bddbd7f584cead5aa604cb861c"
+  },
+  "random 16": {
+   "options": [
+    "-s",
+    "16"
+   ],
+   "sha256": "7967a973a3ea8a11dc8fc3f432593a7677ce85db6ee74519a6b4d2dcedfcd4bd"
+  },
+  "tempo slow": {
+   "options": [
+    "--tempo",
+    "slow",
+    "-s",
+    "21"
+   ],
+   "sha256": "a6b024a24bb4b0caabeea75524d69ad195fbcc618c990a593075e41e35289b61"
+  },
+  "tempo medium": {
+   "options": [
+    "--tempo",
+    "medium",
+    "-s",
+    "22"
+   ],
+   "sha256": "e6b551ed1b3f0be03059a7462268a5e2fe440cc71bdf891055d1190a3ffeac24"
+  },
+  "tempo fast": {
+   "options": [
+    "--tempo",
+    "fast",
+    "-s",
+    "23"
+   ],
+   "sha256": "a97b6d743700e76f3463f7350826746b29535c61510328d7abc21b60c9676541"
+  },
+  "energy chill": {
+   "options": [
+    "--energy",
+    "chill",
+    "-s",
+    "24"
+   ],
+   "sha256": "8e91bd3cf96430ef9a913ef8e9c56d3cc92e00c6135936b736ebedca78003d90"
+  },
+  "energy normal": {
+   "options": [
+    "--energy",
+    "normal",
+    "-s",
+    "25"
+   ],
+   "sha256": "1ddf555fe9b1b537b68ad37fdddeed9ddf37e070d3267ad30957911f7a4d4cfe"
+  },
+  "energy intense": {
+   "options": [
+    "--energy",
+    "intense",
+    "-s",
+    "26"
+   ],
+   "sha256": "69e953449613a59ae79a3a7cf4c5c5e6291126db99b6d6ad9ba61fc722996f97"
+  },
+  "scale minor": {
+   "options": [
+    "--scale",
+    "minor",
+    "-s",
+    "27"
+   ],
+   "sha256": "ce4c6e1fb4895b0e62dafebc176083c20f71bc730054e1bb943afb9a9e596004"
+  },
+  "scale major": {
+   "options": [
+    "--scale",
+    "major",
+    "-s",
+    "28"
+   ],
+   "sha256": "06dd745c3c44fd2f36eb5eb488ff52b401c733b47d22a4fe5e1a5cf3e8724278"
+  },
+  "scale pentatonic": {
+   "options": [
+    "--scale",
+    "pentatonic",
+    "-s",
+    "29"
+   ],
+   "sha256": "33fc94452bc9a4fe69efd8a7c44b2e18f98d8561f90bf1b36d899b18715ae8c5"
+  },
+  "sound chip": {
+   "options": [
+    "--sound",
+    "chip",
+    "-s",
+    "30"
+   ],
+   "sha256": "9d83b1df92e91b97665042af065686f3ac732f1074853686ca3d46339aa758c7"
+  },
+  "sound snes": {
+   "options": [
+    "--sound",
+    "snes",
+    "-s",
+    "31"
+   ],
+   "sha256": "579dd7d23a5f06dba5d1e3ff4da9db78aa407f30bd68f26f1fce8267207598a0"
+  },
+  "sound genesis": {
+   "options": [
+    "--sound",
+    "genesis",
+    "-s",
+    "32"
+   ],
+   "sha256": "25e00fe681c7e95dfe489fe170e06bf6ccd061ec15932b9a11a24f27b00f60aa"
+  },
+  "sound bit": {
+   "options": [
+    "--sound",
+    "bit",
+    "-s",
+    "33"
+   ],
+   "sha256": "b977ba1bdcad5053005f475482ad95030373197863e3e1683a23c9e0515d1c49"
+  },
+  "sound ffvi": {
+   "options": [
+    "--sound",
+    "ffvi",
+    "-s",
+    "34"
+   ],
+   "sha256": "8052ba6fdda45d1938ce0e02debf802adf68feceffd704ab420b7b78dcb11528"
+  },
+  "sound mana": {
+   "options": [
+    "--sound",
+    "mana",
+    "-s",
+    "35"
+   ],
+   "sha256": "b5a51fc46f0fe0abd58a87dc8cf8c4084dec24fe0503cef505fb7c6d6ca0f6fa"
+  },
+  "sound evermore": {
+   "options": [
+    "--sound",
+    "evermore",
+    "-s",
+    "36"
+   ],
+   "sha256": "0f039307cc1b259f9e58d6c7b81740d60d86dfc9fbbfe9257f0bb3d13ccb38d1"
+  },
+  "sound megamanx": {
+   "options": [
+    "--sound",
+    "megamanx",
+    "-s",
+    "37"
+   ],
+   "sha256": "2af0c0d23107c01fee8958a29dd4b348e3d446b5cf7a67229d75fb26e3bf9781"
+  },
+  "style chip": {
+   "options": [
+    "--style",
+    "chip",
+    "-s",
+    "38"
+   ],
+   "sha256": "fd8afeb6ab0d403bd9b770e8a942ab44fa99b454eebf66e2c604ede098ac717e"
+  },
+  "style snes": {
+   "options": [
+    "--style",
+    "snes",
+    "-s",
+    "39"
+   ],
+   "sha256": "87c2e4b85ad1d07338ecb9004f9a18631b37e1f550083260dfcb638436bd4d63"
+  },
+  "style genesis": {
+   "options": [
+    "--style",
+    "genesis",
+    "-s",
+    "40"
+   ],
+   "sha256": "d029e7b7ad39b705505c8624dcbc7b110773f6bafd944e12c0d63dd68a1f7648"
+  },
+  "drum-density sparse": {
+   "options": [
+    "--drum-density",
+    "sparse",
+    "-s",
+    "41"
+   ],
+   "sha256": "1a9e770568e48eeace7f22592333daa1fa88a3f67bda943af7f12b1ec122e9e6"
+  },
+  "drum-density normal": {
+   "options": [
+    "--drum-density",
+    "normal",
+    "-s",
+    "42"
+   ],
+   "sha256": "75de10adee2714cf645f3eb92f46eb323faf6ca5b50ff804b12ff349c4aeaa7b"
+  },
+  "drum-density busy": {
+   "options": [
+    "--drum-density",
+    "busy",
+    "-s",
+    "43"
+   ],
+   "sha256": "5f75989437221e5813b85e592a5661e83f83ac0027642462f8d5e9693355572a"
+  },
+  "no-fills": {
+   "options": [
+    "--no-fills",
+    "-s",
+    "44"
+   ],
+   "sha256": "3dbc0dbd6dc313ad7990ec261731a8597966deb08ec7b5bb1703050c66dd56bd"
+  },
+  "swing off": {
+   "options": [
+    "--swing",
+    "off",
+    "-s",
+    "45"
+   ],
+   "sha256": "0f38773f691b5db763a3a227d2987ef40e1548399551c83113fb9d8d5f162aba"
+  },
+  "swing light": {
+   "options": [
+    "--swing",
+    "light",
+    "-s",
+    "46"
+   ],
+   "sha256": "edcbcf6ea0cafb5076e6a9aa9f94fff106da4bdf2fc694d4af117f2c488d6196"
+  },
+  "swing heavy": {
+   "options": [
+    "--swing",
+    "heavy",
+    "-s",
+    "47"
+   ],
+   "sha256": "1e279d2ccac9f8b97f969f40cd3c0571989e25abf9cc0edf763291cb0781800d"
+  },
+  "melody simple": {
+   "options": [
+    "--melody",
+    "simple",
+    "-s",
+    "48"
+   ],
+   "sha256": "594f362c4967a622cdafd970d4923040f1b0920c5eb477740ac528b87541eace"
+  },
+  "melody phrased": {
+   "options": [
+    "--melody",
+    "phrased",
+    "-s",
+    "49"
+   ],
+   "sha256": "060565e10095fac1cd94dbb6db9d1557381cd3c3cb26bba833d2836f34d2212b"
+  },
+  "harmony-voicing thin": {
+   "options": [
+    "--harmony-voicing",
+    "thin",
+    "-s",
+    "50"
+   ],
+   "sha256": "9fd83c1d1a616c8fc39e051d932730d01dc9ebe7d19501ad7dc52766a7c3b88f"
+  },
+  "harmony-voicing full": {
+   "options": [
+    "--harmony-voicing",
+    "full",
+    "-s",
+    "51"
+   ],
+   "sha256": "a633deb8673c00b11a5120edf7b3c1e147918f3b8e2ebb38614f783e0ed6192f"
+  },
+  "harmony-mode stabs": {
+   "options": [
+    "--harmony-mode",
+    "stabs",
+    "-s",
+    "52"
+   ],
+   "sha256": "93718d878709b7cd5f5eb4d819392543f8348319aab7896f4401ea02e9448532"
+  },
+  "harmony-mode sustain": {
+   "options": [
+    "--harmony-mode",
+    "sustain",
+    "-s",
+    "53"
+   ],
+   "sha256": "030112aed0e6209b33ba693a7fbc5855750ca8373567f1beca720fe0232fe360"
+  },
+  "harmony-mode rhythmic": {
+   "options": [
+    "--harmony-mode",
+    "rhythmic",
+    "-s",
+    "54"
+   ],
+   "sha256": "3ec58d08c079917d13d39d7795a9fa2061e0a75fbf7feb030cb1c5111cf921ef"
+  },
+  "bass-weight heavy": {
+   "options": [
+    "--bass-weight",
+    "heavy",
+    "-s",
+    "55"
+   ],
+   "sha256": "329822f6dd813ffb792728178ee5fefe0448e7693e53985ac16420b49fbbe67a"
+  },
+  "bass-weight medium": {
+   "options": [
+    "--bass-weight",
+    "medium",
+    "-s",
+    "56"
+   ],
+   "sha256": "01f2fee1baf3de6fe190a3e414cf6c31123fb5ea0c2dcabc60022f90bf8ae281"
+  },
+  "bass-weight light": {
+   "options": [
+    "--bass-weight",
+    "light",
+    "-s",
+    "57"
+   ],
+   "sha256": "0a709403bef1a718a5459228255f7ab78b472fb35939c538197c1b42b883a996"
+  },
+  "form standard": {
+   "options": [
+    "--form",
+    "standard",
+    "-s",
+    "58"
+   ],
+   "sha256": "17616bb5e3bb36f5499b4fa39f58be091e017e5805f4fe8586e6f612ca906e14"
+  },
+  "form aaba": {
+   "options": [
+    "--form",
+    "aaba",
+    "-s",
+    "59"
+   ],
+   "sha256": "68b460fb7cbc220b34651fa79b2827d4cbb33028c50912c88fc564dacc718e59"
+  },
+  "form rondo": {
+   "options": [
+    "--form",
+    "rondo",
+    "-s",
+    "60"
+   ],
+   "sha256": "d254f7b479072ad63138b81daee2470c8e2dcf52b1025bfc25100e85b80d3718"
+  },
+  "form short": {
+   "options": [
+    "--form",
+    "short",
+    "-s",
+    "61"
+   ],
+   "sha256": "4441d7cb31871aab654643a48e2a56fcd1562601e976920e9b1320d088c01fa1"
+  },
+  "form linear": {
+   "options": [
+    "--form",
+    "linear",
+    "-s",
+    "62"
+   ],
+   "sha256": "f88bab95143791b656e4a47fefce9a241dca43a637374ceb63c213825e0e2ea8"
+  },
+  "echo on": {
+   "options": [
+    "--echo",
+    "on",
+    "-s",
+    "63"
+   ],
+   "sha256": "7f02dc14d74a328285b64c9741ee780e78657a7edcb6cdb12d37519f682400a8"
+  },
+  "echo off": {
+   "options": [
+    "--echo",
+    "off",
+    "-s",
+    "64"
+   ],
+   "sha256": "a505907fa8d6bdb2e559d75d82abadafe5ccc5f16dba3b0444efbe38dba96ca6"
+  },
+  "echo-wet light": {
+   "options": [
+    "--echo-wet",
+    "light",
+    "-s",
+    "65"
+   ],
+   "sha256": "924c4f67a4f5024d0eb8e876c4e62eb88942bf11d4a85fd1c0bf4846d052e7fc"
+  },
+  "echo-wet normal": {
+   "options": [
+    "--echo-wet",
+    "normal",
+    "-s",
+    "66"
+   ],
+   "sha256": "746127fde807f7e7e7df5c476fa3f3413349a781ce7b99291c6da7cecbb1fdb3"
+  },
+  "echo-wet wet": {
+   "options": [
+    "--echo-wet",
+    "wet",
+    "-s",
+    "67"
+   ],
+   "sha256": "1a72bbd969d46454f117aab8609d9411612c5f3688f2c794a1f4d0aaac0ae849"
+  },
+  "echo-delay eighth": {
+   "options": [
+    "--echo-delay",
+    "eighth",
+    "-s",
+    "68"
+   ],
+   "sha256": "f408e1b98ee35b6b3e8aab2f2aff79f46e35dfa854836c10799739fe03a27eba"
+  },
+  "echo-delay dotted": {
+   "options": [
+    "--echo-delay",
+    "dotted",
+    "-s",
+    "69"
+   ],
+   "sha256": "a5a7d19697a130761a67923cb2811621b130be6b600fe6c924218fc2b17587a5"
+  },
+  "echo-delay quarter": {
+   "options": [
+    "--echo-delay",
+    "quarter",
+    "-s",
+    "70"
+   ],
+   "sha256": "e8068a31910408103313f050c7949cd1d2bcde55179eb0e516e5f03e335c4385"
+  },
+  "echo-delay slap": {
+   "options": [
+    "--echo-delay",
+    "slap",
+    "-s",
+    "71"
+   ],
+   "sha256": "f4cec848e651fed4256f04dbc89562fa92473bc905f12977f448e673df9e7edb"
+  },
+  "echo-delay row": {
+   "options": [
+    "--echo-delay",
+    "row",
+    "-s",
+    "72"
+   ],
+   "sha256": "41e77340e3c26ab09cc79a00ea9b0a2f84e9f4a0b727d1f43c5a75fc6a7c6ca9"
+  },
+  "echo-stereo bounce": {
+   "options": [
+    "--echo-stereo",
+    "bounce",
+    "-s",
+    "73"
+   ],
+   "sha256": "1ed6b798fd843c79da5fe7330162cbabbfe5f11051c47ebd241795f663b684f7"
+  },
+  "echo-stereo centre": {
+   "options": [
+    "--echo-stereo",
+    "centre",
+    "-s",
+    "74"
+   ],
+   "sha256": "f8ca020733fcab5beff9043322d953323ec4f50bc05ba698157d70821960d286"
+  },
+  "pack bit": {
+   "options": [
+    "--pack",
+    "bit",
+    "-s",
+    "75"
+   ],
+   "sha256": "984868f6804cc9f353d921058bbbee90fc14be82ad7d1959860b3fe3bcfb25e0"
+  },
+  "pack ffvi": {
+   "options": [
+    "--pack",
+    "ffvi",
+    "-s",
+    "76"
+   ],
+   "sha256": "6fc62538697b40fec53b617559c8cfac77ae82f9a995147b018061f288027c68"
+  },
+  "pack mana": {
+   "options": [
+    "--pack",
+    "mana",
+    "-s",
+    "77"
+   ],
+   "sha256": "7e483f9fda7830f174244ccb8972e5b520446e5306cc1d166cf686441ee42a61"
+  },
+  "pack evermore": {
+   "options": [
+    "--pack",
+    "evermore",
+    "-s",
+    "78"
+   ],
+   "sha256": "63e11b1170da4bf0fd9f0d1c20ccbb14a3af4956f361a3680fb1690b3fca40df"
+  },
+  "pack megamanx": {
+   "options": [
+    "--pack",
+    "megamanx",
+    "-s",
+    "79"
+   ],
+   "sha256": "ef2220b6dec78ddb3577b54cbc46479dd671e97941d32884fb9c8a0a6837fc72"
+  },
+  "pack none": {
+   "options": [
+    "--pack",
+    "none",
+    "-s",
+    "80"
+   ],
+   "sha256": "9b88b0e2df37910e4e3f8355e36712d1a3e2003db36dfe7dbc4747206058cb0a"
+  },
+  "lead-shift -3": {
+   "options": [
+    "--lead-shift",
+    "-3",
+    "-s",
+    "81"
+   ],
+   "sha256": "b608c13b225a2903fb84f57d5a570fa1166052c111136a48134e0f58def8ae8b"
+  },
+  "lead-shift 4": {
+   "options": [
+    "--lead-shift",
+    "4",
+    "-s",
+    "82"
+   ],
+   "sha256": "3311ea4cc81b8a08080c5d5992fec71e65b9e145678bb5298732450021daff90"
+  },
+  "keys home": {
+   "options": [
+    "--keys",
+    "home",
+    "-s",
+    "83"
+   ],
+   "sha256": "2c083cbccb83af63c9ea56765c26caa60b4b72fe6db67e72bde573164393c915"
+  }
+ }
+}

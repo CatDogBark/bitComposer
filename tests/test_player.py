@@ -10,9 +10,10 @@ import unittest
 import unittest.mock
 
 try:
-    from .support import compose_and_save
+    from . import support  # noqa: F401  the repo on sys.path
 except ImportError:          # discover -s tests imports the modules top-level
-    from support import compose_and_save
+    import support  # noqa: F401
+from bitcomposer.classic import compose_and_save      # Classic songs, as files for the player to play
 from bitcomposer.player import engine
 from bitcomposer.player import level as leveling
 from bitcomposer.player.openmpt import LibraryMissing, lib
@@ -922,6 +923,15 @@ class WindowHeadless(unittest.TestCase):
         self.pump(0.3)
         self.assertIn("--pack-file", b.autoFlags())
         self.assertIn("test_quest", b.autoFlags())
+        win.setProperty("settGenerator", "classic")             # Classic plays its own sounds: the game stays the writer's
+        self.pump(0.3)
+        self.assertIn("--classic", b.autoFlags())
+        self.assertNotIn("--pack-file", b.autoFlags())
+        self.assertNotIn("test_quest", b.autoFlags())
+        self.assertNotIn("--sound", b.autoFlags())              # the seed's pick
+        win.setProperty("settGenerator", "bitcomposer")
+        self.pump(0.3)
+        self.assertIn("--pack-file", b.autoFlags())             # and is still the writer's choice when the writer is back
 
         b.playIndex(1)
         self.assertTrue(self.pump(2, lambda: b.state["status"] == "Playing"))

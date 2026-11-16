@@ -14,6 +14,8 @@ from .performance import Performance
 
 SOUND_SETS = ("bit", "ffvi", "mana", "evermore", "megamanx")   # the built-in sound sets a written song may play on
 DEFAULT_SOUNDS = "bit"                                  # bitComposer's own (packs/bit.py): what it plays on unless a set or a game is named
+OWN_VOICES = False                                      # on bitComposer's own set, the voices that stand for the vocabulary's game's samples
+                                                        # (packs/bit_voices.py) in place of the first set's pools: off until heard as whole songs
 # The form's bounds, the tail and the fade are the performance's now (performance.Performance); these names stay for
 # the bare performance's record: the writer's own constants, as the Song Checks had them.
 MAX_BARS = 48
@@ -61,12 +63,16 @@ def compose_written(vocabulary: str = vocabularies.DEFAULT, pack: str | None = N
         sounds, own = pack_sounds(pack_file)
     else:
         sounds = sound_set(pack, rng)
+    table = PACKS[sounds]
+    if pack_file is None and sounds == DEFAULT_SOUNDS and OWN_VOICES:
+        from .packs import bit_voices
+        table, own = bit_voices.use()
     models = vocabularies.load(vocabulary)
     label = vocabularies.label(vocabulary)
     from .translate import harmony, whole
-    habits = PACKS[sounds].get("habits") or {}
+    habits = table.get("habits") or {}
     echo = (lambda plan: performance_mod.echo_for(plan, seed, models, habits)) if perf.echo == "song" else None if perf.echo == "off" else perf.echo
-    out = whole.compose(models, PACKS[sounds], own, sounds, seed, game=label, title=f"{label} {seed}", max_bars=perf.max_bars,
+    out = whole.compose(models, table, own, sounds, seed, game=label, title=f"{label} {seed}", max_bars=perf.max_bars,
                         min_bars=perf.min_bars, tail_bars=perf.tail_bars, themed=perf.themed, band_returns=perf.band_returns, read=False,
                         fade=perf.fade, loops=perf.loops, echo=echo)
     p, score = out["plan"], out["score"]

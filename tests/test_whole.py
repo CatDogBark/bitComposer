@@ -82,7 +82,7 @@ class PlanTests(unittest.TestCase):
 
 class WholeSongTests(unittest.TestCase):
     def test_a_whole_song_from_a_generated_songs_tables_is_written_rendered_and_read_back(self):
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.packs import PACKS
         from bitcomposer.spc import convert
         from bitcomposer.translate import harness, packtables
@@ -129,7 +129,7 @@ class WholeSongTests(unittest.TestCase):
         in its own bars the notes its layer word gave it (here apart +8). Kefka's three "counter" channels double its tune
         in octaves and thirds for whole stretches; read whole, they were written as a three-voice block of their own at the
         song's loudest level over a one-voice tune (Song Check 72's The Sleeping Observatory)."""
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=5, pack="ffvi")
         ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
@@ -168,7 +168,7 @@ class WholeSongTests(unittest.TestCase):
         a pedal line (a one-pitch register, as a game plays a drum sample as a rhythmic chord part) shares its note
         with the voices beside it, so they can take their interval from it (Whole 167's apart voice had written 0 notes)."""
         import statistics
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=5, pack="ffvi")
         ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
@@ -662,7 +662,7 @@ class KitSecondTests(unittest.TestCase):
         given it its sample, so the writer's hits reach it (the first cut had left it out, and no song played a second)."""
         from unittest import mock
         from bitcomposer import instruments
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.packs import PACKS
         from bitcomposer.translate import harness, packtables, tables
         ctx = harness.load_generated(compose_song(seed=5, pack="ffvi"), "seed 5", "test", seconds=40.0)
@@ -2049,7 +2049,7 @@ class TuneMovesTests(unittest.TestCase):
         self.assertEqual(far(draws(register=(69, 71), far_over=True)), 300)                         # where no other move fits, the far one stands
 
     def test_the_tune_is_written_to_its_songs_moves(self):
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=5, pack="ffvi")
         ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
@@ -2415,7 +2415,7 @@ class TuneShortestTests(unittest.TestCase):
         self.assertAlmostEqual(tune_mod.sounded(0.5, detached, "held", 0.37), 0.5)
 
     def test_the_tune_is_written_with_no_note_under_it(self):
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=5, pack="ffvi")
         ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
@@ -2513,7 +2513,7 @@ class TuneSectionTests(unittest.TestCase):
     @classmethod
     def _models(cls):
         if not hasattr(cls, "_built"):
-            from bitcomposer.composer import compose_song
+            from bitcomposer.classic import compose_song
             from bitcomposer.translate import harness, packtables
             song = compose_song(seed=5, pack="ffvi")
             ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
@@ -2648,7 +2648,7 @@ class TuneGapTests(unittest.TestCase):
         self.assertEqual(rhythm.tune_gap(self.BARS, 30.0, None), 0.0)                                # a note in no bar
 
     def test_the_tune_is_written_to_the_next_bars_first_onset(self):
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=5, pack="ffvi")
         ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
@@ -2771,7 +2771,7 @@ class TuneLengthsTests(unittest.TestCase):
         self.assertAlmostEqual(tune_mod.sounded(2.0, None, "detached", 0.75, 0.25), 0.75)           # no shorter than its shortest usual note
 
     def test_the_tune_is_written_as_its_song_sounds_its_notes(self):
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=5, pack="ffvi")
         ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)
@@ -3001,7 +3001,7 @@ class TuneReturnsTests(unittest.TestCase):
         self.assertIsNone(whole.tune_lead(types.SimpleNamespace(tune_together={}, parts=plan.parts), song, "melody", {"bass": bass}))
 
     def test_the_tune_comes_back_with_the_bass(self):
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=9, pack="ffvi")                                                    # a song with a tune over a bass that comes back
         ctx = harness.load_generated(song, "seed 9", "test", seconds=40.0)
@@ -3509,7 +3509,7 @@ class WithTheKitTests(unittest.TestCase):
     def test_the_written_bass_and_tune_are_held(self):
         import importlib
         from unittest import mock
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=9, pack="ffvi")
         ctx = harness.load_generated(song, "seed 9", "test", seconds=40.0)
@@ -3726,7 +3726,7 @@ class TunePlacesTests(unittest.TestCase):
         self.assertFalse(adds((0.1, 0.0, 0.0, None), [F(1, 4), F(3, 4)], [F(0), F(1, 2)]))              # go still: its share is keeps_places' to hold
 
     def test_the_tune_is_written_within_its_songs_places(self):
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=9, pack="ffvi")
         ctx = harness.load_generated(song, "seed 9", "test", seconds=40.0)
@@ -4199,7 +4199,7 @@ class ChordTonesTests(unittest.TestCase):
         self.assertEqual(sorted((n[3], n[2]) for n in two.notes if n[0] >= 4.0), [(0, 60.0), (0, 64.0), (0, 67.0), (1, 62.0), (1, 67.0), (1, 71.0)])   # voice by voice
 
     def test_the_tune_is_as_it_was_written(self):
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables
         song = compose_song(seed=4, pack="ffvi")                                                    # a song with an accompaniment and an arp
         ctx = harness.load_generated(song, "seed 4", "test", seconds=40.0)
@@ -5148,7 +5148,7 @@ class NewTablesTests(unittest.TestCase):
         from types import SimpleNamespace
         from unittest import mock
         from bitcomposer import instruments
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import harness, packtables, tables
         song = compose_song(seed=5, pack="ffvi")
         ctx = harness.load_generated(song, "seed 5", "test", seconds=40.0)

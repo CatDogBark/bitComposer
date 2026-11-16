@@ -412,7 +412,6 @@ class Pack(unittest.TestCase):
     def test_a_pack_made_loads_and_composes(self):
         import tempfile
         from pathlib import Path
-        from bitcomposer.composer import compose_song
         from bitcomposer.packs import PACKS, packfile
         from bitcomposer.translate import pack
         g = self.gathered()
@@ -428,11 +427,14 @@ class Pack(unittest.TestCase):
         self.assertEqual(data["samples"]["sbass"]["release"], "bass")
         self.assertTrue(data["samples"]["skick"]["percussion"])
         with tempfile.TemporaryDirectory() as d:
-            name = packfile.load_pack_file(pack.write(data, files, Path(d)))
+            path = pack.write(data, files, Path(d))
+            name = packfile.load_pack_file(path)
             self.addCleanup(packfile.unload, name)
             self.assertIn(name, PACKS)
-            song = compose_song(seed=1, pack=name)
-            self.assertTrue(song["patterns"])
+            from bitcomposer import written                      # a written song plays on it (Classic reads no pack file)
+            out = written.compose_written("default", None, 1, pack_file=path)
+            self.assertEqual(out["sounds"], name)
+            self.assertTrue(out["score"].notes)
 
 
 class Archives(unittest.TestCase):
@@ -1223,7 +1225,7 @@ class Against(unittest.TestCase):
         a major or minor triad on it), the chord read over the bar is that triad. The generator changing
         changes the song: pick another seed that holds chords plain then."""
         from collections import Counter
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import against, measures
         song = compose_song(seed=16, sound="ffvi")
         v, r, home = against.read(song)

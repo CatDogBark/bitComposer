@@ -54,24 +54,29 @@ the signing environment, and only those release tags the PyPI one.
    before touching `bitcomposer/player/`. The window's tests run Qt
    offscreen, so no display is needed.
 
-2. If you touched anything in `bitcomposer/`, generate a fixed batch before
-   and after your change and paste both analyzer tables in the PR. The
-   analyzer reads Classic's channel layout, so the batch is Classic's
-   (without `--classic` the command line writes from the vocabulary):
+2. Leave Classic alone. Classic, the 1.x generator behind `--classic`,
+   lives in `bitcomposer/classic/` and is frozen: no file in that folder
+   changes, nothing in it imports from outside it, and code outside it
+   takes only the names of its front door (`bitcomposer/classic/__init__.py`).
+   `tests/test_classic_wall.py` holds all three, each file to its
+   checksum, and `tests/test_classic_lock.py` holds 109 Classic songs to
+   the files they were. A fault found in code the writer has a copy of is
+   put right in the writer's copy. Classic plays its own sounds and reads
+   no pack file.
 
-   ```bash
-   for s in $(seq 1 12); do python3 -m bitcomposer.cli --classic -s $s -d /tmp/before; done
-   python3 tools/analyze.py '/tmp/before/*.it'
-   ```
-
-   `docs/ANALYSIS.md` explains what the columns mean and why ear-checking
-   alone has repeatedly missed real defects here.
+   The analyzer (`tools/analyze.py`; `docs/ANALYSIS.md` explains its
+   columns) reads Classic's channel layout: it measured changes to
+   Classic and still reads a Classic song, and it does not measure a
+   written one. A change to the writer carries the measures its round's
+   record gives (`docs/idiom/phase-4-writing.md`).
 
 3. Keep seeded output deterministic. If your change alters what a seed
    produces, say so; that is fine, silently breaking it is not. A change
    meant to leave the music alone (a refactor, a cleanup, moving code
    between modules) must leave every file byte-identical: see the check
-   below.
+   below. Classic's songs need no check by hand: the lock in the suite
+   holds them, and neither its file nor the wall's is written again to
+   make a change pass.
 
 4. Keep it dependency-free. The generator must run with a bare `python3`.
 
@@ -79,21 +84,16 @@ the signing environment, and only those release tags the PyPI one.
 
 | path | what |
 |---|---|
-| `bitcomposer/composer.py` | `compose_song`: the draws, the section loop, the song message; `compose_and_save` |
-| `bitcomposer/builder.py` | one pattern at a time: chord timeline, key plan, every layer written into it |
-| `bitcomposer/instruments.py` | palettes, the per-song instrument draw (contrast rule), the sample set |
-| `bitcomposer/echo.py` | echo settings tables and the bus that makes taps and darker variants |
-| `bitcomposer/mix.py` | written channel volumes, sustaining-arp level, pack trims, master gain |
-| `bitcomposer/samples/` | `dsp.py` builders and filters; `chip.py`, `snes.py`, `genesis.py` palettes; `__init__.py` the registry, loudness rules, `generate_instrument` |
+| `bitcomposer/classic/` | Classic, the 1.x generator behind `--classic`, whole and frozen behind its wall. `composer.py` is `compose_song` (the draws, the section loop, the song message) and `compose_and_save`; `builder.py` writes one pattern at a time (chord timeline, key plan, every layer); the parts are `melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py`; `registers.py` is the register plan, placed once per song; `theory.py`, `structure.py`, `names.py` are scales and chords, song forms, titles. It has its own copies of the sounds (`samples/`, `packs/`) and of `it_format.py`, `pattern.py`, `instruments.py`, `echo.py`, `mix.py`, as they stood when it was walled off. Nothing in it imports from outside it but the package's version, nothing in it changes, and it reads no pack file. Outside code takes the names of `bitcomposer/classic/__init__.py` (`compose_song`, `compose_and_save`, `save_song`, `resolve_sound`, `SOUNDS`, `STYLES`, `theory`) and reaches no deeper |
+| `bitcomposer/instruments.py`, `echo.py`, `mix.py`, `drums.py`, `pattern.py`, `it_format.py`, `names.py` | the writer's side of what the two once shared: palettes and the sample set, the echo tables and bus, channel volumes and trims, the kit's notes, the pattern grid and channel roles, the IT module writer, titles |
+| `bitcomposer/samples/` | the writer's sounds: `dsp.py` builders and filters; `chip.py`, `snes.py`, `genesis.py` palettes; `recipe.py` a voice synthesised from a recipe; `__init__.py` the registry, loudness rules, `generate_instrument` |
+| `bitcomposer/packs/bit_voices.py`, `bit_voices_data.py` | bitComposer's own voices (`docs/VOICES.md`): sounds made from recipes, each standing for a game's samples, registered in the bit set under their ids; off until heard (`written.OWN_VOICES`) |
 | `emu/` | the SNES sound CPU and SNES chip emulator, in Rust (a second package, `bitcomposer-emu`); see Building the emulator |
 | `bitcomposer/spc/` | SPC snapshots read: the file, ID666, the DSP registers, BRR decoding (`brr.py`); running the driver (`emulate.py`, needs `bitcomposer-emu`), its writes as notes (`notes.py`), sample pitch (`tuning.py`), SPC to IT (`convert.py` decides, in stages, how IT carries a song; `snes_chip.py` is the SNES chip's sound from a note's registers; `it_song.py` writes the IT song on a row grid and knows nothing of the SNES); `python -m bitcomposer.spc` |
 | `bitcomposer/translate/` | the translator (`docs/TRANSLATOR.md`): a song's played notes read as music (`events.py` the notes, `beat.py` beat and bar, `roles.py` each voice's part, `harmony.py` key and chords, `form.py` its parts and loop, `reading.py` all of it), kept in a database on the user's machine (`store.py`); `measures.py` the yardsticks shared by a soundtrack and the generator's songs; `pack.py` a thin pack from a game's songs; `archives.py` a game's SPC files from a folder, a zip or a set 7-Zip or unar unpacks; `python -m bitcomposer.translate` |
 | `bitcomposer/written.py`, `performance.py`, `score.py`, `vocabularies/` | what the CLI and the player write by default since 2.0 (without `--classic`): `written.py` a song from a vocabulary on a sound set (`compose_written`), rendered through `spc/convert.py`; `performance.py` the player's performance of it (the theme asked for, the echo, the vibrato, the loop twice), kept out of the writer; `score.py` a Classic song as a score of voices for that back end (`--score`); `vocabularies/` the shipped vocabulary (`default.json.gz`) beside the library's and each imported game's |
 | `bitcomposer/translate/` (the writer) | the whole-song writer: `whole/` the plan (`plan.py`, every draw from the tables; `token.py`, the balance token read into named facts) and the render (`render.py`); `writer/` each part's line bar by bar; `rhythm/` the counted words and the balance token's fields (`fields.py`, a part's fields by name); `harness.py` a part written into a real song in place of its own; `tables.py` outcomes counted under a context; `packtables.py` the tables a pack carries (`KEPT`); `lead.py` the lead pass (which voice carries the tune) |
-| `bitcomposer/packs/` | one module per style pack: its voices, their registry entries and its `PACK` habits; `packfile.py` reads pack files (`docs/PACKS.md`); `library.py` the packs on this machine, for the player's LIBRARY and SOUNDS screens (import in a worker process, add, export, move a voice, previews) |
-| `bitcomposer/melody.py`, `harmony.py`, `bass.py`, `arp.py`, `drums.py` | the parts |
-| `bitcomposer/registers.py` | the register plan: where the chord, the lead and the counter-line sit, placed once per song |
-| `bitcomposer/theory.py`, `structure.py`, `names.py` | scales and chords, song forms, titles |
+| `bitcomposer/packs/` | the writer's sound sets, one module per style pack: its voices, their registry entries and its `PACK` habits; `packfile.py` reads pack files (`docs/PACKS.md`); `library.py` the packs on this machine, for the player's LIBRARY and SOUNDS screens (import in a worker process, add, export, move a voice, previews) |
 | `bitcomposer/pattern.py`, `it_format.py` | channel layout, note writing, echo planning; the `.it` writer |
 | `bitcomposer/cli.py` | the command line; its parser is also the player's list of compose settings |
 | `bitcomposer/player/` | the player: `engine.py` (playlist, playback, auto-generate, the prune and KEEP, voice previews), the Qt window (`qml/Main.qml`, `backend.py`, `app.py`; the LIBRARY and SOUNDS screens are in them), `openmpt.py` and `audio.py` (libopenmpt and the sound output), `level.py` (the one level every song plays at, measured from its audio), `mpris.py` and `mediakeys_win.py` (media keys), `autostart.py`, `desktop.py` (the Linux menu entry), `update.py` (the release check, CANDIDATES, UPDATE and GET THE EMULATOR) |
@@ -112,20 +112,19 @@ Adding a built-in pack: its module in `bitcomposer/packs/`, registered in
 `packs/__init__.py` (the import, `_MODULES` and `PACKS`); its name in the
 CLI's `--sound` and `--pack` choices (`cli.py`); and in the player's
 `builtinSounds` list in `bitcomposer/player/qml/Main.qml` (Classic's SOUND
-row; the packs on this machine have a row of their own, YOUR GAMES), where
+row; the packs on this machine have a row of their own, YOUR GAMES, shown
+for written songs only: Classic plays its own sounds), where
 the mixer's voice labels also drop each pack's voice-name prefix (`ffvi_`,
 `mmx_`, ...) by one pattern near the top of the file. The random sound
 draw picks a new pack up by itself.
 
-The byte-identical check, on one version (a Classic song's message
-records it), before and after the change: Classic on every sound, then
-written songs (without `--classic` the command line writes from the
-vocabulary and does not read `--sound`):
+The byte-identical check, on one version, before and after the change:
+written songs, as the player performs them and bare (without `--classic`
+the command line writes from the vocabulary and does not read `--sound`):
 
 ```bash
 mkdir -p /tmp/before
-for sound in chip snes genesis bit ffvi mana evermore megamanx; do for s in $(seq 1 10); do python3 -m bitcomposer.cli --classic --sound $sound -s $s -o /tmp/before/$sound-$s.it; done; done
-for s in $(seq 1 10); do python3 -m bitcomposer.cli -s $s -o /tmp/before/written-$s.it; done
+for s in $(seq 1 10); do python3 -m bitcomposer.cli -s $s -o /tmp/before/written-$s.it; python3 -m bitcomposer.cli --bare -s $s -o /tmp/before/bare-$s.it; done
 ```
 
 then the same into `/tmp/after`, and compare:
@@ -135,9 +134,9 @@ diff <(cd /tmp/before && sha256sum *.it) <(cd /tmp/after && sha256sum *.it)
 ```
 
 No output means no song changed. Add the options your change touches to
-the loops: Classic's (`--keys home`, `--form aaba`, `--lead-shift -3`,
-...) to the first, the writer's (`--pack ffvi`, `--no-carry-theme`,
-`--bare`, ...) to the second.
+the loop (`--pack ffvi`, `--pack-file PACK.json`, `--no-carry-theme`,
+...). Classic is not in the loop: it cannot change, and the suite's lock
+says so on every run.
 
 ## Building the emulator
 
