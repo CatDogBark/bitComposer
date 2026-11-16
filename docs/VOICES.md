@@ -33,7 +33,11 @@ A recipe is a short description, measured once from a recording and kept in plac
   where it has them, how wide its chorus is (`chorus`), how much breath noise it carries (`breath`) and the noise of
   its strike (`strike`).
 - **hit**, a sound that plays once: a few partials, each with where its pitch starts and ends and its level at four
-  moments (`partials`); noise in half-octave bands at four moments (`noise`); its level curve (`env`).
+  moments (`partials`); noise in half-octave bands at four moments (`noise`); its level curve (`env`). A hit may give
+  its own moments in place of the four quarters (`moments`, the bounds in whole milliseconds, spaced as a strike decays:
+  0, 5, 15, 35, 75, 150, 300 ...), so a cymbal's first thump and its wash are told apart; how long it waits before it
+  strikes (`delay`, whole milliseconds), where a level curve read over a window could not open that sharply; and its
+  loudness as an RMS (`rms`) in place of its peak (`peak`).
 
 A recipe holds no wave: no sample value and no phase. Every phase and every noise sample is drawn by `recipe.py` from
 the voice's seed, so the same recipe and seed make the same sound on every run, and the sound is bitComposer's own. A
