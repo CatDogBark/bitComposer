@@ -1,7 +1,7 @@
 """The music: drums, melody, form, option coverage, echo options. Run with: python3 -m unittest discover -s tests"""
 import unittest
 
-from support import (_gen, analyze, compose_and_save, compose_song, itertools, os, tempfile, unittest)  # noqa: F401
+from classic_support import (_gen, analyze, compose_and_save, compose_song, itertools, os, tempfile, unittest)  # noqa: F401
 
 
 
@@ -163,7 +163,7 @@ class Intros(unittest.TestCase):
                 if pat.data[r][ch].note not in (0, 253, 254, 255)}
 
     def test_intros_vary_and_are_short(self):
-        from bitcomposer import structure as struct
+        from bitcomposer.classic import structure as struct
         seen = set()
         for seed in range(1, 21):
             info = compose_song(seed=seed, style_pref="snes")["info"]
@@ -174,8 +174,8 @@ class Intros(unittest.TestCase):
         self.assertGreaterEqual(len(seen), 3, seen)
 
     def test_parts_enter_on_their_bars(self):
-        from bitcomposer import structure as struct
-        from bitcomposer.builder import PART_CHANNELS
+        from bitcomposer.classic import structure as struct
+        from bitcomposer.classic.builder import PART_CHANNELS
         checked = set()
         for pack, seeds in (("none", range(1, 13)), ("megamanx", range(101, 111))):
             for seed in seeds:
@@ -197,7 +197,7 @@ class Intros(unittest.TestCase):
 
     def test_intro_draw_leaves_the_song_alone(self):
         """Two songs that differ only in the intro draw agree after it."""
-        from bitcomposer import structure as struct
+        from bitcomposer.classic import structure as struct
         song = compose_song(seed=1, style_pref="snes", pack="none")
         n = song["info"]["intro_patterns"]
         self.assertTrue(song["info"]["intro"])
@@ -229,7 +229,7 @@ class Sound(unittest.TestCase):
     """One axis for the user: a palette or a pack."""
 
     def test_resolve_sound(self):
-        from bitcomposer.composer import resolve_sound, SOUNDS
+        from bitcomposer.classic.composer import resolve_sound, SOUNDS
         self.assertEqual(resolve_sound("genesis", "megamanx"), ("snes", "megamanx"))
         self.assertEqual(resolve_sound("chip", "random"), ("chip", "none"))
         self.assertEqual(resolve_sound("random", "random", "mana"), ("snes", "mana"))
@@ -241,7 +241,7 @@ class Sound(unittest.TestCase):
             resolve_sound(sound="nes")
 
     def test_sound_reaches_the_song_and_random_draws_every_sound(self):
-        from bitcomposer.composer import SOUNDS
+        from bitcomposer.classic.composer import SOUNDS
         with tempfile.TemporaryDirectory() as tmp:
             info = compose_and_save(os.path.join(tmp, "a.it"), seed=3, sound="evermore", style="genesis")
             self.assertEqual((info["style"], info["pack"]), ("snes", "evermore"))
@@ -259,7 +259,7 @@ class Length(unittest.TestCase):
     are dropped above the ceiling, and the order list stays valid."""
 
     def test_lengths_stay_in_the_band(self):
-        from bitcomposer import structure as struct
+        from bitcomposer.classic import structure as struct
         adjusted = 0
         for seed in range(300, 330):
             song = compose_song(seed=seed)

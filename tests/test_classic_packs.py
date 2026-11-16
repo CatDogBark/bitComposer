@@ -1,14 +1,14 @@
 """Style packs, their engine habits, the mix rules. Run with: python3 -m unittest discover -s tests"""
 import unittest
 
-from support import (compose_song, composer, it_format, names, pattern, samples, unittest)  # noqa: F401
-from bitcomposer import mix  # noqa: E402
+from classic_support import (compose_song, composer, it_format, names, pattern, samples, unittest)  # noqa: F401
+from bitcomposer.classic import mix  # noqa: E402
 
 
 
 class Packs(unittest.TestCase):
     def test_ffvi_pack_uses_its_voices_and_habits(self):
-        from bitcomposer.packs import PACKS
+        from bitcomposer.classic.packs import PACKS
         song = compose_song(seed=5, style_pref="snes", pack="ffvi")
         info = song["info"]
         self.assertEqual(info["pack"], "ffvi")
@@ -21,7 +21,7 @@ class Packs(unittest.TestCase):
         self.assertIn(info["harmony_mode"], ("ostinato", "sustain", "pulse", "stabs"))
 
     def test_every_pack_generates_with_its_own_voices(self):
-        from bitcomposer.packs import PACKS
+        from bitcomposer.classic.packs import PACKS
         for name, pack in PACKS.items():
             info = compose_song(seed=6, style_pref="snes", pack=name)["info"]
             self.assertEqual(info["pack"], name, name)
@@ -30,13 +30,13 @@ class Packs(unittest.TestCase):
             self.assertEqual(info["instruments"]["tom"], pack["voices"]["drums"]["tom"], name)
 
     def test_drone_bass_holds_one_note_per_chord(self):
-        from bitcomposer import bass
+        from bitcomposer.classic import bass
         notes = bass.generate_bass(48, "minor", 32, style="drone", weight="heavy")
         self.assertEqual(notes, [(0, 36)])      # heavy register, MIDI 28-39: C2, 65 Hz
         self.assertEqual(bass.pick_section_bass("light", 0.95, "drone"), "drone")
 
     def test_riff_library_is_chord_safe_and_one_bar(self):
-        from bitcomposer import bass
+        from bitcomposer.classic import bass
         for name, figure in bass.RIFFS.items():
             self.assertTrue(all(0 <= row < 16 for row, _ in figure), name)
             self.assertTrue(all(iv % 12 in (0, 7, 10) for _, iv in figure), name)
@@ -53,7 +53,7 @@ class Packs(unittest.TestCase):
         self.assertEqual(notes[-1][1] - notes[0][1], 10)
 
     def test_riff_keeps_every_note_and_pops_use_the_high_sample(self):
-        from bitcomposer import bass, pattern
+        from bitcomposer.classic import bass, pattern
         import random
         random.seed(1)
         full = bass.generate_bass(48, "major", 32, style="riff", weight="heavy", density=0.3, riff="funk")
@@ -64,7 +64,7 @@ class Packs(unittest.TestCase):
         self.assertEqual(len(insts), 2, insts)      # the low sample and the high one
 
     def test_arp_never_pushes_where_the_riff_pushes(self):
-        from bitcomposer import bass, arp, pattern
+        from bitcomposer.classic import bass, arp, pattern
         for seed in range(100, 130):
             info = compose_song(seed=seed, style_pref="snes", pack="megamanx")["info"]
             if not info["bass_riff"]:
@@ -75,12 +75,12 @@ class Packs(unittest.TestCase):
                 self.assertFalse(steps & pushes, (seed, sec, info["bass_riff"], info["arp_figures"][sec]))
 
     def test_chug_voicings_restrike_on_their_steps(self):
-        from bitcomposer import harmony
+        from bitcomposer.classic import harmony
         rows = [r for r, n in harmony.generate_harmony([60, 64, 67], 32, "chug_sync", 3)[0] if n != -1]
         self.assertEqual(rows, [0, 3, 6, 8, 14, 16, 19, 22, 24, 30])
 
     def test_riff_bass_repeats_each_bar(self):
-        from bitcomposer import bass
+        from bitcomposer.classic import bass
         notes = bass.generate_bass(48, "minor", 32, style="riff", weight="heavy")
         rows = [r for r, _ in notes]
         self.assertEqual(rows, [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30])
@@ -101,7 +101,7 @@ class Packs(unittest.TestCase):
             self.assertEqual(len(vols), pattern.NUM_CHANNELS)
 
     def test_sustaining_arp_voice_is_trimmed(self):
-        from bitcomposer.packs import PACKS
+        from bitcomposer.classic.packs import PACKS
         song = compose_song(seed=4, style_pref="snes", pack="megamanx")
         self.assertIn(song["info"]["instruments"]["arp"], PACKS["megamanx"]["voices"]["arp"])
         self.assertFalse(song["info"]["struck"]["arp"])
@@ -115,7 +115,7 @@ class Packs(unittest.TestCase):
         for pal in composer.PALETTES.values():
             for v in pal.values():
                 names.update(v if isinstance(v, list) else (v.values() if isinstance(v, dict) else []))
-        from bitcomposer.packs import PACKS
+        from bitcomposer.classic.packs import PACKS
         for p in PACKS.values():
             for v in p["voices"].values():
                 names.update(v if isinstance(v, list) else ([v] if isinstance(v, str) else v.values()))
@@ -124,13 +124,13 @@ class Packs(unittest.TestCase):
                 self.assertEqual(samples.is_struck(name), samples.generate_instrument(name)["struck"], name)
 
     def test_pack_none_is_plain_snes(self):
-        from bitcomposer.packs import PACKS
+        from bitcomposer.classic.packs import PACKS
         info = compose_song(seed=5, style_pref="snes", pack="none")["info"]
         self.assertIsNone(info["pack"])
         self.assertIn(info["instruments"]["melody"], composer.PALETTES["snes"]["lead"])
 
     def test_ostinato_voicing_restrikes_every_cell(self):
-        from bitcomposer import harmony
+        from bitcomposer.classic import harmony
         voices = harmony.generate_harmony([60, 64, 67], 32, "ostinato", 3)
         rows = [r for r, n in voices[0] if n != -1]
         self.assertEqual(rows, [0, 3, 6, 8, 11, 14, 16, 19, 22, 24, 27, 30])
@@ -140,8 +140,8 @@ if __name__ == "__main__":
     unittest.main()
 
     def test_rhythmic_harmony_never_lands_on_a_slow_voice(self):
-        from bitcomposer.instruments import SLOW_FAMILIES
-        from bitcomposer.packs import PACKS
+        from bitcomposer.classic.instruments import SLOW_FAMILIES
+        from bitcomposer.classic.packs import PACKS
         for pack in ("megamanx", "ffvi", "mana"):
             pool = PACKS[pack]["voices"]["harmony"]
             has_fast = any(samples.PRESET_RELEASE.get(h) not in SLOW_FAMILIES for h in pool)

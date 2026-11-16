@@ -412,7 +412,6 @@ class Pack(unittest.TestCase):
     def test_a_pack_made_loads_and_composes(self):
         import tempfile
         from pathlib import Path
-        from bitcomposer.composer import compose_song
         from bitcomposer.packs import PACKS, packfile
         from bitcomposer.translate import pack
         g = self.gathered()
@@ -1226,7 +1225,7 @@ class Against(unittest.TestCase):
         a major or minor triad on it), the chord read over the bar is that triad. The generator changing
         changes the song: pick another seed that holds chords plain then."""
         from collections import Counter
-        from bitcomposer.composer import compose_song
+        from bitcomposer.classic import compose_song
         from bitcomposer.translate import against, measures
         song = compose_song(seed=16, sound="ffvi")
         v, r, home = against.read(song)

@@ -58,7 +58,7 @@ def line(r) -> str:
 def _composed(db, pack: str, n: int) -> tuple[str, dict]:
     """Measures of n Classic songs composed on one of Classic's own sounds (its name), kept as the generator's. Classic
     reads no pack file: a pack.json is refused."""
-    from ..composer import compose_song
+    from ..classic import compose_song
     if pack.endswith(".json"):
         raise ValueError(f"--against {pack}: Classic plays its own sounds and reads no pack file; name one of its sounds")
     name = pack

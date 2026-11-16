@@ -1,7 +1,7 @@
 """Theory: scales, chords, arp colour, rhythm templates. Run with: python3 -m unittest discover -s tests"""
 import unittest
 
-from support import (it_format, melody, random, theory, unittest)  # noqa: F401
+from classic_support import (it_format, melody, random, theory, unittest)  # noqa: F401
 
 
 
@@ -32,7 +32,7 @@ class Theory(unittest.TestCase):
                     self.assertIn(ctype, theory.CHORD_INTERVALS)
 
     def test_arp_colour_tones_come_from_the_scale(self):
-        from bitcomposer import arp
+        from bitcomposer.classic import arp
         for scale_name, root in (("major", 60), ("mixolydian", 62), ("phrygian", 64),
                                  ("natural_minor", 57), ("minor_pentatonic", 60)):
             scale = theory.build_scale(root, scale_name, octaves=3)
