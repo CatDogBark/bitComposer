@@ -116,7 +116,8 @@ Adding a built-in pack: its module in `bitcomposer/packs/`, registered in
 `packs/__init__.py` (the import, `_MODULES` and `PACKS`); its name in the
 CLI's `--sound` and `--pack` choices (`cli.py`); and in the player's
 `builtinSounds` list in `bitcomposer/player/qml/Main.qml` (Classic's SOUND
-row; the packs on this machine have a row of their own, YOUR GAMES), where
+row; the packs on this machine have a row of their own, YOUR GAMES, shown
+for written songs only: Classic plays its own sounds), where
 the mixer's voice labels also drop each pack's voice-name prefix (`ffvi_`,
 `mmx_`, ...) by one pattern near the top of the file. The random sound
 draw picks a new pack up by itself.
